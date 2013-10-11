@@ -7,7 +7,10 @@ By Felix Rusu (felix@lowpowerlab.com)
 - SSL Encrypted
 - auth_basic Authenticated
 - realtime websocket driven using node.js and socket.io
- 
+
+###License
+[CC-BY-SA 3.0](http://creativecommons.org/licenses/by-sa/3.0/us/)
+
 ###Setup
 Please see this blog post on how to setup all the necessary files and configuration:
 http://lowpowerlab.com/blog/2013/10/07/raspberrypi-home-automation-gateway-setup/
