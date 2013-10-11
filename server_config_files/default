@@ -1,0 +1,67 @@
+#upstream backend {
+#  server 127.0.0.1:8080;
+#}
+
+server{
+  listen 80;
+  listen 443 ssl;
+  server_name default;
+
+  auth_basic "Restricted";
+  auth_basic_user_file /var/www/default/.htpasswd;
+
+  #ssl on; #uncomment to reject any non-SSL connections
+  ssl_certificate /etc/nginx/ssl/server.crt;
+  ssl_certificate_key /etc/nginx/ssl/server.key;
+
+  access_log /var/log/nginx/default.access.log;
+  error_log /var/log/nginx/default.error.log;
+
+  # Redirect all non-SSL traffic to SSL.
+  if ($ssl_protocol = "") {
+    rewrite ^ https://$host$request_uri? permanent;
+  }
+
+  root /var/www/default;
+  index index.html index.php index.htm; ## first that is found is matched
+
+  location /socket.io/ {
+    proxy_pass http://localhost:8080;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection upgrade;
+  }
+
+  # setup PHP
+  location ~* \.php$ {
+    fastcgi_split_path_info ^(.+\.php)(.*)$;
+
+    # typically the fpm.sock is used, but check to make sure by using:
+    # sudo -ri "listen = " /etc/php5/fpm/
+    # should get something like: 
+    #  /etc/php5/fpm/pool.d/www.conf:listen = /var/run/php5-fpm.sock
+    # then you know it's fpm.sock
+    fastcgi_pass unix:/var/run/php5-fpm.sock;
+    #fastcgi_pass 127.0.0.1:9000;
+
+    fastcgi_index index.php;
+    fastcgi_param SCRIPT_FILENAME /var/www/default$fastcgi_script_name;
+    fastcgi_param QUERY_STRING $query_string;
+    fastcgi_param REQUEST_METHOD $request_method;
+    fastcgi_param CONTENT_TYPE $content_type;
+    fastcgi_param CONTENT_LENGTH $content_length;
+    include fastcgi_params;
+  }
+
+  # redirect server error pages to the static page /50x.html
+  error_page 500 502 503 504 /50x.html;
+  location = /50x.html {
+      root html;
+  }
+
+  ## Disable viewing .htaccess & .htpassword
+  location ~ /\.ht {
+      deny all;
+  }
+}
+
