@@ -4,7 +4,7 @@ By Felix Rusu, Low Power Lab LLC (felix@lowpowerlab.com)
 <br/>
 
 ###License:
-- CC-BY-SA
+[CC-BY-SA 3.0](http://creativecommons.org/licenses/by-sa/3.0/us/)
 
 ###Details
 Please see this blog post for more details how this case was created:
