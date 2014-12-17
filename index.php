@@ -4,11 +4,9 @@
   <title>Moteino automation</title>
   <link rel="icon" href="icon.ico" type="image/x-icon">
   <link rel="stylesheet" href="https://code.jquery.com/mobile/1.3.2/jquery.mobile-1.3.2.min.css">
-    
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
   <script src="https://code.jquery.com/mobile/1.3.2/jquery.mobile-1.3.2.min.js"></script>
-  <script src="socket.io.js"></script>
-  
+  <script src="https://cdn.socket.io/socket.io-1.2.1.js"></script>
   <style type="text/css">
   .btn-text, #loadmsg {
       font-size: 32px;
