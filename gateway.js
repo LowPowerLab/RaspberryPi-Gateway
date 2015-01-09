@@ -20,20 +20,22 @@ io.sockets.on('connection', function (socket) {
   // respond to STATUS updates
   socket.on('GRGSTS', function (data) {
     socket.emit('MOTEINOLOG', 'getting status...');
-    serial.write('GRGSTS');
+    serial.write('11:STS'); //serial.write('GRGSTS');
   });
  
   // open garage
   socket.on('GRGOPN', function (data) {
     socket.emit('MOTEINOLOG', 'requesting open...');
-    serial.write('GRGOPN');
+    serial.write('11:OPN'); //serial.write('GRGOPN');
   });
  
   // close garage
   socket.on('GRGCLS', function (data) {
     socket.emit('MOTEINOLOG', 'requesting close...');
-    serial.write('GRGCLS');
+    serial.write('11:CLS'); //serial.write('GRGCLS');
   });
+
+  socket.on('message', function(data) { serial.write(data); } );
 });
  
 serial.on("data", function (data) {
@@ -44,6 +46,24 @@ serial.on("data", function (data) {
   if (data.indexOf(' CLOSING ') != -1) status = 'Closing';
   if (data.indexOf(' UNKNOWN ') != -1) status = 'Unknown';
   if (status.length >0)
+  {
     io.sockets.emit('MOTEINO', status);  
+  }
+
+  status='';
+  if (data.indexOf("[21] SSR:0") != -1 || data.indexOf("[21] BTN1:0") != -1) status = "21:SSR:0";
+  if (data.indexOf("[21] SSR:1") != -1 || data.indexOf("[21] BTN1:1") != -1) status = "21:SSR:1";
+  if (data.indexOf("[23] SSR:0") != -1 || data.indexOf("[23] BTN1:0") != -1) status = "23:SSR:0";
+  if (data.indexOf("[23] SSR:1") != -1 || data.indexOf("[23] BTN1:1") != -1) status = "23:SSR:1";
+  if (data.indexOf("[25] SSR:0") != -1 || data.indexOf("[25] BTN1:0") != -1) status = "25:SSR:0";
+  if (data.indexOf("[25] SSR:1") != -1 || data.indexOf("[25] BTN1:1") != -1) status = "25:SSR:1";
+  if (data.indexOf("[26] SSR:0") != -1 || data.indexOf("[26] BTN1:0") != -1) status = "26:SSR:0";
+  if (data.indexOf("[26] SSR:1") != -1 || data.indexOf("[26] BTN1:1") != -1) status = "26:SSR:1";
+  if (data.indexOf("[27] SSR:0") != -1 || data.indexOf("[27] BTN1:0") != -1) status = "27:SSR:0";
+  if (data.indexOf("[27] SSR:1") != -1 || data.indexOf("[27] BTN1:1") != -1) status = "27:SSR:1";
+  if (status.length >0)
+  {
+    io.sockets.emit('SM', status);  
+  }
   io.sockets.emit('MOTEINOLOG', data);
 });
