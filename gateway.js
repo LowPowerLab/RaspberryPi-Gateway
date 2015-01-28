@@ -5,6 +5,7 @@ var serial = new serialport.SerialPort("/dev/ttyAMA0", { baudrate : 115200, pars
  
 //authorize handshake - make sure the request is coming from nginx, not from the outside world
 //if you comment out this section, you will be able to hit this socket directly at the port it's running at, from anywhere!
+//this was tested on Socket.IO v1.2.1 and will not work on older versions
 io.use(function(socket, next) {
  var handshakeData = socket.request;
  console.log("AUTHORIZING CONNECTION FROM " + handshakeData.connection.remoteAddress + ":" + handshakeData.connection.remotePort);
