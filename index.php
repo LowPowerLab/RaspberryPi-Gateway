@@ -2,11 +2,14 @@
 <html lang="en">
 <head>
   <title>Moteino automation</title>
-  <link rel="icon" href="icon.ico" type="image/x-icon">
-  <link rel="stylesheet" href="https://code.jquery.com/mobile/1.3.2/jquery.mobile-1.3.2.min.css">
-  <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
-  <script src="https://code.jquery.com/mobile/1.3.2/jquery.mobile-1.3.2.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="css/icon.ico" type="image/x-icon">
   <script src="https://cdn.socket.io/socket.io-1.2.1.js"></script>
+  <link rel="stylesheet" href="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css" />
+  <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+  <script src="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+  
+  
   <style type="text/css">
   .btn-text, #loadmsg {
       font-size: 32px;
@@ -123,57 +126,57 @@
       socket.on('SM', function(data) {
         if (data == "23:SSR:0")
         {
-          $('#SMLABbtn .btn-text').text('LAB (OFF)').parent().buttonMarkup({ icon: "delete" }).parent().css("background", "red");
+          $('#SMLABbtn .btn-text').text('LAB (OFF)').parent().buttonMarkup({ icon: "delete" }).css("background", "red");
           lights["SMLABbtn"] = "OFF";
         }
         if (data == "23:SSR:1")
         {
-          $('#SMLABbtn .btn-text').text('LAB (ON)').parent().buttonMarkup({ icon: "check" }).parent().css("background", "green");
+          $('#SMLABbtn .btn-text').text('LAB (ON)').parent().buttonMarkup({ icon: "check" }).css("background", "green");
           
           lights["SMLABbtn"] = "ON";
         }
         
         if (data == "25:SSR:0")
         {
-          $('#SMSTAIRSbtn .btn-text').text('STAIRS (OFF)').parent().buttonMarkup({ icon: "delete" }).parent().css("background", "red");
+          $('#SMSTAIRSbtn .btn-text').text('STAIRS (OFF)').parent().buttonMarkup({ icon: "delete" }).css("background", "red");
           lights["SMSTAIRSbtn"] = "OFF";
         }
         if (data == "25:SSR:1")
         {
-          $('#SMSTAIRSbtn .btn-text').text('STAIRS (ON)').parent().buttonMarkup({ icon: "check" }).parent().css("background", "green");
+          $('#SMSTAIRSbtn .btn-text').text('STAIRS (ON)').parent().buttonMarkup({ icon: "check" }).css("background", "green");
           lights["SMSTAIRSbtn"] = "ON";
         }
         
         if (data == "26:SSR:0")
         {
-          $('#SMFRONTbtn .btn-text').text('FRONT (OFF)').parent().buttonMarkup({ icon: "delete" }).parent().css("background", "red");
+          $('#SMFRONTbtn .btn-text').text('FRONT (OFF)').parent().buttonMarkup({ icon: "delete" }).css("background", "red");
           lights["SMFRONTbtn"] = "OFF";
         }
         if (data == "26:SSR:1")
         {
-          $('#SMFRONTbtn .btn-text').text('FRONT (ON)').parent().buttonMarkup({ icon: "check" }).parent().css("background", "green");
+          $('#SMFRONTbtn .btn-text').text('FRONT (ON)').parent().buttonMarkup({ icon: "check" }).css("background", "green");
           lights["SMFRONTbtn"] = "ON";
         }
         
         if (data == "21:SSR:0")
         {
-          $('#SMGARAGEbtn .btn-text').text('GARAGE (OFF)').parent().buttonMarkup({ icon: "delete" }).parent().css("background", "red");
+          $('#SMGARAGEbtn .btn-text').text('GARAGE (OFF)').parent().buttonMarkup({ icon: "delete" }).css("background", "red");
           lights["SMGARAGEbtn"] = "OFF";
         }
         if (data == "21:SSR:1")
         {
-          $('#SMGARAGEbtn .btn-text').text('GARAGE (ON)').parent().buttonMarkup({ icon: "check" }).parent().css("background", "green");
+          $('#SMGARAGEbtn .btn-text').text('GARAGE (ON)').parent().buttonMarkup({ icon: "check" }).css("background", "green");
           lights["SMGARAGEbtn"] = "ON";
         }
         
         if (data == "27:SSR:0")
         {
-          $('#SMLOBBYbtn .btn-text').text('LOBBY (OFF)').parent().buttonMarkup({ icon: "delete" }).parent().css("background", "red");
+          $('#SMLOBBYbtn .btn-text').text('LOBBY (OFF)').parent().buttonMarkup({ icon: "delete" }).css("background", "red");
           lights["SMLOBBYbtn"] = "OFF";
         }
         if (data == "27:SSR:1")
         {
-          $('#SMLOBBYbtn .btn-text').text('LOBBY (ON)').parent().buttonMarkup({ icon: "check" }).parent().css("background", "green");
+          $('#SMLOBBYbtn .btn-text').text('LOBBY (ON)').parent().buttonMarkup({ icon: "check" }).css("background", "green");
           lights["SMLOBBYbtn"] = "ON";
         }
       });
