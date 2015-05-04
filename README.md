@@ -23,6 +23,8 @@ http://lowpowerlab.com/gateway
 - Copy gateway.js, metrics.js in your /home/pi/moteino folder.
 - Adjust any email settings in these files
 - Connect a Moteino to your Pi through the serial port or USB if you have a MoteinoUSB. It should be running [this gateway sketch](https://github.com/LowPowerLab/RFM69/tree/master/Examples/PiGateway). Verify the settings in the sketch to match the hardware and also the encryption key and network ID should be the same on all nodes.
+- Ensure nginx/webserver is running
+- Ensure your gateway.js script runs at boot (see the [Pi Stack Setup guide](http://lowpowerlab.com/gateway/#pisetup)). Otherwise if you want to manually start it or see the output it generates to the console start it with 'node gateway.js &'. If you want to manually start it and ensure it persists after you logout use 'nohup node gateway.js &'
 
 ###Video Overview & Demo
 https://www.youtube.com/watch?v=F15dEqZ4pMM
