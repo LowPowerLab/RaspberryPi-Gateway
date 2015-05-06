@@ -168,7 +168,7 @@
     </div>
 
     <div data-role="footer">
-      <h1><span style="font-size:11px">© <a href="lowpowerlab.com">LowPowerLab.com</a> 2015. All rights reserved. <a href="lowpowerlab.com/gateway">About</a></span></h1>
+      <h1><span style="font-size:11px">© <a href="http://lowpowerlab.com">LowPowerLab.com</a> 2015. All rights reserved. <a href="http://lowpowerlab.com/gateway">About</a></span></h1>
     </div>
   </div>
   
