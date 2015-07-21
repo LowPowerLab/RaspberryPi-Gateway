@@ -96,6 +96,11 @@ exports.metrics = {
   SMB2_OFF : { name:'B2', regexp:/BTN2\:0/i, value:'OFF'},
   SMB2_ON  : { name:'B2', regexp:/BTN2\:1/i, value:'ON'},
 
+  //BellMote
+  BELL_DISABLED : { name:'Status', regexp:/BELL\:0/i, value:'OFF'},
+  BELL_ENABLED  : { name:'Status', regexp:/BELL\:1/i, value:'ON'},
+  START         : { name:'START', regexp:/START/i, value:'Started'},
+  
   //WeatherShield metrics
   //F1 : { name:'F', regexp:/F\:(-?\d+)/i, value:'', valueFilter:function(value) { return value/100;}, unit:'F', pin:1, },
   //F2 : { name:'F', regexp:/F\:(-?\d+\.\d+)/i, value:'', unit:'F', pin:1, },
@@ -137,18 +142,15 @@ exports.metrics = {
 exports.events = {
   motionAlert : { label:'Motion : Alert', icon:'audio', descr:'Alert sound when MOTION is detected', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { io.sockets.emit('PLAYSOUND', 'sounds/alert.wav'); }; } },
   mailboxAlert : { label:'Mailbox Open Alert!', icon:'audio', descr:'Message sound when mailbox is opened', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { io.sockets.emit('PLAYSOUND', 'sounds/incomingmessage.wav'); }; } },
-  motionEmail : { label:'Motion : Email', icon:'mail', descr:'Send email when MOTION is detected', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendEmail('MOTION DETECTED', 'MOTION WAS DETECTED ON NODE: [' + node._id + '] ' + node.label); }; } },
-  motionSMS : { label:'Motion : SMS', icon:'comment', descr:'Send SMS when MOTION is detected', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendSMS('MOTION DETECTED', 'MOTION WAS DETECTED ON NODE: [' + node._id + '] ' + node.label); }; } },
-  mailboxSMS : { label:'Mailbox open : SMS', icon:'comment', descr:'Send SMS when mailbox is opened', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendSMS('MAILBOX OPENED', 'MAILBOX WAS OPENED, NODE:' + node._id + ' ' + node.label); }; } },
+  motionEmail : { label:'Motion : Email', icon:'mail', descr:'Send email when MOTION is detected', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendEmail('MOTION DETECTED', 'MOTION WAS DETECTED ON NODE: [' + node._id + ':' + node.label + '] @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
+  motionSMS : { label:'Motion : SMS', icon:'comment', descr:'Send SMS when MOTION is detected', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendSMS('MOTION DETECTED', 'MOTION WAS DETECTED ON NODE: [' + node._id + ':' + node.label + '] @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
+  mailboxSMS : { label:'Mailbox open : SMS', icon:'comment', descr:'Send SMS when mailbox is opened', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendSMS('MAILBOX OPENED', 'Mailbox opened [' + node._id + ':' + node.label + '] @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
   motionLightON23 : { label:'Motion: SM23 ON!', icon:'action', descr:'Turn SwitchMote:23 ON when MOTION is detected', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendMessageToNode({nodeId:23, action:'MOT:1'}); }; } },
   doorbellSound : { label:'Doorbell : Sound', icon:'audio', descr:'Play sound when doorbell rings', serverExecute:function(node) { if (node.metrics['RING'] && node.metrics['RING'].value == 'RING' && (Date.now() - new Date(node.metrics['RING'].updated).getTime() < 2000)) { io.sockets.emit('PLAYSOUND', 'sounds/doorbell.wav'); }; } },
   doorbellSMS : { label:'Doorbell : SMS', icon:'comment', descr:'Send SMS when Doorbell button is pressed', serverExecute:function(node) { if (node.metrics['RING'] && node.metrics['RING'].value == 'RING' && (Date.now() - new Date(node.metrics['RING'].updated).getTime() < 2000)) { sendSMS('DOORBELL', 'DOORBELL WAS RINGED: [' + node._id + '] ' + node.label + ' @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
   sumpSMS : { label:'SumpPump : SMS (below 20cm)', icon:'comment', descr:'Send SMS if water < 20cm below surface', serverExecute:function(node) { if (node.metrics['CM'] && node.metrics['CM'].value < 20 && (Date.now() - new Date(node.metrics['CM'].updated).getTime() < 2000)) { sendSMS('SUMP PUMP ALERT', 'Water is only 20cm below surface and rising - [' + node._id + '] ' + node.label + ' @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
-  //timer based events - its a good idea to keep timer events distinct by at least a few seconds to avoid clogging the serial port when serial commands run at the same instant
-  switchMoteON_PM : { label:'SwitchMote ON at 9PM!', icon:'clock', descr:'Turn this switch ON at 9PM sharp every day', nextSchedule:function(node) { return exports.timeoutOffset(21,0); /*run at 9PM sharp*/ }, scheduledExecute:function(node) { if (node.metrics['B1'] && node.metrics['B1'].value == 'OFF') { sendMessageToNode({nodeId:node._id, action:'BTN1:1'}); }; } },
-  switchMoteON_PM2 : { label:'SwitchMote ON at 9:00:02PM!', icon:'clock', descr:'Turn this switch ON at 9:00:02PM every day', nextSchedule:function(node) { return exports.timeoutOffset(21,0,2); /*run at 9:00:02PM*/ }, scheduledExecute:function(node) { if (node.metrics['B1'] && node.metrics['B1'].value == 'OFF') { sendMessageToNode({nodeId:node._id, action:'BTN1:1'}); }; } },
-  switchMoteOFF_AM : { label:'SwitchMote OFF at 6:30AM!', icon:'clock', descr:'Turn this switch OFF at 6:30AM every day', nextSchedule:function(node) { return exports.timeoutOffset(6,30); /*run at 6:30AM */ }, scheduledExecute:function(node) { if (node.metrics['B1'] && node.metrics['B1'].value == 'ON') { sendMessageToNode({nodeId:node._id, action:'BTN1:0'}); }; } },
-  switchMoteOFF_AM2 : { label:'SwitchMote OFF at 6:30:02AM!', icon:'clock', descr:'Turn this switch OFF at 6:30:02AM every day', nextSchedule:function(node) { return exports.timeoutOffset(6,30,2); /*run at 6:30:2AM */ }, scheduledExecute:function(node) { if (node.metrics['B1'] && node.metrics['B1'].value == 'ON') { sendMessageToNode({nodeId:node._id, action:'BTN1:0'}); }; } },
+  switchMoteON_PM : { label:'SwitchMote ON at 9PM!', icon:'clock', descr:'Turn this switch ON at 9PM sharp every day', nextSchedule:function(node) { return exports.timeoutOffset(21,15); /*run at 9:15PM*/ }, scheduledExecute:function(node) { if (node.metrics['B1'] && node.metrics['B1'].value == 'OFF') { sendMessageToNode({nodeId:node._id, action:'BTN1:1'}); }; } },
+  switchMoteOFF_AM : { label:'SwitchMote OFF at 6:30AM!', icon:'clock', descr:'Turn this switch OFF at 6:30AM every day', nextSchedule:function(node) { return exports.timeoutOffset(6,00); /*run at 6:00AM */ }, scheduledExecute:function(node) { if (node.metrics['B1'] && node.metrics['B1'].value == 'ON') { sendMessageToNode({nodeId:node._id, action:'BTN1:0'}); }; } },
 };
 
 // ******************************************************************************************************************************************
@@ -168,7 +170,10 @@ exports.motes = {
   DoorBellMote: {
     label  : 'DoorBell',
     icon   : 'icon_doorbell.png',
-    controls : { ring : { states: [{ label:'Ring it!', action:'RING', icon:'audio' }]}},
+    controls : { ring : { states: [{ label:'Ring it!', action:'RING', icon:'audio' }]},
+                 status :  { states: [{ label:'Disabled', action:'BELL:1', css:'background-color:#FF9B9B;', icon:'power', condition:''+function(node) { return node.metrics['Status']!=null && node.metrics['Status'].value == 'OFF'; }},
+                                      { label:'Enabled',  action:'BELL:0', css:'background-color:#9BFFBE;color:#000000', icon:'power', condition:''+function(node) { return node.metrics['Status']==null || node.metrics['Status'].value == 'ON'; }}]},
+    },
   },
 
   GarageMote : {
