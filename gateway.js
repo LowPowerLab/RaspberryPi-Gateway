@@ -60,35 +60,34 @@
 // _id field is special - if not used it is automatically added and used as unique index
 //                      - we can set that field when inserting to use it as an automatic unique index for fast lookups of nodes (by node Id)
 io = require('socket.io').listen(8080);
-var serialport = require("serialport"); //https://github.com/voodootikigod/node-serialport
-var Datastore = require('nedb'); //https://github.com/louischatriot/nedb
-var nodemailer = require('nodemailer'); //https://github.com/andris9/Nodemailer
+var serialport = require("serialport");
+var Datastore = require('nedb');
+var nodemailer = require('nodemailer'); //using nodemailer: https://github.com/andris9/Nodemailer
 var db = new Datastore({ filename: __dirname + '/gateway.db', autoload: true });       //used to keep all node/metric data
 var dbLog = new Datastore({ filename: __dirname + '/gatewayLog.db', autoload: true }); //used to keep all logging/graph data
 var dbunmatched = new Datastore({ filename: __dirname + '/gateway_nonmatches.db', autoload: true });
 // change "/dev/ttyAMA0" to whatever your Pi's GPIO serial port is
-var serial = new serialport.SerialPort('/dev/ttyAMA0', { baudrate : 115200, parser: serialport.parsers.readline("\n") });
+var serial = new serialport.SerialPort("/dev/ttyAMA0", { baudrate : 115200, parser: serialport.parsers.readline("\n") });
 var metricsDef = require('./metrics.js');
-var settings = require('./settings.js');
-require("console-stamp")(console, "mm-dd-yy_HH:MM:ss.l"); //timestamp logs - https://github.com/starak/node-console-stamp
-db.persistence.setAutocompactionInterval(settings.general.compactDBInterval); //compact the database every 24hrs
+db.persistence.setAutocompactionInterval(86400000); //daily
+
 dbLog.ensureIndex({ fieldName: 'n' }, function (err) { if (err) console.log('dbLog EnsureIndex[n] Error:' + err); });
 dbLog.ensureIndex({ fieldName: 'm' }, function (err) { if (err) console.log('dbLog EnsureIndex[m] Error:' + err); });
 
 var transporter = nodemailer.createTransport({
-    service: settings.credentials.emailservice, //"gmail" is preconfigured by nodemailer, but you can setup any other email client supported by nodemailer
+    service: 'gmail', //"gmail" is preconfigured by nodemailer, but you can setup any other email client supported by nodemailer
     auth: {
-        user: settings.credentials.email,
-        pass: settings.credentials.emailpass,
+        user: '___YOU___@gmail.com',
+        pass: '___GMAIL_PASSWORD_OR_ACCESS_TOKEN___'
     }
 });
 
-//global.LOG = function(data) { process.stdout.write(data || ''); }
-//global.LOGln = function(data) { process.stdout.write((data || '') + '\n'); }
+global.LOG = function(data) { process.stdout.write(data || ''); }
+global.LOGln = function(data) { process.stdout.write((data || '') + '\n'); }
 global.sendEmail = function(SUBJECT, BODY) {
   var mailOptions = {
       from: 'Moteino Gateway <gateway@moteino.com>',
-      to: settings.credentials.emailAlertsTo, // list of receivers, comma separated
+      to: '___YOU___@gmail.com', // list of receivers, comma separated
       subject: SUBJECT,
       text: BODY
       //html: '<b>Hello world ?</b>' // html body
@@ -102,7 +101,7 @@ global.sendEmail = function(SUBJECT, BODY) {
 global.sendSMS = function(SUBJECT, BODY) {
   var mailOptions = {
       from: 'Moteino Gateway <gateway@moteino.com>',
-      to: settings.credentials.smsAlertsTo, //your mobile carrier should have an email address that will generate a SMS to your phone
+      to: '__CELL_PHONE_NO__@txt.att.net', //your mobile carrier should have an email address that will generate a SMS to your phone
       subject: SUBJECT,
       text: BODY
   };
@@ -115,7 +114,7 @@ global.sendSMS = function(SUBJECT, BODY) {
 global.sendMessageToNode = function(node) {
   if (node.nodeId && node.action)
   {
-    serial.write(node.nodeId + ':' + node.action + '\n', function () { serial.drain(); });
+    serial.write(node.nodeId + ':' + node.action)
     console.log('NODEACTION: ' + JSON.stringify(node));    
   }
 }
@@ -418,14 +417,11 @@ db.find({ events : { $exists: true } }, function (err, entries) {
   for (var k in entries)
     for (var i in entries[k].events)
     {
-      if (entries[k].events[i]==1) //enabled events only
+      //console.log('Event for ' + JSON.stringify(entries[k].events) + ' : ' + metricsDef.events[i]);
+      if (metricsDef.events[i] && metricsDef.events[i].nextSchedule && metricsDef.events[i].scheduledExecute)
       {
-        //console.log('Event for ' + JSON.stringify(entries[k].events) + ' : ' + metricsDef.events[i]);
-        if (metricsDef.events[i] && metricsDef.events[i].nextSchedule && metricsDef.events[i].scheduledExecute)
-        {
-          schedule(entries[k], i);
-          count++;
-        }
+        schedule(entries[k], i);
+        count++;
       }
     }
   //console.log('*** Events Register db count: ' + count);
