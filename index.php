@@ -375,7 +375,6 @@
     socket.on('UPDATENODE', function(entry) {
       updateNode(entry);
       refreshNodeListUI();
-      //handleNodeEvents(entry);
     });
     
     socket.on('UPDATENODES', function(entries) {
@@ -491,6 +490,7 @@
     
     socket.on('GRAPHDATAREADY', function(rawData){
       graphData = [];
+      LOG('Got ' + rawData.data.length + ' graph data points...');
       for(var key in rawData.data)
         graphData.push([rawData.data[key]._id, rawData.data[key].v]);
       graphOptions.xaxis.min = graphView.start;
@@ -586,7 +586,7 @@
       {
         nodes[node._id] = node;
         var nodeValue = metricsValues(node.metrics);
-        var lowBat = node.metrics.V != null && node.metrics.V.value < 3.65;
+        var lowBat = node.metrics.V != null && node.metrics.V.value < 3.55;
         var newLI = $('<li id="' +  node._id + '"><a node-id="' + node._id + '" href="#nodedetails" class="nodedetails"><img class="productimg" src="images/'+getNodeIcon(node.type)+'"><h2>' + (node.label || node._id) + ' ' + resolveRSSIImage(node.rssi) + ' ' + (lowBat ? '<img src="images/lowbattery.png" style="max-width:12px"/> ' : '') + ago(node.updated, 0).tag + (node.hidden ? ' <img class="listIcon20px" src="images/icon_hidden.png" />' : '') + '</h2><p>' + (node.descr || '&nbsp;') + '</p>' + (nodeValue ? '<span class="ui-li-count ui-li-count16">' + nodeValue + '</span>' : '') + '</a></li>');
         var existingNode = $('#nodeList li#' + node._id);
         if (node.hidden)
@@ -600,24 +600,6 @@
         if (node._id == selectedNodeId) refreshNodeDetails(node);
       }
     }
-    
-    // function handleNodeEvents(node)
-    // {
-      // //handle node events
-      // if (motesDef[node.type] && motesDef[node.type].events)
-      // {
-        // for (var eKey in motesDef[node.type].events)
-        // {
-          // var nodeEvent = motesDef[node.type].events[eKey];
-          // if (nodeEvent.clientExecute)
-          // {
-            // var f = eval('(' + nodeEvent.clientExecute + ')'); //using eval is generally a bad idea but there is no way to pass functions in JSON via websockets so we pass them as strings instead
-            // //if (node._id==88) LOG('----------- EXECUTE: MOTION 88 ------------ ' + eKey);
-            // f(node);
-          // }
-        // }
-      // }
-    // }
     
     function refreshNodeListUI()
     {
@@ -642,11 +624,12 @@
       var s = (now-update)/1000;
       var m = s/60;
       var h = s/3600;
+      var d = s/86400;
       var updated = s.toFixed(0) + 's';
       if (s <6) updated = 'now';
       if (s>=60) updated = m.toFixed(0)+'m';
       if (h>=2) updated = h.toFixed(0)+'h';
-      //if (h>=24) updated = '24h+';
+      if (h>=24) updated = Math.floor(d)+'d' + ((s%86400)/3600).toFixed(0) + 'h'; //2d3h = two days and 3 hours ago (51hrs)
       var theColor = 'ff8800'; //dark orange //"rgb(255,125,20)";
       if (s<6) theColor = "00ff00"; //dark green
       if (s<30) theColor = "33cc33"; //green
@@ -966,6 +949,14 @@
    
     $("#clearbtn").click("tap", function(event) {
       $('#log').val('');
+    });
+    
+    $("#rawActionTextspan").keypress(function(event) {
+      if (event.which == 13) //if ENTER pressed in the message box .. then "click" the SEND button
+      {
+        $("#rawActionSend").click();
+        return false;  
+      }
     });
     
     $("#rawActionSend").click("tap", function(event) {
