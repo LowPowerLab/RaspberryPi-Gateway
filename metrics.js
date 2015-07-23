@@ -96,7 +96,8 @@ exports.metrics = {
   SMB2_OFF : { name:'B2', regexp:/BTN2\:0/i, value:'OFF'},
   SMB2_ON  : { name:'B2', regexp:/BTN2\:1/i, value:'ON'},
 
-  //BellMote
+  //DoorBellMote
+  ring : { name:'RING', regexp:/RING/i, value:'RING', pin:1, graph:1, graphValue:1, graphOptions:{ lines: { show:false, fill:false }, points: { show: true, radius: 5,  lineWidth:1 }, grid: { backgroundColor: {colors:['#000', '#a40']}}, yaxis: { ticks: 0 }}},
   BELL_DISABLED : { name:'Status', regexp:/BELL\:0/i, value:'OFF'},
   BELL_ENABLED  : { name:'Status', regexp:/BELL\:1/i, value:'ON'},
   START         : { name:'START', regexp:/START/i, value:'Started'},
@@ -123,9 +124,6 @@ exports.metrics = {
   GLM : { name:'GLM', regexp:/GLM\:([\d\.]+)/i, value:'', unit:'glm', },
   GAL : { name:'GAL', regexp:/GAL\:([\d\.]+)/i, value:'', unit:'gal', pin:1, },
 
-  //DoorBellMote
-  ring : { name:'RING', regexp:/RING/i, value:'RING', pin:1, graph:1, graphValue:1, graphOptions:{ lines: { show:false, fill:false }, points: { show: true, radius: 5,  lineWidth:1 }, grid: { backgroundColor: {colors:['#000', '#a40']}}, yaxis: { ticks: 0 }}},
-    
   //special metrics
   V : { name:'V', regexp:/(?:V?BAT|VOLTS|V)\:(\d\.\d+)v?/i, value:'', unit:'v'},
   //catchAll : { name:'CatchAll', regexp:/(\w+)\:(\w+)/i, value:''},
