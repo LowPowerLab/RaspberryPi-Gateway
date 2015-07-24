@@ -580,7 +580,6 @@
     }
 
     function updateNode(node) {
-      //if (node._id==88) LOG('----------- FUNCTION updateNode: MOTION 88 ------------');
       LOG(JSON.stringify(node));
       if (node._id)
       {
@@ -702,13 +701,6 @@
     });
        
     function refreshNodeDetails(node) {
-      // if(node.metrics.V != undefined)
-      // {
-        // $('.nodeBatt').html(node.metrics.V.value);
-        // $('.nodeBattWrap').show();
-      // }
-      // else $('.nodeBattWrap').hide();
-
       $('#nodeLabel').val(node.label || '');
       $('#nodeDetailTitle').html(node.label || 'Node details');
       $('#nodeMoteType').val(node.type || '');
@@ -728,13 +720,12 @@
         var metric = node.metrics[key];
         var metricValue = metricsValues([metric]);
         var newLI = $('<li id="' + key + '"><a metric-id="' + key + '" href="#metricdetails" class="metricdetails"><img class="ui-li-icon" src="images/' + (metric.pin==1 ? 'pin.png' : 'blank.png') + '" />' +  metric.label + ' ' + (metric.graph==1 ? '<img style="width:16px" src="images/graph.png" /> ' : '') + ago(metric.updated, 0).tag + '<span class="ui-li-count ui-li-count16">' + metricValue +  '</span></a></li>');
-        //<img class="pin" src="images/pin.png"><img class="pin" src="images/pin.png"><img class="pin" src="images/pin.png">
         $('#metricList').append(newLI);
         if (key == selectedMetricKey)
         {
           $('.metricUpdated').html(ago(metric.updated, 0).tag);
-          $('#metricValue').html(metric.value + (metric.unit || ''));
-          if (metric.graph) addGraphDataPoint([(new Date()).getTime(), metric.value]); //TODO: assumes same timezone, update this according to timezone
+          $('#metricValue').val(metric.value + (metric.unit || ''));
+          if (metric.graph) addGraphDataPoint([(new Date()).getTime(), metric.value]); //TODO: assumes same timezone as server, update this according to timezone
         }
       }
       $('#metricList').listview().listview('refresh');

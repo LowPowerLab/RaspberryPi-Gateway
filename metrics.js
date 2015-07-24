@@ -96,15 +96,13 @@ exports.metrics = {
   SMB2_OFF : { name:'B2', regexp:/BTN2\:0/i, value:'OFF'},
   SMB2_ON  : { name:'B2', regexp:/BTN2\:1/i, value:'ON'},
 
-  //DoorBellMote
+  //Door Bell Mote
   ring : { name:'RING', regexp:/RING/i, value:'RING', pin:1, graph:1, graphValue:1, graphOptions:{ lines: { show:false, fill:false }, points: { show: true, radius: 5,  lineWidth:1 }, grid: { backgroundColor: {colors:['#000', '#a40']}}, yaxis: { ticks: 0 }}},
   BELL_DISABLED : { name:'Status', regexp:/BELL\:0/i, value:'OFF'},
   BELL_ENABLED  : { name:'Status', regexp:/BELL\:1/i, value:'ON'},
   START         : { name:'START', regexp:/START/i, value:'Started'},
   
   //WeatherShield metrics
-  //F1 : { name:'F', regexp:/F\:(-?\d+)/i, value:'', valueFilter:function(value) { return value/100;}, unit:'F', pin:1, },
-  //F2 : { name:'F', regexp:/F\:(-?\d+\.\d+)/i, value:'', unit:'F', pin:1, },
   F : { name:'F', regexp:/F\:(-?\d+\.\d+)/i, value:'', unit:'°', pin:1 },
   FH : { name:'F', regexp:/F\:(-?\d+)/i, value:'', valuation:function(value) {return value/100;}, unit:'°', pin:1, graph:1 },
   C : { name:'C', regexp:/C\:([-\d\.]+)/i, value:'', unit:'°', pin:1, },
@@ -123,7 +121,7 @@ exports.metrics = {
   GPM : { name:'GPM', regexp:/GPM\:([\d\.]+)/i, value:'', unit:'gpm', graph:1, graphOptions : { lines: { lineWidth:1 }, colors:['#09c'], /*yaxis: { ticks: [1,5,20], transform:  function(v) {return v==0?v:Math.log(v); //log scale },*/ tickDecimals: 2 } },
   GLM : { name:'GLM', regexp:/GLM\:([\d\.]+)/i, value:'', unit:'glm', },
   GAL : { name:'GAL', regexp:/GAL\:([\d\.]+)/i, value:'', unit:'gal', pin:1, },
-
+    
   //special metrics
   V : { name:'V', regexp:/(?:V?BAT|VOLTS|V)\:(\d\.\d+)v?/i, value:'', unit:'v'},
   //catchAll : { name:'CatchAll', regexp:/(\w+)\:(\w+)/i, value:''},
@@ -209,6 +207,10 @@ exports.motes = {
   SonarMote: {
     label  : 'Distance Sensor',
     icon   : 'icon_sonar.png',
+  },
+  WeatherMote: {
+    label  : 'Weather Sensor',
+    icon   : 'icon_weather.png',
   },
 };
 
