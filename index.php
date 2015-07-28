@@ -342,6 +342,9 @@
   </div>
 
   <script type="text/javascript">
+  if (!window.jQuery || typeof $.mobile == 'undefined')
+    document.body.innerHTML = unescape('Error: jQuery/mobile could not be loaded from the CDNs. Check the internet connection.');
+  else {
   $(function(){
     var nodes = {};        //this holds the current nodes data
     var selectedNodeId;    //points to the selected node ID
@@ -976,6 +979,7 @@
 			opacity: 0.80
 		}).appendTo("body");
   });
+  }
   </script>
 </body>
 </html>
