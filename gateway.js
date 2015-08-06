@@ -59,19 +59,20 @@
 // IMPORTANT details about NeDB:
 // _id field is special - if not used it is automatically added and used as unique index
 //                      - we can set that field when inserting to use it as an automatic unique index for fast lookups of nodes (by node Id)
-io = require('socket.io').listen(8080);
+var settings = require('./settings.js');
+io = require('socket.io').listen(settings.general.socketPort);
 var serialport = require("serialport"); //https://github.com/voodootikigod/node-serialport
 var Datastore = require('nedb'); //https://github.com/louischatriot/nedb
 var nodemailer = require('nodemailer'); //https://github.com/andris9/Nodemailer
-var db = new Datastore({ filename: __dirname + '/gateway.db', autoload: true });       //used to keep all node/metric data
-var dbLog = new Datastore({ filename: __dirname + '/gatewayLog.db', autoload: true }); //used to keep all logging/graph data
-var dbunmatched = new Datastore({ filename: __dirname + '/gateway_nonmatches.db', autoload: true });
+var db = new Datastore({ filename: __dirname + '/' + settings.database.name, autoload: true });       //used to keep all node/metric data
+var dbLog = new Datastore({ filename: __dirname + '/' + settings.database.logName, autoload: true }); //used to keep all logging/graph data
+var dbunmatched = new Datastore({ filename: __dirname + '/' + settings.database.nonMatchesName, autoload: true });
 // change "/dev/ttyAMA0" to whatever your Pi's GPIO serial port is
-var serial = new serialport.SerialPort('/dev/ttyAMA0', { baudrate : 115200, parser: serialport.parsers.readline("\n") });
+var serial = new serialport.SerialPort(settings.serial.port, { baudrate : settings.serial.baud, parser: serialport.parsers.readline("\n") });
 var metricsDef = require('./metrics.js');
-var settings = require('./settings.js');
-require("console-stamp")(console, "mm-dd-yy_HH:MM:ss.l"); //timestamp logs - https://github.com/starak/node-console-stamp
-db.persistence.setAutocompactionInterval(settings.general.compactDBInterval); //compact the database every 24hrs
+
+require("console-stamp")(console, settings.general.consoleLogDateFormat); //timestamp logs - https://github.com/starak/node-console-stamp
+db.persistence.setAutocompactionInterval(settings.database.compactDBInterval); //compact the database every 24hrs
 dbLog.ensureIndex({ fieldName: 'n' }, function (err) { if (err) console.log('dbLog EnsureIndex[n] Error:' + err); });
 dbLog.ensureIndex({ fieldName: 'm' }, function (err) { if (err) console.log('dbLog EnsureIndex[m] Error:' + err); });
 
@@ -435,10 +436,10 @@ db.find({ events : { $exists: true } }, function (err, entries) {
 function dbLogRecycle() {
   var elapsed = new Date().getTime();
   console.log('Recycling dbLog ...');
-  dbLog.remove({_id:{$lte: ((new Date().getTime())-604800000)}}, {multi:true}, function(err, count){ console.log('Removed '  + count + ' records'); }); //604800000ms = 1 week
+  dbLog.remove({_id:{$lte: ((new Date().getTime())-settings.database.logTimespan)}}, {multi:true}, function(err, count){ console.log('Removed '  + count + ' records'); });
   dbLog.persistence.compactDatafile();
   console.log('Recycling dbLog finished in ' + (new Date().getTime() - elapsed) + 'ms !');
-  setTimeout(dbLogRecycle, 86400000); //run again in 24 hours
+  setTimeout(dbLogRecycle, settings.database.compactDBInterval); //run again in 24 hours
 }
 
 //86400000ms = 1 day
