@@ -13,10 +13,7 @@ exports.serial = {
 
 exports.database = {
   name : 'gateway.db',
-  logName : 'gatewayLog.db',
-  logTimespan : 604800000, //604800000ms = 1 week (keep up to 1 week worth of data in the log)
   nonMatchesName : 'gateway_nonmatches.db',
-  compactDBInterval : 86400000,
 };
 
 exports.general = {

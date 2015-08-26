@@ -48,9 +48,9 @@
 // and copyright notices in any redistribution of this code
 // **********************************************************************************
 
-//Great place to read on Javascript Arrays: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array
-//Great place to read on Javascript Objects: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_Objects
-//Great place to read on Javascript Regular Expressions: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
+//Great reference on Javascript Arrays: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array
+//Great reference on Javascript Objects: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_Objects
+//Great reference on Javascript Regular Expressions: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
 //Great sandbox to test your Regular Expressions: http://regexr.com/
 //JqueryMobile generic icons: http://api.jquerymobile.com/icons/
 //FLOT graphs customizations: http://www.jqueryflottutorial.com/jquery-flot-customizing-data-series-format.html
@@ -64,7 +64,7 @@
 //     - value - this can be hardcoded, or if left blank the value will be the first captured parentheses from the regex expression
 //     - pin:1/0 - if '1' then by default this metric will show up in the main homepage view for that node, otherwise it will only show in the node page; it can then manually be flipped in the UI
 //     - graph:1/0 - if '1' then by default this metric will be logged in gatewayLog.db every time it comes in
-//     - graphValue - you can specify a hardcoded value that should be logged instead of the captured metric (ex for 'MOTION' it's more useful/efficient to log value '1' so we can graph it etc)
+//     - logValue - you can specify a hardcoded value that should be logged instead of the captured metric (has to always be numeric!)
 //     - graphOptions - this is a javascript object that when presend is injected directly into the FLOT graph for the metric - you can use this to highly customize the appearance of any metric graph
 //                    - it should only be specified one per each metric - the first one (ie one for each set of metrics that have multiple entries with same 'name') - ex: GarageMote 'Status' metric
 //                    - this object is overlapped over the default 'graphOptions' defined in index.php
@@ -77,40 +77,44 @@
 exports.metrics = {
   //GarageMote
   //NOTE the \b word boundary is used to avoid matching "OPENING" (ie OPEN must be followed by word boundary/end of word)
-  open : { name:'Status', regexp:/(?:STS\:)?(OPN|OPEN)\b/i, value:'OPEN', pin:1, graph:1, graphValue:2, graphOptions:{ yaxis: {ticks:0}, colors:['#4a0'], /*lines: { lineWidth:1 }*/}},
-  opening : { name:'Status', regexp:/(?:STS\:)?(OPNING|OPENING)/i, value:'OPENING..', pin:1, graph:1, graphValue:1 },
-  closed : { name:'Status', regexp:/(?:STS\:)?(CLS|CLOSED)/i, value:'CLOSED', pin:1, graph:1, graphValue:0 },
-  closing : { name:'Status', regexp:/(?:STS\:)?(CLSING|CLOSING)/i, value:'CLOSING..', pin:1, graph:1, graphValue:1 },
-  unknown : { name:'Status', regexp:/(?:STS\:)?(UNK|UNKNOWN)/i, value:'UNKNOWN!', pin:1, graph:1, graphValue:-1 },
+  open : { name:'Status', regexp:/(?:STS\:)?(OPN|OPEN)\b/i, value:'OPEN', pin:1, graph:1, logValue:2, graphOptions:{ legendLbl:'Garage door events', yaxis: {ticks:0}, colors:['#4a0'], /*lines: { lineWidth:1 }*/}},
+  opening : { name:'Status', regexp:/(?:STS\:)?(OPNING|OPENING)/i, value:'OPENING..', pin:1, graph:1, logValue:1 },
+  closed : { name:'Status', regexp:/(?:STS\:)?(CLS|CLOSED)/i, value:'CLOSED', pin:1, graphValPrefix:' Door: ', graph:1, logValue:0 },
+  closing : { name:'Status', regexp:/(?:STS\:)?(CLSING|CLOSING)/i, value:'CLOSING..', pin:1, graph:1, logValue:1.1 }, //1.1 to avoid a match with "OPENING"
+  unknown : { name:'Status', regexp:/(?:STS\:)?(UNK|UNKNOWN)/i, value:'UNKNOWN!', pin:1, graph:1, logValue:0.5 },
 
   //MotionMote and Mailbox notifier
-  motion : { name:'M', regexp:/MOTION/i, value:'MOTION', pin:1, graph:1, graphValue:1, graphOptions:{ lines: { show:false, fill:false }, points: { show: true, radius: 5, lineWidth:1 }, grid: { backgroundColor: {colors:['#000', '#03c', '#08c']}}, yaxis: { ticks: 0 }}},
+  motion : { name:'M', regexp:/MOTION/i, value:'MOTION', pin:1, graph:1, logValue:1, graphValSuffix:' detected!', graphOptions:{ legendLbl:'Motion', lines: { show:false, fill:false }, points: { show: true, radius: 5, lineWidth:1 }, grid: { backgroundColor: {colors:['#000', '#03c', '#08c']}}, yaxis: { ticks: 0 }}},
   lastMotion : { name:'LO', regexp:/(?:LO|LM)\:((?:\d+h)?\d{1,2}m|\d{1,2}s)/i, value:'', pin:1 },
   debug : { name:'DEBUG', regexp:/\[(?:DEBUG)\:([^\]]+)\]/i, value:''},
 
   //SwitchMote buttons
   SMB0_OFF : { name:'B0', regexp:/BTN0\:0/i, value:'OFF'},
   SMB0_ON  : { name:'B0', regexp:/BTN0\:1/i, value:'ON'},
-  SMB1_OFF : { name:'B1', regexp:/(BTN1|SSR|RLY)\:0/i, value:'OFF', pin:1, graph:1, graphValue:0, graphOptions:{ yaxis: {ticks:0}, colors:['#4a0']}},
-  SMB1_ON  : { name:'B1', regexp:/(BTN1|SSR|RLY)\:1/i, value:'ON', pin:1, graph:1, graphValue:1, graphOptions: { /* already defined above for 'B1', no need to repeat */ }},
+  SMB1_OFF : { name:'B1', regexp:/(BTN1|SSR|RLY)\:0/i, value:'OFF', pin:1, graph:1, logValue:0, graphOptions:{ yaxis: {ticks:0}, colors:['#4a0']}},
+  SMB1_ON  : { name:'B1', regexp:/(BTN1|SSR|RLY)\:1/i, value:'ON', pin:1, graph:1, logValue:1, graphOptions: { /* already defined above for 'B1', no need to repeat */ }},
   SMB2_OFF : { name:'B2', regexp:/BTN2\:0/i, value:'OFF'},
   SMB2_ON  : { name:'B2', regexp:/BTN2\:1/i, value:'ON'},
 
   //Door Bell Mote
-  ring : { name:'RING', regexp:/RING/i, value:'RING', pin:1, graph:1, graphValue:1, graphOptions:{ lines: { show:false, fill:false }, points: { show: true, radius: 5,  lineWidth:1 }, grid: { backgroundColor: {colors:['#000', '#a40']}}, yaxis: { ticks: 0 }}},
+  ring : { name:'RING', regexp:/RING/i, value:'RING', pin:1, graph:1, logValue:1, graphValSuffix:'!', graphOptions:{ legendLbl:'Doorbell rings', lines: { show:false, fill:false }, points: { show: true, radius: 5,  lineWidth:1 }, grid: { backgroundColor: {colors:['#000', '#a40']}}, yaxis: { ticks: 0 }}},
   BELL_DISABLED : { name:'Status', regexp:/BELL\:0/i, value:'OFF'},
   BELL_ENABLED  : { name:'Status', regexp:/BELL\:1/i, value:'ON'},
   START         : { name:'START', regexp:/START/i, value:'Started'},
   
   //WeatherShield metrics
+  FH : { name:'F', regexp:/F\:(-?\d+)/i, value:'', valuation:function(value) {return value/100;}, unit:'°', pin:1, graph:1, graphValSuffix:'F', graphOptions:{ legendLbl:'Temperature' }},
   F : { name:'F', regexp:/F\:(-?\d+\.\d+)/i, value:'', unit:'°', pin:1 },
-  FH : { name:'F', regexp:/F\:(-?\d+)/i, value:'', valuation:function(value) {return value/100;}, unit:'°', pin:1, graph:1 },
-  C : { name:'C', regexp:/C\:([-\d\.]+)/i, value:'', unit:'°', pin:1, },
-  H : { name:'H', regexp:/H\:([\d\.]+)/i, value:'', unit:'%', pin:1, graph:1 },
+  C : { name:'C', regexp:/C\:([-\d\.]+)/i, value:'', unit:'°', pin:1, graph:1, graphValSuffix:'C', graphOptions:{ legendLbl:'Temperature' }},
+  H : { name:'H', regexp:/H\:([\d\.]+)/i, value:'', unit:'%', pin:1, graph:1, graphOptions:{ legendLbl:'Humidity'}},
   P : { name:'P', regexp:/P\:([\d\.]+)/i, value:'', unit:'"', pin:1, },
 
+  //SprinklerMote
+  SPRKL_ZONE : { name:'ZONE', regexp:/ZONE\:([\d\.]+)/i, value:'', pin:1, graph:1, logValue:'', graphValPrefix:'Zone ', graphValSuffix:' running!',  graphOptions:{ legendLbl:'Zone', colors:['#4a0']}}, //this captures zone messages and extracts the ID of the active zone
+  SPRKL_OFF : { name:'ZONE', regexp:/ZONES\:OFF/i, value:'OFF', pin:1, graph:1, logValue:0, graphValPrefix:'', graphValSuffix:''},
+  
   //SonarMote
-  sonar : { name:'CM', regexp:/([\d\.]+)cm?/i, value:'', unit:'cm', pin:1, graph:1, graphOptions: { lines: { lineWidth:1 }, colors:['#09c']} },
+  sonar : { name:'CM', regexp:/([\d\.]+)cm?/i, value:'', unit:'cm', pin:1, graph:1,  graphOptions: { legendLbl:'Level', lines: { lineWidth:1 }, colors:['#09c']} },
 
   //WattMote
   VRMS : { name:'VRMS', regexp:/VRMS\:([\d\.]+)(?:V)?/i, value:'', unit:'V', },
@@ -118,10 +122,10 @@ exports.metrics = {
   WATT : { name:'W', regexp:/W\:([\d\.]+)(?:W)/i, value:'', unit:'W', pin:1, },
 
   //WaterMote
-  GPM : { name:'GPM', regexp:/GPM\:([\d\.]+)/i, value:'', unit:'gpm', graph:1, graphOptions : { lines: { lineWidth:1 }, colors:['#09c'], /*yaxis: { ticks: [1,5,20], transform:  function(v) {return v==0?v:Math.log(v); //log scale },*/ tickDecimals: 2 } },
+  GPM : { name:'GPM', regexp:/GPM\:([\d\.]+)/i, value:'', unit:'gpm', graph:1,  graphOptions : { legendLbl:'Gallons/min', lines: { lineWidth:1 }, colors:['#09c'], /*yaxis: { ticks: [1,5,20], transform:  function(v) {return v==0?v:Math.log(v); //log scale },*/ tickDecimals: 2} },
   GLM : { name:'GLM', regexp:/GLM\:([\d\.]+)/i, value:'', unit:'glm', },
   GAL : { name:'GAL', regexp:/GAL\:([\d\.]+)/i, value:'', unit:'gal', pin:1, },
-    
+
   //special metrics
   V : { name:'V', regexp:/(?:V?BAT|VOLTS|V)\:(\d\.\d+)v?/i, value:'', unit:'v'},
   //catchAll : { name:'CatchAll', regexp:/(\w+)\:(\w+)/i, value:''},
@@ -145,8 +149,12 @@ exports.events = {
   doorbellSound : { label:'Doorbell : Sound', icon:'audio', descr:'Play sound when doorbell rings', serverExecute:function(node) { if (node.metrics['RING'] && node.metrics['RING'].value == 'RING' && (Date.now() - new Date(node.metrics['RING'].updated).getTime() < 2000)) { io.sockets.emit('PLAYSOUND', 'sounds/doorbell.wav'); }; } },
   doorbellSMS : { label:'Doorbell : SMS', icon:'comment', descr:'Send SMS when Doorbell button is pressed', serverExecute:function(node) { if (node.metrics['RING'] && node.metrics['RING'].value == 'RING' && (Date.now() - new Date(node.metrics['RING'].updated).getTime() < 2000)) { sendSMS('DOORBELL', 'DOORBELL WAS RINGED: [' + node._id + '] ' + node.label + ' @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
   sumpSMS : { label:'SumpPump : SMS (below 20cm)', icon:'comment', descr:'Send SMS if water < 20cm below surface', serverExecute:function(node) { if (node.metrics['CM'] && node.metrics['CM'].value < 20 && (Date.now() - new Date(node.metrics['CM'].updated).getTime() < 2000)) { sendSMS('SUMP PUMP ALERT', 'Water is only 20cm below surface and rising - [' + node._id + '] ' + node.label + ' @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
-  switchMoteON_PM : { label:'SwitchMote ON at 9PM!', icon:'clock', descr:'Turn this switch ON at 9PM sharp every day', nextSchedule:function(node) { return exports.timeoutOffset(21,15); /*run at 9:15PM*/ }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:1'}); } },
-  switchMoteOFF_AM : { label:'SwitchMote OFF at 6:30AM!', icon:'clock', descr:'Turn this switch OFF at 6:30AM every day', nextSchedule:function(node) { return exports.timeoutOffset(6,00); /*run at 6:00AM */ }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:0'}); } },
+  switchMoteON_PM : { label:'SwitchMote ON at 8:15PM!', icon:'clock', descr:'Turn this switch ON at 8:15PM every day', nextSchedule:function(node) { return exports.timeoutOffset(20,15); /*run at 8:15PM*/ }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:1'}); } },
+  switchMoteOFF_AM : { label:'SwitchMote OFF at 6:00AM!', icon:'clock', descr:'Turn this switch OFF at 6:30AM every day', nextSchedule:function(node) { return exports.timeoutOffset(6,00); /*run at 6:30AM */ }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:0'}); } },
+  //for the sprinkler events, rather than scheduling with offsets, its much easir we run them every day, and check the odd/even/weekend condition in the event itself
+  sprinklersOddDays : { label:'Odd days @ 6:30AM', icon:'clock', descr:'Run this sprinkler program on odd days at 6:30AM', nextSchedule:function(node) { return exports.timeoutOffset(6,30); }, scheduledExecute:function(node) { if ((new Date().getDate()%2)==1) sendMessageToNode({nodeId:node._id, action:'PRG 2:300 3:300 1:300 4:300 5:300' /*runs stations 1-5 (300sec each))*/}); } },
+  sprinklersEvenDays : { label:'Even days @ 6:30AM', icon:'clock', descr:'Run this sprinkler program on even days at 6:30AM', nextSchedule:function(node) { return exports.timeoutOffset(6,30); }, scheduledExecute:function(node) { if ((new Date().getDate()%2)==0) sendMessageToNode({nodeId:node._id, action:'PRG 2:300 3:300 1:300 4:300 5:300' /*runs stations 1-5 (300sec each)*/}); } },  
+  sprinklersWeekends : { label:'Weekends @ 6:30AM)', icon:'clock', descr:'Run this sprinkler program on weekend days at 6:30AM', nextSchedule:function(node) { return exports.timeoutOffset(6,30); }, scheduledExecute:function(node) { if ([0,6].indexOf(new Date().getDay())>-1 /*Saturday=6,Sunday=0,*/) sendMessageToNode({nodeId:node._id, action:'PRG 2:180 3:180 1:180 4:180 5:180' /*runs stations 1-5 (180sec each)*/}); } },    
 };
 
 // ******************************************************************************************************************************************
@@ -167,8 +175,8 @@ exports.motes = {
     label  : 'DoorBell',
     icon   : 'icon_doorbell.png',
     controls : { ring : { states: [{ label:'Ring it!', action:'RING', icon:'audio' }]},
-                 status :  { states: [{ label:'Disabled', action:'BELL:1', css:'background-color:#FF9B9B;', icon:'power', condition:''+function(node) { return node.metrics['Status']!=null && node.metrics['Status'].value == 'OFF'; }},
-                                      { label:'Enabled',  action:'BELL:0', css:'background-color:#9BFFBE;color:#000000', icon:'power', condition:''+function(node) { return node.metrics['Status']==null || node.metrics['Status'].value == 'ON'; }}]},
+                 status :  { states: [{ label:'Disabled', action:'BELL:1', css:'background-color:#FF9B9B;', icon:'fa-bell-slash', condition:''+function(node) { return node.metrics['Status']!=null && node.metrics['Status'].value == 'OFF'; }},
+                                      { label:'Enabled',  action:'BELL:0', css:'background-color:#9BFFBE;color:#000000', icon:'fa-bell', condition:''+function(node) { return node.metrics['Status']==null || node.metrics['Status'].value == 'ON'; }}]},
     },
   },
 
@@ -208,6 +216,30 @@ exports.motes = {
     label  : 'Distance Sensor',
     icon   : 'icon_sonar.png',
   },
+  SprinklerMote: {
+    label  : 'Sprinkler Controller',
+    icon   : 'icon_sprinklers.png',
+    controls : { 
+      Z1 : { states: [{ label:'1', action:'ON:1', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE'].value != '1'; }},
+                      { label:'1', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE'].value == '1'; }}]},
+      Z2 : { states: [{ label:'2', action:'ON:2', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE'].value != '2'; }},
+                      { label:'2', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE'].value == '2'; }}]},
+      Z3 : { states: [{ label:'3', action:'ON:3', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE'].value != '3'; }},
+                      { label:'3', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE'].value == '3'; }}]},
+      Z4 : { states: [{ label:'4', action:'ON:4', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE'].value != '4'; }},
+                      { label:'4', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE'].value == '4'; }}]},
+      Z5 : { states: [{ label:'5', action:'ON:5', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE'].value != '5'; }},
+                      { label:'5', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE'].value == '5'; }}]},
+      Z6 : { states: [{ label:'6', action:'ON:6', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE'].value != '6'; }},
+                      { label:'6', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE'].value == '6'; }}]},
+      Z7 : { states: [{ label:'7', action:'ON:7', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE'].value != '7'; }},
+                      { label:'7', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE'].value == '7'; }}]},
+      Z8 : { states: [{ label:'8', action:'ON:8', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE'].value != '8'; }},
+                      { label:'8', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE'].value == '8'; }}]},
+      Z9 : { states: [{ label:'9', action:'ON:9', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE'].value != '9'; }},
+                      { label:'9', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE'].value == '9'; }}]},
+    },
+  },
   WeatherMote: {
     label  : 'Weather Sensor',
     icon   : 'icon_weather.png',
@@ -217,13 +249,29 @@ exports.motes = {
 // ******************************************************************************************************************************************
 //                                            HELPER FUNCTIONS
 // ******************************************************************************************************************************************
+exports.ONEDAY = 86400000;
 exports.isNumeric =  function(n) {
   return !isNaN(parseFloat(n)) && isFinite(n); //http://stackoverflow.com/questions/18082/validate-decimal-numbers-in-javascript-isnumeric/1830844#1830844
 }
 
 //extracts the value of a given metric based on the regular expression and any valuation function defined for that metric
 exports.determineValue = function(matchingMetric, matchingToken) {
-  var actualValueToProcess = matchingToken[1] || matchingToken[0];
+  var actualValueToProcess = matchingToken[1] || matchingToken[0]; //attempt to get first captured group if any, else fall back to entire match
+  var result;
+  if (matchingMetric.valuation != undefined)
+  {
+    //console.log('Valuating: ' + actualValueToProcess);
+    result = matchingMetric.valuation(actualValueToProcess);
+  }
+  else result = matchingMetric.value || actualValueToProcess;
+  if (exports.isNumeric(result))
+    return Number(result);
+  else return result;
+};
+
+//extracts the value of a given metric based on the regular expression
+exports.determineGraphValue = function(matchingMetric, matchingToken) {
+  var actualValueToProcess = matchingToken[2] || matchingToken[1] || matchingToken[0]; //attempt to get second captured group if any, else first group if any, else fall back to entire match
   var result;
   if (matchingMetric.valuation != undefined)
   {
@@ -240,7 +288,7 @@ exports.determineValue = function(matchingMetric, matchingToken) {
 //offset can be used to add more time to the calculated timeout, for instance to delay by one day: pass offset=86400000
 exports.timeoutOffset = function(hour, minute, second, millisecond, offset) {
   var result = new Date().setHours(hour,minute,second || 0, millisecond || 0);
-  result = result < new Date().getTime() ? (result + 86400000) : result;
+  result = result < new Date().getTime() ? (result + exports.ONEDAY) : result;
   result -= new Date().getTime();
   if (exports.isNumeric(offset)) result += offset;
   return result;

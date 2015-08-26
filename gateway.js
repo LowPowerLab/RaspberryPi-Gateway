@@ -1,11 +1,13 @@
 ﻿// **********************************************************************************
-// Websocket backend for the Moteino IoT Framework
-// http://lowpowerlab.com/gateway
-// **********************************************************************************
-// Based on Node.js, socket.io, node-serialport, NeDB
+// Websocket server backend for the Moteino IoT Framework
+// Hardware and software stack details: http://lowpowerlab.com/gateway
 // This is a work in progress and is released without any warranties expressed or implied.
-// Please read the details below.
-// Also ensure you change the settings in this file to match your hardware and email settings etc.
+// **********************************************************************************
+// Based on Node.js, and following node packages:
+//      socket.io, node-serialport, neDB, nodemailer, console-stamp
+// **********************************************************************************
+//                    BEFORE THE FIRST USE:
+//       Adjust settings in settings.js and read the rest of this readme.
 // **********************************************************************************
 // NeDB is Node Embedded Database - a persistent database for Node.js, with no dependency
 // Specs and documentation at: https://github.com/louischatriot/nedb
@@ -19,6 +21,7 @@
 // This script is configured to compact the database every 24 hours since time of start.
 // ********************************************************************************************
 // Copyright Felix Rusu, Low Power Lab LLC (2015), http://lowpowerlab.com/contact
+// ********************************************************************************************
 // ********************************************************************************************
 //                                    LICENSE
 // ********************************************************************************************
@@ -60,21 +63,22 @@
 // _id field is special - if not used it is automatically added and used as unique index
 //                      - we can set that field when inserting to use it as an automatic unique index for fast lookups of nodes (by node Id)
 var settings = require('./settings.js');
+var dbLog = require('./logUtil.js');
 io = require('socket.io').listen(settings.general.socketPort);
 var serialport = require("serialport"); //https://github.com/voodootikigod/node-serialport
 var Datastore = require('nedb'); //https://github.com/louischatriot/nedb
 var nodemailer = require('nodemailer'); //https://github.com/andris9/Nodemailer
-var db = new Datastore({ filename: __dirname + '/' + settings.database.name, autoload: true });       //used to keep all node/metric data
-var dbLog = new Datastore({ filename: __dirname + '/' + settings.database.logName, autoload: true }); //used to keep all logging/graph data
-var dbunmatched = new Datastore({ filename: __dirname + '/' + settings.database.nonMatchesName, autoload: true });
-// change "/dev/ttyAMA0" to whatever your Pi's GPIO serial port is
+var path = require('path');
+var db = new Datastore({ filename: path.join(__dirname, 'db', settings.database.name), autoload: true });       //used to keep all node/metric data
+//var dbLog = new Datastore({ filename: path.join(__dirname, 'db', settings.database.logName), autoload: true }); //used to keep all logging/graph data
+var dbunmatched = new Datastore({ filename: path.join(__dirname, 'db', settings.database.nonMatchesName), autoload: true });
 var serial = new serialport.SerialPort(settings.serial.port, { baudrate : settings.serial.baud, parser: serialport.parsers.readline("\n") });
 var metricsDef = require('./metrics.js');
 
 require("console-stamp")(console, settings.general.consoleLogDateFormat); //timestamp logs - https://github.com/starak/node-console-stamp
 db.persistence.setAutocompactionInterval(settings.database.compactDBInterval); //compact the database every 24hrs
-dbLog.ensureIndex({ fieldName: 'n' }, function (err) { if (err) console.log('dbLog EnsureIndex[n] Error:' + err); });
-dbLog.ensureIndex({ fieldName: 'm' }, function (err) { if (err) console.log('dbLog EnsureIndex[m] Error:' + err); });
+//dbLog.ensureIndex({ fieldName: 'n' }, function (err) { if (err) console.log('dbLog EnsureIndex[n] Error:' + err); });
+//dbLog.ensureIndex({ fieldName: 'm' }, function (err) { if (err) console.log('dbLog EnsureIndex[m] Error:' + err); });
 
 var transporter = nodemailer.createTransport({
     service: settings.credentials.emailservice, //"gmail" is preconfigured by nodemailer, but you can setup any other email client supported by nodemailer
@@ -159,9 +163,9 @@ io.use(function(socket, next) {
 });
 
 io.sockets.on('connection', function (socket) {
-  var address = socket.request.connection.remoteAddress;
-  var port = socket.request.connection.remotePort;
-  console.log("NEW CONNECTION FROM " + address + ":" + port);
+  var address = socket.handshake.headers['x-forwarded-for'] || socket.request.connection.remoteAddress;
+  //var port = socket.request.connection.remotePort;
+  console.log("NEW CONNECTION FROM " + address /*+ ":" + port*/);
   socket.emit('MOTESDEF', metricsDef.motes);
   socket.emit('METRICSDEF', metricsDef.metrics);
   socket.emit('EVENTSDEF', metricsDef.events);
@@ -269,23 +273,22 @@ io.sockets.on('connection', function (socket) {
   });
 
   socket.on('GETGRAPHDATA', function (nodeId, metricKey, start, end) {
-    dbLog.find({n:nodeId, m:metricKey, $and: [{_id:{$gte:start}}, {_id:{$lte:end}}]}, function (err, entries) {
-      console.log('==>GETGRAPHDATA found: ' + entries.length + ' data points - nodeId:' + nodeId + ', m:' + metricKey);
-      
-      var graphOptions;
-      for(var k in metricsDef.metrics)
+    var sts = Math.floor(start / 1000); //get timestamp in whole seconds
+    var ets = Math.floor(end / 1000); //get timestamp in whole seconds
+    var logfile = path.join(__dirname, 'db', dbLog.getLogName(nodeId,metricKey));
+    var graphData = dbLog.getData(logfile, sts, ets);
+    var graphOptions={};
+    for(var k in metricsDef.metrics)
+    {
+      if (metricsDef.metrics[k].name == metricKey)
       {
-        if (metricsDef.metrics[k].name == metricKey && metricsDef.metrics[k].graphOptions != undefined)
-        {
+        if (metricsDef.metrics[k].graphOptions != undefined)
           graphOptions = metricsDef.metrics[k].graphOptions;
-          break;
-        }
+        break;
       }
-      
-      for(var k in entries) entries[k].m=entries[k].n=undefined; //remove everything but the time and value, reduces socket traffic
-      
-      socket.emit('GRAPHDATAREADY', { data:entries, options : graphOptions });
-    });
+    }
+    graphOptions.metricName=metricKey;
+    socket.emit('GRAPHDATAREADY', { graphData:graphData, options : graphOptions });
   });
 });
 
@@ -356,9 +359,17 @@ serial.on("data", function (data) {
             //log data for graphing purposes, keep labels as short as possible since this log will grow indefinitely and is not compacted like the node database
             if (existingNode.metrics[matchingMetric.name].graph==1)
             {
-              var graphValue = matchingMetric.graphValue != undefined ? matchingMetric.graphValue : existingNode.metrics[matchingMetric.name].value;
+              var graphValue = metricsDef.isNumeric(matchingMetric.logValue) ? matchingMetric.logValue : metricsDef.determineGraphValue(matchingMetric, tokenMatch); //existingNode.metrics[matchingMetric.name].value;
               if (metricsDef.isNumeric(graphValue))
-                dbLog.insert({ _id:(new Date().getTime()), n:id, m:matchingMetric.name, v:graphValue });
+              {
+                var ts = Math.floor(Date.now() / 1000); //get timestamp in whole seconds
+                var logfile = path.join(__dirname, 'db', dbLog.getLogName(id, matchingMetric.name));
+                try {
+                  console.log('post: ' + logfile + '[' + ts + ','+graphValue + ']');
+                  dbLog.postData(logfile, ts, graphValue);
+                } catch (err) { console.log('    POST ERROR: ' + err.message); } //because this is a callback concurrent calls to the same log, milliseconds apart, can cause a file handle concurrency exception
+              }
+              else console.log('   METRIC NOT NUMERIC, logging skipped... (extracted value:' + graphValue + ')');
             }
 
             //console.log('TOKEN MATCHED OBJ:' + JSON.stringify(existingNode));
@@ -401,13 +412,14 @@ scheduledEvents = []; //each entry should be defined like this: {nodeId, eventKe
 //schedule and register a scheduled type event
 function schedule(node, eventKey) {
   var nextRunTimeout = metricsDef.events[eventKey].nextSchedule(node);
-  console.log('**** ADDING SCHEDULED EVENT - nodeId:' + node._id+' event:'+eventKey+' to run in ~' + (nextRunTimeout/3600000).toFixed(2) + 'hrs');
+  console.log('**** SCHEDULING EVENT - nodeId:' + node._id+' event:'+eventKey+' to run in ~' + (nextRunTimeout/3600000).toFixed(2) + 'hrs');
   var theTimer = setTimeout(runAndReschedule, nextRunTimeout, metricsDef.events[eventKey].scheduledExecute, node, eventKey); //http://www.w3schools.com/jsref/met_win_settimeout.asp
   scheduledEvents.push({nodeId:node._id, eventKey:eventKey, timer:theTimer}); //save nodeId, eventKey and timer (needs to be removed if the event is disabled/removed from the UI)
 }
 
 //run a scheduled event and reschedule it
 function runAndReschedule(functionToExecute, node, eventKey) {
+  console.log('**** RUNNING SCHEDULED EVENT - nodeId:' + node._id + ' event:' + eventKey + '...');
   functionToExecute(node, eventKey);
   schedule(node, eventKey);
 }
@@ -431,21 +443,3 @@ db.find({ events : { $exists: true } }, function (err, entries) {
     }
   //console.log('*** Events Register db count: ' + count);
 });
-  
-//periodic function that will erase logged data older than 1 week
-function dbLogRecycle() {
-  var elapsed = new Date().getTime();
-  console.log('Recycling dbLog ...');
-  dbLog.remove({_id:{$lte: ((new Date().getTime())-settings.database.logTimespan)}}, {multi:true}, function(err, count){ console.log('Removed '  + count + ' records'); });
-  dbLog.persistence.compactDatafile();
-  console.log('Recycling dbLog finished in ' + (new Date().getTime() - elapsed) + 'ms !');
-  setTimeout(dbLogRecycle, settings.database.compactDBInterval); //run again in 24 hours
-}
-
-//86400000ms = 1 day
-// var nextRun = new Date().setHours(3,0,0,0); //3am sharp
-// nextRun = nextRun < new Date().getTime() ? (nextRun + 86400000) : nextRun;
-// nextRun -= new Date().getTime();
-var nextRunTimeout = metricsDef.timeoutOffset(3,0,0,0);
-console.log('**** SCHEDULED dbLogRecycle to run in ~' + (nextRunTimeout/3600000).toFixed(2) + 'hrs');
-setTimeout(dbLogRecycle, nextRunTimeout); //run at next 3am
