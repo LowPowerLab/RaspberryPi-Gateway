@@ -495,7 +495,7 @@
       graphData = [];
       LOG('Got ' + rawData.graphData.data.length + ' graph data points...');
       for(var key in rawData.graphData.data)
-        graphData.push([rawData.graphData.data[key]._id, rawData.graphData.data[key].v]);
+        graphData.push([rawData.graphData.data[key].t, rawData.graphData.data[key].v]);
       graphOptions.xaxis.min = graphView.start;
       graphOptions.xaxis.max = graphView.end;
       graphOptions = $.extend(true, graphOptions, rawData.options); //http://stackoverflow.com/questions/171251/how-can-i-merge-properties-of-two-javascript-objects-dynamically
