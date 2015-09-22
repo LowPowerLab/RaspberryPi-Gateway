@@ -75,7 +75,7 @@ exports.postData = function post(filename, timestamp, value) {
   //prepare 9 byte buffer to write
   buff.writeInt8(0,0);             //flag byte
   buff.writeUInt32BE(timestamp,1); //timestamp 4 bytes
-  buff.writeUInt32BE(value,5);     //value 4 bytes
+  buff.writeInt32BE(value,5);     //value 4 bytes
 
   // If there is data then read last value
   if (logsize>=9) {
