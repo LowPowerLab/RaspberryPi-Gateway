@@ -74,6 +74,9 @@
 //     - each related metric should have the same name - for instance look at GarageMote - all the regex expressions actually update the same metric specified by name='Status'
 //       so when garage goes through different states it will update a single metric called 'Status'
 //       Another good example is SwitchMote where we have 6 different metric definitions here but only 3 resultant actual metrics (Button1, Button2 and Button3)
+var request = require('request');
+var settings = require('./settings.js');
+
 exports.metrics = {
   //GarageMote
   //NOTE the \b word boundary is used to avoid matching "OPENING" (ie OPEN must be followed by word boundary/end of word)
@@ -101,18 +104,18 @@ exports.metrics = {
   BELL_DISABLED : { name:'Status', regexp:/BELL\:0/i, value:'OFF'},
   BELL_ENABLED  : { name:'Status', regexp:/BELL\:1/i, value:'ON'},
   START         : { name:'START', regexp:/START/i, value:'Started'},
-  
+
   //WeatherShield metrics
-  FH : { name:'F', regexp:/F\:(-?\d+)/i, value:'', valuation:function(value) {return value/100;}, unit:'°', pin:1, graph:1, graphValSuffix:'F', graphOptions:{ legendLbl:'Temperature' }},
-  F : { name:'F', regexp:/F\:(-?\d+\.\d+)/i, value:'', unit:'°', pin:1 },
+  F : { name:'F', regexp:/F\:(-?\d+\.\d+)/i, value:'', unit:'°', pin:1, graph:1, graphValSuffix:'F', graphOptions:{ legendLbl:'Temperature', lines: { lineWidth:1 } }},
+  FH : { name:'F', regexp:/F\:(-?\d+)/i, value:'', valuation:function(value) {return value/100;}, unit:'°', pin:1, graph:1, graphValSuffix:'F', graphOptions:{ legendLbl:'Temperature', lines: { lineWidth:1 }}},
   C : { name:'C', regexp:/C\:([-\d\.]+)/i, value:'', unit:'°', pin:1, graph:1, graphValSuffix:'C', graphOptions:{ legendLbl:'Temperature' }},
-  H : { name:'H', regexp:/H\:([\d\.]+)/i, value:'', unit:'%', pin:1, graph:1, graphOptions:{ legendLbl:'Humidity'}},
+  H : { name:'H', regexp:/H\:([\d\.]+)/i, value:'', unit:'%', pin:1, graph:1, graphOptions:{ legendLbl:'Humidity', lines: { lineWidth:1 }}},
   P : { name:'P', regexp:/P\:([\d\.]+)/i, value:'', unit:'"', pin:1, },
 
   //SprinklerMote
   SPRKL_ZONE : { name:'ZONE', regexp:/ZONE\:([\d\.]+)/i, value:'', pin:1, graph:1, logValue:'', graphValPrefix:'Zone ', graphValSuffix:' running!',  graphOptions:{ legendLbl:'Zone', colors:['#4a0']}}, //this captures zone messages and extracts the ID of the active zone
   SPRKL_OFF : { name:'ZONE', regexp:/ZONES\:OFF/i, value:'OFF', pin:1, graph:1, logValue:0, graphValPrefix:'', graphValSuffix:''},
-  
+
   //SonarMote
   sonar : { name:'CM', regexp:/([\d\.]+)cm?/i, value:'', unit:'cm', pin:1, graph:1,  graphOptions: { legendLbl:'Level', lines: { lineWidth:1 }, colors:['#09c']} },
 
@@ -122,10 +125,17 @@ exports.metrics = {
   WATT : { name:'W', regexp:/W\:([\d\.]+)(?:W)/i, value:'', unit:'W', pin:1, },
 
   //WaterMote
-  GPM : { name:'GPM', regexp:/GPM\:([\d\.]+)/i, value:'', unit:'gpm', graph:1,  graphOptions : { legendLbl:'Gallons/min', lines: { lineWidth:1 }, colors:['#09c'], /*yaxis: { ticks: [1,5,20], transform:  function(v) {return v==0?v:Math.log(v); //log scale },*/ tickDecimals: 2} },
+  GPM : { name:'GPM', regexp:/GPM\:([\d\.]+)/i, value:'', unit:'gpm', graph:1,  graphOptions : { legendLbl:'Gallons/min', lines: { lineWidth:1 }, colors:['#09c'],  /*yaxis: { ticks: [1,5,20], transform:  function(v) {return v==0?v:Math.log(v); //log scale },*/ tickDecimals: 2} },
   GLM : { name:'GLM', regexp:/GLM\:([\d\.]+)/i, value:'', unit:'glm', },
   GAL : { name:'GAL', regexp:/GAL\:([\d\.]+)/i, value:'', unit:'gal', pin:1, },
-
+  
+  //Thermostat specific
+  HOLD : { name:'HOLD', regexp:/HOLD\:(ON|OFF)/i, value:''},
+  MODE : { name:'MODE', regexp:/MODE\:(COOL|HEAT|AUTO|OFF)/i, value:''},
+  TARGET : { name:'TARGET', regexp:/TARGET\:([-\d\.]+)/i, value:'', unit:'°'},
+  TSTATE : { name:'TSTATE', regexp:/TSTATE\:(COOLING|HEATING|OFF)/i, value:''},
+  FSTATE : { name:'FSTATE', regexp:/FSTATE\:(AUTO|AUTOCIRC|ON)/i, value:''},
+  
   //special metrics
   V : { name:'V', regexp:/(?:V?BAT|VOLTS|V)\:(\d\.\d+)v?/i, value:'', unit:'v'},
   //catchAll : { name:'CatchAll', regexp:/(\w+)\:(\w+)/i, value:''},
@@ -149,12 +159,20 @@ exports.events = {
   doorbellSound : { label:'Doorbell : Sound', icon:'audio', descr:'Play sound when doorbell rings', serverExecute:function(node) { if (node.metrics['RING'] && node.metrics['RING'].value == 'RING' && (Date.now() - new Date(node.metrics['RING'].updated).getTime() < 2000)) { io.sockets.emit('PLAYSOUND', 'sounds/doorbell.wav'); }; } },
   doorbellSMS : { label:'Doorbell : SMS', icon:'comment', descr:'Send SMS when Doorbell button is pressed', serverExecute:function(node) { if (node.metrics['RING'] && node.metrics['RING'].value == 'RING' && (Date.now() - new Date(node.metrics['RING'].updated).getTime() < 2000)) { sendSMS('DOORBELL', 'DOORBELL WAS RINGED: [' + node._id + '] ' + node.label + ' @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
   sumpSMS : { label:'SumpPump : SMS (below 20cm)', icon:'comment', descr:'Send SMS if water < 20cm below surface', serverExecute:function(node) { if (node.metrics['CM'] && node.metrics['CM'].value < 20 && (Date.now() - new Date(node.metrics['CM'].updated).getTime() < 2000)) { sendSMS('SUMP PUMP ALERT', 'Water is only 20cm below surface and rising - [' + node._id + '] ' + node.label + ' @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
-  switchMoteON_PM : { label:'SwitchMote ON at 8:15PM!', icon:'clock', descr:'Turn this switch ON at 8:15PM every day', nextSchedule:function(node) { return exports.timeoutOffset(20,15); /*run at 8:15PM*/ }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:1'}); } },
-  switchMoteOFF_AM : { label:'SwitchMote OFF at 6:00AM!', icon:'clock', descr:'Turn this switch OFF at 6:30AM every day', nextSchedule:function(node) { return exports.timeoutOffset(6,00); /*run at 6:30AM */ }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:0'}); } },
+  switchMoteON_PM : { label:'SwitchMote ON at 8:00PM!', icon:'clock', descr:'Turn this switch ON at 8PM every day', nextSchedule:function(node) { return exports.timeoutOffset(20,0); /*run at 8:15PM*/ }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:1'}); } },
+  switchMoteOFF_AM : { label:'SwitchMote OFF at 7:00AM!', icon:'clock', descr:'Turn this switch OFF at 7AM every day', nextSchedule:function(node) { return exports.timeoutOffset(7,00); /*run at 6:30AM */ }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:0'}); } },
   //for the sprinkler events, rather than scheduling with offsets, its much easir we run them every day, and check the odd/even/weekend condition in the event itself
   sprinklersOddDays : { label:'Odd days @ 6:30AM', icon:'clock', descr:'Run this sprinkler program on odd days at 6:30AM', nextSchedule:function(node) { return exports.timeoutOffset(6,30); }, scheduledExecute:function(node) { if ((new Date().getDate()%2)==1) sendMessageToNode({nodeId:node._id, action:'PRG 2:300 3:300 1:300 4:300 5:300' /*runs stations 1-5 (300sec each))*/}); } },
   sprinklersEvenDays : { label:'Even days @ 6:30AM', icon:'clock', descr:'Run this sprinkler program on even days at 6:30AM', nextSchedule:function(node) { return exports.timeoutOffset(6,30); }, scheduledExecute:function(node) { if ((new Date().getDate()%2)==0) sendMessageToNode({nodeId:node._id, action:'PRG 2:300 3:300 1:300 4:300 5:300' /*runs stations 1-5 (300sec each)*/}); } },  
-  sprinklersWeekends : { label:'Weekends @ 6:30AM)', icon:'clock', descr:'Run this sprinkler program on weekend days at 6:30AM', nextSchedule:function(node) { return exports.timeoutOffset(6,30); }, scheduledExecute:function(node) { if ([0,6].indexOf(new Date().getDay())>-1 /*Saturday=6,Sunday=0,*/) sendMessageToNode({nodeId:node._id, action:'PRG 2:180 3:180 1:180 4:180 5:180' /*runs stations 1-5 (180sec each)*/}); } },    
+  sprinklersWeekends : { label:'Weekends @ 6:30AM)', icon:'clock', descr:'Run this sprinkler program on weekend days at 6:30AM', nextSchedule:function(node) { return exports.timeoutOffset(6,30); }, scheduledExecute:function(node) { if ([0,6].indexOf(new Date().getDay())>-1 /*Saturday=6,Sunday=0,*/) sendMessageToNode({nodeId:node._id, action:'PRG 2:180 3:180 1:180 4:180 5:180' /*runs stations 1-5 (180sec each)*/}); } },
+
+  //thermostat poll event
+  thermostatPoll : { label:'Thermostat status poll', icon:'fa-heartbeat', descr:'Poll thermostat status (HTTP GET)',
+    nextSchedule:function(node) { return 30000; },
+    scheduledExecute:function(node) {
+      exports.tstatPoll(node._id);
+    }},
+  //END thermostat poll event
 };
 
 // ******************************************************************************************************************************************
@@ -170,6 +188,9 @@ exports.events = {
 //                work when the garage is OPEN or closed, otherwise it should do nothing and wait for these 2 valid states to occur
 //           The 'condition' property is a stringified function that is eval-ed at the client side when displaying the control (first control with condition evaluating to TRUE will be displayed)
 //           The 'css' property allows you to style the control buttons differently for each state, also the states icons are jquery mobile standard icons you can specify
+//           The 'action' property is a string message that will be sent to that node when the control is clicked
+//           The 'serverExecute' property is a server side function that if defined, will be called when the control is clicked (ie it can do anything like triggering an HTTP request like in the case of an IP thermostat)
+//           The 'breakAfter' property, if set to 'true', will insert a page break after the control it's specified for. This is useful for nodes that have many of controls, to break them apart on the page
 exports.motes = {
   DoorBellMote: {
     label  : 'DoorBell',
@@ -203,12 +224,12 @@ exports.motes = {
     label   : 'Light Switch',
     icon : 'icon_switchmote.png',
     controls : { B0 : { states: [{ label:'B0 (off)', action:'BTN0:1', css:'background-color:#FF9B9B;', icon:'power', condition:''+function(node) { return node.metrics['B0'].value == 'OFF'; }},  //http://api.jquerymobile.com/icons/
-                                { label:'B0 (on)',  action:'BTN0:0', css:'background-color:#9BFFBE;color:#000000', icon:'power', condition:''+function(state) { return node.metrics['B0'].value == 'ON'; }}],
+                                { label:'B0 (on)',  action:'BTN0:0', css:'background-color:#9BFFBE;color:#000000', icon:'power', condition:''+function(node) { return node.metrics['B0'].value == 'ON'; }}],
                        showCondition:''+function(node) { return (node.metrics && $.inArray('B0', Object.keys(node.metrics))>-1);}},
                 B1 : { states: [{ label:'Off', action:'BTN1:1', css:'background-color:#FF9B9B;', icon:'power', condition:''+function(node) { return node.metrics['B1'].value == 'OFF'; }},
                                 { label:'On',  action:'BTN1:0', css:'background-color:#9BFFBE;color:#000000', icon:'power', condition:''+function(node) { return node.metrics['B1'].value == 'ON'; }}]},
                 B2 : { states: [{ label:'B2 (off)', action:'BTN2:1', css:'background-color:#FF9B9B;', icon:'power', condition:''+function(node) { return node.metrics['B2'].value == 'OFF'; }},
-                                { label:'B2 (on)',  action:'BTN2:0', css:'background-color:#9BFFBE;color:#000000', icon:'power', condition:''+function(state) { return node.metrics['B2'].value == 'ON'; }}],
+                                { label:'B2 (on)',  action:'BTN2:0', css:'background-color:#9BFFBE;color:#000000', icon:'power', condition:''+function(node) { return node.metrics['B2'].value == 'ON'; }}],
                        showCondition:''+function(node) { return (node.metrics && $.inArray('B2', Object.keys(node.metrics))>-1);}},
                },
   },
@@ -244,10 +265,203 @@ exports.motes = {
     label  : 'Weather Sensor',
     icon   : 'icon_weather.png',
   },
-};
+
+  WaterMeter: {
+    label  : 'Water Meter',
+    icon   : 'icon_watermeter.png',
+  },
+  
+  RadioThermostat: { //for Radio Thermostat CT50
+    label  : 'Thermostat (WiFi)',
+    icon   : 'icon_thermostat.png',
+    controls : { 
+      //decrease target temperature by 1°
+      COOLER : { states: [{ label:'Cooler', action:'', icon:'fa-chevron-down', //css:'background-color:#0077ff;color:#fff',
+                            serverExecute:function(node){
+                              var targetNow=0, modeNow='';
+                              if (node.metrics['MODE']) modeNow = node.metrics['MODE'].value;
+                              if (node.metrics['TARGET']) targetNow = node.metrics['TARGET'].value;
+                              if (targetNow <= 0 || (modeNow!='COOL' && modeNow != 'HEAT')) return;
+                              var thejson = (modeNow=='COOL' ? { 't_cool' : --targetNow } : { 't_heat' : --targetNow });
+                              exports.tstatRequest(thejson, node._id);
+                            },
+                          }]
+                 },
+      //increase target temperature by 1°
+      WARMER : { states: [{ label:'Warmer', action:'', icon:'fa-chevron-up', //css:'background-color:#ff1100;color:#fff',
+                            serverExecute:function(node){
+                              var targetNow=0, modeNow='';
+                              if (node.metrics['MODE']) modeNow = node.metrics['MODE'].value;
+                              if (node.metrics['TARGET']) targetNow = node.metrics['TARGET'].value;
+                              if (targetNow <= 0 || (modeNow!='COOL' && modeNow != 'HEAT')) return;
+                              var thejson = (modeNow=='COOL' ? { 't_cool' : ++targetNow } : { 't_heat' : ++targetNow });
+                              exports.tstatRequest(thejson, node._id);
+                            },
+                         }],
+               },
+      //example presets (set specific warm/cold hold temperature in 1 click)
+      COOL78 : { states: [{ label:'Cool:78°', action:'', icon:'fa-ge',
+                            serverExecute:function(node){
+                              var targetNow=0, modeNow='';
+                              if (node.metrics['MODE']) modeNow = node.metrics['MODE'].value;
+                              if (node.metrics['TARGET']) targetNow = node.metrics['TARGET'].value;
+                              if (targetNow == 78 && modeNow=='COOL') return;
+                              var thejson = { 'tmode':2, 't_cool':78, 'hold':1 };
+                              exports.tstatRequest(thejson, node._id);
+                            },
+                         }],
+               },
+      HEAT78 : { states: [{ label:'Heat:73°', action:'', icon:'fa-fire',
+                            serverExecute:function(node){
+                              var targetNow=0, modeNow='';
+                              if (node.metrics['MODE']) modeNow = node.metrics['MODE'].value;
+                              if (node.metrics['TARGET']) targetNow = node.metrics['TARGET'].value;
+                              if (targetNow == 73 && modeNow=='HEAT') return;
+                              var thejson = { 'tmode':1, 't_heat':73, 'hold':1 };
+                              exports.tstatRequest(thejson, node._id);
+                            },
+                         }],
+                  breakAfter:true,
+               },
+      //switch to COOL mode
+      COOL : { states: [{ label:'Cool', action:'', icon:'fa-ge', css:'background-color:#0077ff;color:#fff',
+                          serverExecute:function(node){
+                            var targetNow=0, modeNow='';
+                            if (node.metrics['MODE']) modeNow = node.metrics['MODE'].value;
+                            if (node.metrics['TARGET']) targetNow = node.metrics['TARGET'].value;
+                            if (targetNow <= 0 || modeNow=='COOL') return;
+                            var thejson = { 'tmode':2, 't_cool' : ++targetNow };
+                            exports.tstatRequest(thejson, node._id);
+                          },
+                          condition:''+function(node) { return node.metrics['MODE'].value == 'COOL'; }
+                        },
+                        { label:'Cool', action:'', icon:'fa-ge',
+                          serverExecute:function(node){
+                            var targetNow=0, modeNow='';
+                            if (node.metrics['MODE']) modeNow = node.metrics['MODE'].value;
+                            if (node.metrics['TARGET']) targetNow = node.metrics['TARGET'].value;
+                            if (targetNow <= 0 || modeNow=='COOL') return;
+                            var thejson = { 'tmode':2, 't_cool' : ++targetNow };
+                            exports.tstatRequest(thejson, node._id);
+                          },
+                          condition:''+function(node) { return node.metrics['MODE'].value != 'COOL'; }
+                        }]
+               },
+      //switch to HEAT mode
+      HEAT : { states: [{ label:'Heat', action:'', icon:'fa-fire', css:'background-color:#ff1100;color:#fff',
+                          serverExecute:function(node){
+                            var targetNow=0, modeNow='';
+                            if (node.metrics['MODE']) modeNow = node.metrics['MODE'].value;
+                            if (node.metrics['F']) targetNow = node.metrics['F'].value;
+                            if (targetNow <= 0 || modeNow=='HEAT') return;
+                            var thejson = { 'tmode':1, 't_heat' : --targetNow };
+                            exports.tstatRequest(thejson, node._id);
+                          },
+                          condition:''+function(node) { return node.metrics['MODE'].value == 'HEAT'; }
+                        },
+                        { label:'Heat', action:'', icon:'fa-fire',
+                          serverExecute:function(node){
+                            var targetNow=0, modeNow='';
+                            if (node.metrics['MODE']) modeNow = node.metrics['MODE'].value;
+                            if (node.metrics['TARGET']) targetNow = node.metrics['TARGET'].value;
+                            if (targetNow <= 0 || modeNow=='HEAT') return;
+                            var thejson = { 'tmode':1, 't_heat' : --targetNow };
+                            exports.tstatRequest(thejson, node._id);
+                          },
+                          condition:''+function(node) { return node.metrics['MODE'].value != 'HEAT'; }
+                        }]
+               },
+      //switch to AUTO mode
+      AUTO : { states: [{ label:'Auto', action:'', icon:'fa-balance-scale', css:'background-color:#9BFFBE',
+                          serverExecute:function(node){
+                            var targetNow=0, modeNow='';
+                            if (node.metrics['MODE']) modeNow = node.metrics['MODE'].value;
+                            if (modeNow=='AUTO') return;
+                            exports.tstatRequest({ 'tmode':3 }, node._id);
+                          },
+                          condition:''+function(node) { return node.metrics['MODE'].value == 'AUTO'; }
+                        },
+                        { label:'Auto', action:'', icon:'fa-balance-scale',
+                          serverExecute:function(node){
+                            var targetNow=0, modeNow='';
+                            if (node.metrics['MODE']) modeNow = node.metrics['MODE'].value;
+                            if (modeNow=='AUTO') return;
+                            exports.tstatRequest({ 'tmode':3 }, node._id);
+                          },
+                          condition:''+function(node) { return node.metrics['MODE'].value != 'AUTO'; }
+                        }]
+               },
+      //switch thermostat OFF
+      OFF : { states: [{ label:'Off', action:'', icon:'fa-power-off', css:'background-color:#ff1100;color:#fff',
+                          serverExecute:function(node){
+                            var targetNow=0, modeNow='';
+                            if (node.metrics['MODE']) modeNow = node.metrics['MODE'].value;
+                            if (modeNow=='OFF') return;
+                            exports.tstatRequest({ 'tmode':0 }, node._id);
+                          },
+                          condition:''+function(node) { return node.metrics['MODE'].value == 'OFF'; }
+                        },
+                        { label:'Off', action:'', icon:'fa-power-off',
+                          serverExecute:function(node){
+                            var targetNow=0, modeNow='';
+                            if (node.metrics['MODE']) modeNow = node.metrics['MODE'].value;
+                            if (modeNow=='OFF') return;
+                            exports.tstatRequest({ 'tmode':0 }, node._id);
+                          },
+                          condition:''+function(node) { return node.metrics['MODE'].value != 'OFF'; }
+                        }],
+                breakAfter:true,
+              },
+      //toggle the fan mode
+      FAN : { states: [{ label:'Turn fan ON', action:'', icon:'fa-unlock-alt', //css:'background-color:#FF9B9B',
+                          serverExecute:function(node){
+                            var fanNow='';
+                            if (node.metrics['FSTATE']) fanNow = node.metrics['FSTATE'].value;
+                            if (fanNow != 'AUTO' && fanNow != 'ON') return;
+                            var thejson = (fanNow == 'AUTO' ? { 'fmode':2 } : { 'fmode':0 }); //toggle between ON and AUTO
+                            exports.tstatRequest(thejson, node._id);
+                          },
+                          condition:''+function(node) { return node.metrics['FSTATE'].value == 'AUTO'; }
+                        },
+                        { label:'Turn fan AUTO', action:'', icon:'fa-lock', css:'background-color:#9BFFBE',
+                          serverExecute:function(node){
+                            var fanNow='';
+                            if (node.metrics['FSTATE']) fanNow = node.metrics['FSTATE'].value;
+                            if (fanNow != 'AUTO' && fanNow != 'ON') return;
+                            var thejson = (fanNow == 'AUTO' ? { 'fmode':2 } : { 'fmode':0 }); //toggle between ON and AUTO
+                            exports.tstatRequest(thejson, node._id);
+                          },
+                          condition:''+function(node) { return node.metrics['FSTATE'].value == 'ON'; }
+                        }],
+             },
+      //toggle HOLD on/off
+      HOLD : { states: [{ label:'HOLD', action:'', icon:'fa-unlock-alt', css:'background-color:#FF9B9B',
+                          serverExecute:function(node){
+                            var holdNow='';
+                            if (node.metrics['HOLD']) holdNow = node.metrics['HOLD'].value;
+                            if (holdNow != 'ON' && holdNow != 'OFF') return;
+                            var thejson = (holdNow == 'OFF' ? { 'hold':1 } : { 'hold':0 });
+                            exports.tstatRequest(thejson, node._id);
+                          },
+                          condition:''+function(node) { return node.metrics['HOLD'].value == 'OFF'; }
+                        },
+                        { label:'HOLD', action:'', icon:'fa-lock', css:'background-color:#9BFFBE',
+                          serverExecute:function(node){
+                            var holdNow='';
+                            if (node.metrics['HOLD']) holdNow = node.metrics['HOLD'].value;
+                            if (holdNow != 'ON' && holdNow != 'OFF') return;
+                            var thejson = (holdNow == 'OFF' ? { 'hold':1 } : { 'hold':0 });
+                            exports.tstatRequest(thejson, node._id);
+                          },
+                          condition:''+function(node) { return node.metrics['HOLD'].value == 'ON'; }
+                        }],
+             },
+    },
+  }
+}
 
 // ******************************************************************************************************************************************
-//                                            HELPER FUNCTIONS
+//                                            GENERAL HELPER FUNCTIONS
 // ******************************************************************************************************************************************
 exports.ONEDAY = 86400000;
 exports.isNumeric =  function(n) {
@@ -293,3 +507,37 @@ exports.timeoutOffset = function(hour, minute, second, millisecond, offset) {
   if (exports.isNumeric(offset)) result += offset;
   return result;
 };
+
+// ******************************************************************************************************************************************
+//                                            RADIO THERMOSTAT SPECIFIC HELPER FUNCTIONS
+// ******************************************************************************************************************************************
+// *** these are implemented for Radio Thermostat CT50
+// ******************************************************************************************************************************************
+//this function sends an HTTP GET request to the thermostat to refresh metrics like current temperature, target temp, mode (heat/cool), hold etc.
+exports.tstatPoll = function(nodeId) {
+  request('http://'+settings.radiothermostat.ip+'/tstat', function (error, response, body) {
+    if (!error && response.statusCode == 200) {
+      var info = JSON.parse(body);
+      var target = info.t_cool || info.t_heat || undefined;
+      var fakeSerialMsg = '['+nodeId+'] '+'F:'+(info.temp*100) + (target ? ' TARGET:'+target : '') + ' HOLD:'+(info.hold==1?'ON':'OFF')+' TSTATE:'+(info.tstate==0?'OFF':(info.tstate==1?'HEATING':'COOLING'))+' FSTATE:'+(info.fstate==0?'AUTO':(info.fstate==1?'ON':'AUTOCIRC'))+' MODE:'+(info.tmode==3?'AUTO':(info.tmode==2?'COOL':(info.tmode==1?'HEAT':'OFF')));
+      processSerialData(fakeSerialMsg);
+      io.sockets.emit('LOG', fakeSerialMsg);
+    }
+    else io.sockets.emit('LOG', 'THERMOSTAT STATUS GET FAIL:' + error);
+  });
+}
+
+//this function sends an HTTP POST request to the thermostat (usually to change temperature/mode etc).
+exports.tstatRequest = function(thejson, nodeId) {
+  //console.log('tstatRequest:' + JSON.stringify(thejson));
+  request.post({ url:'http://'+settings.radiothermostat.ip+'/tstat', json: thejson},
+                function(error,response,body){
+                  //console.log('BODY: ' + JSON.stringify(body));
+                  if (error) console.log('ERROR in tstatRequest(): ' + JSON.stringify(thejson) + ' nodeId:' + nodeId + ' - ' + error);
+                  else exports.tstatPoll(nodeId); //now ask for a refresh of status from thermostat (HTTP GET)
+                }
+  );
+}
+// ******************************************************************************************************************************************
+//                                            END RADIO THERMOSTAT SPECIFIC HELPER FUNCTIONS
+// ******************************************************************************************************************************************

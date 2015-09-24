@@ -48,17 +48,19 @@
 -->
 <html lang="en">
 <head>
-  <title>Moteino Gateway</title>
+  <title>Moteino Gateway Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" href="images/favicon.ico" type="image/x-icon">
   <script src="https://cdn.socket.io/socket.io-1.2.1.js"></script>
-  <link rel="stylesheet" href="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css" />
+  <link type="text/css" rel="stylesheet" href="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css" />
+  <link type="text/css" rel="stylesheet" href="css/jqm-font-awesome-usvg-upng.min.css" />
   <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
   <script src="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
   <script language="javascript" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.min.js"></script>
   <script language="javascript" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.time.min.js"></script>
   <script language="javascript" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.selection.min.js"></script>
-  <script language="javascript" type="text/javascript" src="graphHelper.js"></script>
+  <script language="javascript" type="text/javascript" src="js/graphHelper.js"></script>
+  <script language="javascript" type="text/javascript" src="js/dateFormat.js"></script> <!-- for demo see http://jsfiddle.net/phZr7/1/ -->
 
   <style type="text/css">
   .ui-content { padding-top:0; }
@@ -138,11 +140,11 @@
   <div data-role="page" id="homepage">
     <div data-role="header">
       <a href="http://lowpowerlab.com/gateway" target="new" data-role="none"><img src="images/logo.png" alt="LowPowerLab" title="LowPowerLab.com" style="float:left;display:inline;max-width:30px;padding:4px"/></a>
-      <h1>Moteino Gateway</h1>
+      <h1>Moteino Gateway Dashboard</h1>
       <div class="ui-btn-right" data-role="controlgroup" data-type="horizontal" data-mini="true">
-        <a id="btnHiddenNodesToggle" href="#" data-role="button" data-icon="eye" data-iconpos="notext">Show hidden</a>
-        <a id="btnSearch" href="#" data-role="button" data-icon="search" data-iconpos="notext">Search</a>
-        <a href="#logpage" data-role="button" data-icon="bars" data-iconpos="notext">Log</a>
+        <a id="btnHiddenNodesToggle" href="#" data-role="button" data-icon="eye" data-iconpos="notext" title="Show hidden nodes">Show hidden</a>
+        <a id="btnSearch" href="#" data-role="button" data-icon="search" data-iconpos="notext" title="search nodes">Search</a>
+        <a href="#logpage" data-role="button" data-icon="fa-terminal" data-iconpos="notext" title="terminal/log">Log</a>
       </div>
     </div>
 
@@ -178,7 +180,8 @@
       <a id="node_update" href="#homepage" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-home ui-btn-icon-left ui-mini ui-btn-notext">Home</a>
       
       <div class="ui-btn-right" data-role="controlgroup" data-type="horizontal">
-        <a href="#deleteNode" class="ui-btn ui-btn-inline ui-corner-all ui-icon-delete ui-btn-icon-left ui-mini" data-transition="fade">Delete</a>
+        <a id="btnHideNodeToggle" href="#" data-role="button" data-icon="eye" data-iconpos="notext" title="Show/Hide on dashboard">Hide on dashboard</a>
+        <a href="#deleteNode" data-role="button" data-icon="delete" data-iconpos="notext" data-transition="fade" title="Delete this node">Delete</a>
       </div>
     </div>
     <div data-role="main" class="ui-content">
@@ -189,23 +192,11 @@
         <input type="text" name="nodeLabel" id="nodeLabel" placeholder="node label..." />
         <label for="nodeDescr" class="labelbold">Description:</label>
         <input type="text" name="nodeDescr" id="nodeDescr" placeholder="description/location..." />
-        <label for="nodeHidden" class="labelbold">Visibility:</label>
-        <select name="nodeHidden" id="nodeHidden" data-role="slider" data-mini="true">
-          <option value="0">visible</option>
-          <option value="1">hidden</option>
-        </select> 
       </div>
       <ul id="metricList" data-role="listview" data-inset="true" data-theme="a" data-dividertheme="b"></ul>
       
       <div class="center-wrapper">
-        <div id="nodeControls" class="center-div">
-        <!--
-        <div id="nodeControls" data-role="controlgroup" data-type="horizontal">
-          <a href="#" data-role="button" data-icon="search">X</a>
-          <a href="#" data-role="button" data-icon="bars">Y</a>
-          <a href="#" data-role="button" data-icon="search">Z</a>
-          -->
-        </div>
+        <div id="nodeControls" class="center-div"></div>
       </div>
 
       <ul id="eventList" data-role="listview" data-inset="true" data-theme="a" data-dividertheme="b"></ul>
@@ -213,15 +204,13 @@
       <div class="center-wrapper" style="margin-top:10px">
         <div id="nodeEvents" class="center-div">
           <div id="nodeControls" data-role="controlgroup" data-type="horizontal">
-            <a id="addNodeEvent" href="#addEvent" data-role="button" data-icon="plus" style="background-color:#9BFFBE">Event</a>
+            <a id="addNodeEvent" href="#addEvent" data-role="button" data-icon="plus" style="background-color:#9BFFBE" title="Add new event">Event</a>
           </div>
         </div>
       </div>
 
       <span class="nodeDetailLabel">Node ID:</span><span class="nodeID">x</span><br/>
-      <!--<span class="nodeDetailLabel">Updated:</span><span class="nodeUpdated">x</span><br/>-->
-      <!--<div class="nodeBattWrap"><span class="nodeDetailLabel">Battery:</span><span class="nodeBatt">x</span></div>-->
-      <span class="nodeDetailLabel">RSSI:</span><span class="nodeRSSI">x</span><br/>
+      <span id="rssiinfo"><span class="nodeDetailLabel">RSSI:</span><span class="nodeRSSI">x</span></span><br/>
     </div>
   </div>
 
@@ -244,7 +233,9 @@
       <h3><span id="metricDetailTitle">Metric details</span> <span class="metricUpdated">x</span></h3>
       <a id="metric_return" href="#" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-back ui-btn-icon-left ui-mini" data-rel="back">Node</a>
       <div class="ui-btn-right" data-role="controlgroup" data-type="horizontal">
-        <a href="#deleteMetric" class="ui-btn ui-btn-inline ui-corner-all ui-icon-delete ui-btn-icon-left ui-mini" data-transition="fade">Delete</a>
+        <a id="btnPinMetric" href="#" data-role="button" data-icon="fa-map-marker" data-iconpos="notext" title="Show on dashboard">Pin</a>
+        <a id="btnGraphMetric" href="#" data-role="button" data-icon="fa-bar-chart" data-iconpos="notext" title="Data log this metric">Graph</a>
+        <a href="#deleteMetric" data-role="button" data-icon="delete" data-iconpos="notext" data-transition="fade" title="Delete this metric">Delete</a>
       </div>
     </div>
     <div data-role="main" class="ui-content">
@@ -253,33 +244,19 @@
         <input type="text" name="metricLabel" id="metricLabel" placeholder="metric label..." />
         <label for="metricValue" class="labelbold">Value:</label>
         <input type="text" name="metricValue" id="metricValue" placeholder="value" readonly />
-        <label for="metricPinned" class="labelbold">Pinned:</label>
-        <select name="metricPinned" id="metricPinned" data-role="slider" data-mini="true">
-          <option value="0">off</option>
-          <option value="1">pinned</option>
-        </select>
-        <img id="metricPinIcon" class="icon" src="images/pin.png" style="display:none" />
-      </div>
-      <div id="metricGraphedWrapper" class="ui-field-contain">
-        <label for="metricGraphed" class="labelbold">Graph:</label>
-        <select name="metricGraphed" id="metricGraphed" data-role="slider" data-mini="true">
-          <option value="0">no</option>
-          <option value="1">yes</option>
-        </select>
-        <img id="metricGraphedIcon" class="icon" src="images/graph.png" style="display:none" />
       </div>
       <div id="metricGraphWrapper" style="width:100%; height:280px;">
         <div id="metricGraph"></div>
         <div id="graphControls" data-role="controlgroup" data-type="horizontal" style="text-align:center;margin:auto">
-          <!--<a class="graphControl" href="#" data-role="button" hours="720" data-icon="calendar" data-theme="b">M</a>-->
-          <a class="graphControl" href="#" data-role="button" hours="168" data-icon="calendar" data-theme="b">W</a>
-          <a class="graphControl" href="#" data-role="button" hours="24" data-icon="calendar" data-theme="b">D</a>
-          <a class="graphControl" href="#" data-role="button" hours="1" data-icon="calendar" data-theme="b">H</a>
-          <a id="graphZoomIn" href="#" data-role="button" data-icon="plus" data-iconpos="notext" data-theme="b">ZoomIn</a>
-          <a id="graphZoomOut" href="#" data-role="button" data-icon="minus" data-iconpos="notext" data-theme="b">ZoomOut</a>
-          <a id="graphPanLeft" href="#" data-role="button" data-icon="arrow-l" data-iconpos="notext" data-theme="b">Left</a>
-          <a id="graphPanRight" href="#" data-role="button" data-icon="arrow-r" data-iconpos="notext" data-theme="b">Right</a>
-          <a id="graphReset" href="#" data-role="button" data-icon="refresh" data-iconpos="notext" data-theme="b">Reset</a>
+          <a class="graphControl" href="#" data-role="button" hours="720" data-icon="calendar" data-theme="b" title="last month">M</a>
+          <a class="graphControl" href="#" data-role="button" hours="168" data-icon="calendar" data-theme="b" title="last week">W</a>
+          <a class="graphControl" href="#" data-role="button" hours="24" data-icon="calendar" data-theme="b" title="last day">D</a>
+          <a class="graphControl" href="#" data-role="button" hours="1" data-icon="calendar" data-theme="b" title="last hour">H</a>
+          <a id="graphZoomIn" href="#" data-role="button" data-icon="plus" data-iconpos="notext" data-theme="b" title="zoom in">ZoomIn</a>
+          <a id="graphZoomOut" href="#" data-role="button" data-icon="minus" data-iconpos="notext" data-theme="b" title="zoom out">ZoomOut</a>
+          <a id="graphPanLeft" href="#" data-role="button" data-icon="arrow-l" data-iconpos="notext" data-theme="b" title="scroll left">Left</a>
+          <a id="graphPanRight" href="#" data-role="button" data-icon="arrow-r" data-iconpos="notext" data-theme="b" title="scroll right">Right</a>
+          <!--<a id="graphReset" href="#" data-role="button" data-icon="refresh" data-iconpos="notext" data-theme="b" title="reset graph">Reset</a>-->
         </div>
       </div>
       <div class="center-wrapper">
@@ -307,20 +284,26 @@
 
   <div data-role="page" id="deleteMetric" data-dialog="true">
     <div data-role="main" class="ui-content">
-      <h3>Are you sure you want to remove this metric?</h3>
-      <span>Further data from metric will make it appear again.</span><br />      
-      <a id="deleteMetric_yes" href="#nodedetails" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-check ui-btn-icon-left ui-mini" data-rel="nodedetails" style="background: red; color: white;">Delete</a>
-      <a href="#" class="ui-btn ui-btn-inline ui-shadow ui-corner-all ui-mini ui-icon-back ui-btn-icon-left" data-rel="back">Cancel</a>
+      <div class="center-wrapper" style="padding:20px">
+        <h3>Are you sure you want to remove this metric?</h3>
+      </div>
+      <div class="center-wrapper" style="padding:10px">
+        <span><strong>NOTE:</strong> Stored metric data will be kept (if any).<br/>Further data from this node-metric will make it appear again.</span>
+      </div>
+      <div class="center-wrapper" style="padding:20px">
+        <a id="deleteMetric_yes" href="#nodedetails" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-check ui-btn-icon-left ui-mini" data-rel="nodedetails" style="background: red; color: white;">Delete</a>
+        <a href="#" class="ui-btn ui-btn-inline ui-shadow ui-corner-all ui-mini ui-icon-back ui-btn-icon-left" data-rel="back">Cancel</a>
+      </div>
     </div>
   </div>
 
   <div data-role="page" id="logpage">
     <div data-role="header">
       <a href="#homepage" class="ui-btn ui-corner-all ui-shadow ui-icon-home ui-btn-icon-left">Home</a>
-      <h1>Raw data log</h1>
+      <h1>Terminal</h1>
       <div class="ui-btn-right" data-role="controlgroup" data-type="horizontal" data-mini="true">
-        <a id="btnRawToggle" href="#" data-role="button" data-icon="arrow-u" data-iconpos="notext">Raw send</a>
-        <a id="clearbtn" href="#" data-role="button" data-icon="delete" data-iconpos="notext">Clear</a>
+        <a id="btnRawToggle" href="#" data-role="button" data-icon="arrow-u" data-iconpos="notext" title="Send raw data to gateway Moteino">Raw send</a>
+        <a id="clearbtn" href="#" data-role="button" data-icon="fa-remove" data-iconpos="notext" title="clear console/log textbox">Clear</a>
       </div>
     </div>
 
@@ -430,42 +413,49 @@
       new Audio(soundFile).play();
     });
     
-    // //copies properties of newPropertiesObj into originalObj and returns the result as new object; existing properties are overwritten
-    // function copyProperties(originalObj, newPropertiesObj)
-    // {
-      // var result = $.extend(true, {}, originalObj);
-      // for (var prop in newPropertiesObj) {
-        // if (newPropertiesObj.hasOwnProperty(prop)) {
-          // result[prop] = newPropertiesObj[prop];
-        // }
-      // }
-      // return result;
-    // }
-    
     graphData=[];
     metricGraphWrapper = $('#metricGraphWrapper');
     metricGraph = $('#metricGraph');
     var plot;
-
     var graphOptions;
-
-    $("#metricdetails").on("pagebeforeshow",function(event){
-      $('#metricPinned').slider('refresh');
-      $('#metricGraphed').slider('refresh');
-    });
+    var graphFrozen;
 
     function renderPlot() {
       metricGraphWrapper.show();
       $("div[ui-role='loadinggraph']").hide();
       metricGraph.width(metricGraphWrapper.width()).height(metricGraphWrapper.height() - $('#graphControls').height()); //this assumes the 'pageshow' page event already happened, otherwise will fail to set the width correctly and should be moved in that event
-      plot = $.plot(metricGraph, [graphData], graphOptions);
-
+      plot = $.plot(metricGraph, [{label:graphOptions.legendLbl, data:graphData}], graphOptions);
+      
       //graph value tooltips
       metricGraph.bind("plothover", function (event, pos, item) {
         if (item) {
-          var val = item.datapoint[1].toFixed(2);
+          var date = new Date(item.datapoint[0]);
+          
+          for (var mkey in metricsDef)
+          {
+            if (metricsDef[mkey].name == graphOptions.metricName)
+            {
+              //The displayed value of a metric on the graph can get it's value from the following places, from lowest to highest priority:
+              // - actual raw value stored in the log
+              // - metricDef.logValue
+              // - metricDef.value
+              // - metricDef.valOverride
+              // - metricDef.value='' and metricDef.logValue='' are special - they capture the first regex match group of the raw metric (or whole match if no groups specified with regex capturing parentheses)
+              // - a specific metricDef.logValue that matches the value in the log takes priority over anything else
+              if (metricsDef[mkey].value === '' || metricsDef[mkey].logValue === '' || metricsDef[mkey].logValue === item.datapoint[1])
+              {
+                item.unit = metricsDef[mkey].unit || item.unit;
+                item.graphValPrefix = metricsDef[mkey].graphValPrefix != undefined ? metricsDef[mkey].graphValPrefix : item.graphValPrefix;
+                item.graphValSuffix = metricsDef[mkey].graphValSuffix != undefined ? metricsDef[mkey].graphValSuffix : item.graphValSuffix;
+                item.valOverride = metricsDef[mkey].valOverride || (metricsDef[mkey].value === '' ? item.datapoint[1] : metricsDef[mkey].value) || (metricsDef[mkey].logValue === '' ? item.datapoint[1] : metricsDef[mkey].logValue) || item.valOverride;
+                if (metricsDef[mkey].logValue === item.datapoint[1]) break;
+              }
+            }
+          }
+
+          var val = date.format("mmm-d, ") + '<b>' + date.format('h:MM')+'</b>'+date.format('tt')+'<br/><b>' + (item.graphValPrefix||'') + (item.valOverride || item.datapoint[1]/*.toFixed(2)*/) + '</b>' + (item.unit || '') + (item.graphValSuffix||'');
           $("#tooltip").html(val)
-            .css({top: item.pageY-25, left: item.pageX+5})
+            .css({top: item.pageY-40, left: item.pageX+7})
             .fadeIn(200);
         } else
           $("#tooltip").hide();
@@ -474,11 +464,13 @@
       $(document).off("pageshow", "#metricdetails", renderPlot);
     }
 
-    function refreshGraph() {
+    function refreshGraph(freezeGraph) {
       graphData = [];
+      graphFrozen = freezeGraph || false;
       graphOptions = {
         lines: {show: true, steps: true, fill:true },
         xaxis: { mode: "time", timezone: "browser", min:graphView.start, max:graphView.end},
+        yaxis: { min:null, max:null, autoscaleMargin:0.05},
         grid: {hoverable: true, clickable: true, backgroundColor: {colors:['#000', '#666']}},
         selection: { mode: "x" },
         //series: { colors: [{ opacity: 0.8 }, { brightness: 0.6, opacity: 0.8 } ]},
@@ -493,13 +485,29 @@
     
     socket.on('GRAPHDATAREADY', function(rawData){
       graphData = [];
-      LOG('Got ' + rawData.graphData.data.length + ' graph data points...');
-      for(var key in rawData.graphData.data)
-        graphData.push([rawData.graphData.data[key].t, rawData.graphData.data[key].v]);
+      var max = Number.NEGATIVE_INFINITY;
+      var min = Number.POSITIVE_INFINITY;
+      var minmax = 0;
+
+      for(var key in rawData.graphData.data) {
+        graphData.push([rawData.graphData.data[key].t, rawData.graphData.data[key].v]); //build flot series from raw data
+        max = Math.max(max, rawData.graphData.data[key].v);
+        min = Math.min(min, rawData.graphData.data[key].v);
+      }
+
+      //defining the upper and lower margin
+      minmax=(max-min) * graphOptions.yaxis.autoscaleMargin;
+      if (min==max)  // in case of only one value in the dataset (motion detection)
+        minmax=graphOptions.yaxis.autoscaleMargin * min;
+      min -= minmax;
+      max += minmax;
       graphOptions.xaxis.min = graphView.start;
       graphOptions.xaxis.max = graphView.end;
+      graphOptions.yaxis.min = min;
+      graphOptions.yaxis.max = max;
+    
       graphOptions = $.extend(true, graphOptions, rawData.options); //http://stackoverflow.com/questions/171251/how-can-i-merge-properties-of-two-javascript-objects-dynamically
-      
+      $('#graphStat').html(rawData.graphData.data.length + 'pts, ' + rawData.graphData.queryTime + 'ms');
       //need to defer plotting until after pageshow is finished rendering, otherwise the wrapper will return an incorrect width of "100"
       if (metricGraphWrapper.width()==100)
         $(document).on("pageshow", "#metricdetails", renderPlot);
@@ -512,32 +520,34 @@
         metricGraph.width(metricGraphWrapper.width());
         graphOptions.xaxis.min = graphView.start;
         graphOptions.xaxis.max = graphView.end;
-        plot = $.plot(metricGraph, [graphData], graphOptions);
+        $.plot(metricGraph, [{label:graphOptions.legendLbl, data:graphData}], graphOptions);
       }
     });
     
     $(window).on("navigate", function(event, data) { $("#tooltip").hide(); }); //hide graph tooltip on any navigation
     
-    $("#graphZoomIn").click(function () {graphView.zoomin(); refreshGraph();});
-    $("#graphZoomOut").click(function () {graphView.zoomout(); refreshGraph();});
-    $('#graphPanRight').click(function () {graphView.panright(); refreshGraph();});
-    $('#graphPanLeft').click(function () {graphView.panleft(); refreshGraph();});
-    $('#graphReset').click(function () {graphView.resetDomain(); refreshGraph();});
+    $("#graphZoomIn").click(function () {graphView.zoomin(); refreshGraph(true);});
+    $("#graphZoomOut").click(function () {graphView.zoomout(); refreshGraph(true);});
+    $('#graphPanRight').click(function () {graphView.panright(); refreshGraph(true);});
+    $('#graphPanLeft').click(function () {graphView.panleft(); refreshGraph(true);});
+    //$('#graphReset').click(function () {graphView.resetDomain(); refreshGraph();});
     $('.graphControl').click(function () {graphView.setDomain($(this).attr("hours")); refreshGraph();});
     metricGraph.bind("plotselected", function (event, ranges)
     {
         graphView.start = ranges.xaxis.from;
         graphView.end = ranges.xaxis.to;
-        refreshGraph();
+        refreshGraph(true);
     });
     
     function addGraphDataPoint(point) {
+      if (graphFrozen) return;
       graphData.push(point);
       if (graphData.length > 10)
-        graphData.shift();
+        graphData.shift(); //remove first point in graph
       graphOptions.xaxis.min = graphView.start = graphData[0][0];
       graphOptions.xaxis.max = graphView.end = graphData[graphData.length-1][0];
-      plot = $.plot(metricGraph, [graphData], graphOptions);
+      //plot = $.plot(metricGraph, [graphData], graphOptions);
+      $.plot(metricGraph, [{label:graphOptions.legendLbl, data:graphData}], graphOptions);
       //redraw alternative:
       //plot.setData([graphData]);
       //plot.setupGrid(); //only necessary if your new data will change the axes or grid
@@ -579,7 +589,7 @@
       else if (Math.abs(rssi) > 75) img = 'icon_rssi_3.png';
       else if (Math.abs(rssi) > 70) img = 'icon_rssi_2.png';
       else img = 'icon_rssi_1.png';
-      return '<img class="listIcon20px" src="images/'+img+'" title="RSSI:-'+Math.abs(rssi)+'" />';
+      return '<img class="listIcon20px" src="images/'+img+'" title="RSSI:-'+Math.abs(rssi)+'" /> ';
     }
 
     function updateNode(node) {
@@ -612,7 +622,7 @@
       else
       {
         showHiddenNodes = false;
-        $('#btnHiddenNodesToggle').removeClass('ui-btn-b').hide();
+        $('#btnHiddenNodesToggle').css('background-color', '').hide();
       }
       $('#nodeList').listview('refresh'); //re-render the listview
     }
@@ -679,15 +689,21 @@
       if (showHiddenNodes)
       {
         $(".hiddenNodeShow").removeClass('hiddenNodeShow').addClass('hiddenNode');
-        $("#btnHiddenNodesToggle").removeClass('ui-btn-b');
+        $('#btnHiddenNodesToggle').css('background-color', '');
         showHiddenNodes = false;
       }
       else
       {
         $(".hiddenNode").removeClass('hiddenNode').addClass('hiddenNodeShow');
-        $("#btnHiddenNodesToggle").addClass('ui-btn-b');
+        $('#btnHiddenNodesToggle').css('background-color', '#D00');
         showHiddenNodes = true;
       }
+    });
+    
+    $("#btnHideNodeToggle").click("tap", function(event) {
+      if ($("#btnHideNodeToggle").hasClass('hidden'))
+        $("#btnHideNodeToggle").removeClass('hidden').css('background-color','');
+      else $("#btnHideNodeToggle").addClass('hidden').css('background-color','#D00');;
     });
     
     $("#btnRawToggle").click("tap", function(event) {
@@ -709,12 +725,13 @@
       $('#nodeMoteType').val(node.type || '');
       $("#nodeMoteType").selectmenu('refresh',true);
       $('#nodeDescr').val(node.descr || '');
-      $('#nodeHidden').val(node.hidden||0);
-      $('#nodeHidden').slider().slider('refresh');
-      //$('#nodeHidden').slider('refresh');
+
+      if (node.hidden) $("#btnHideNodeToggle").addClass('hidden').css('background-color','#D00');
+      else $("#btnHideNodeToggle").removeClass('hidden').css('background-color','');;
       
       $('.nodeID').html(node._id);
-      $('.nodeRSSI').html(node.rssi);
+      if (node.rssi) { $('#rssiinfo').show(); $('.nodeRSSI').html(node.rssi); }
+      else $('#rssiinfo').hide();
       $('.nodeUpdated').html(ago(node.updated, false).tag);
       
       $('#metricList').empty();
@@ -779,14 +796,17 @@
               newBtn.addClass('ui-icon-' + state.icon);
             }
             
-            newBtn.bind('click', {nodeId:node._id, action:state.action}, function(event) {
-             //alert(event.data.action + ' was clicked for node ' + event.data.nodeId);
-             socket.emit("NODEACTION", {nodeId:event.data.nodeId, action:event.data.action});
+            newBtn.bind('click', {nodeId:node._id, action:state.action, nodeType:node.type, cKey:cKey, sKey:sKey}, function(event) {
+              //alert(event.data.action + ' was clicked for node ' + event.data.nodeId);
+              socket.emit("CONTROLCLICK", {nodeId:event.data.nodeId, action:event.data.action, nodeType:event.data.nodeType, controlKey:event.data.cKey, stateKey:event.data.sKey});
             });
             $('#nodeControls').append(newBtn); ////$('#nodeControls').controlgroup("container").append(newBtn);
             showControls = true;
             break;
           }
+          
+          if (control.breakAfter == true)
+            $('#nodeControls').append('<br/>');
         }
         
         if (showControls)
@@ -804,29 +824,26 @@
       $('.metricUpdated').html(ago(metric.updated, 0).tag);
       $('#metricValue').val(metric.value + (metric.unit || ''));
       $('#metricLabel').val(metric.label || '');
+      
       if (metric.pin=='1')
-        $('#metricPinIcon').show();
-      else $('#metricPinIcon').hide();
-      $('#metricPinned').val(metric.pin||0);
-      //$('#metricPinned').slider('refresh');
+        $("#btnPinMetric").addClass('pinned').css('background-color','#38C');
+      else $("#btnPinMetric").removeClass('pinned').css('background-color','');
 
       graphData=[];
       metricGraphWrapper.hide();
-      $('#metricGraphedWrapper').show();
+      $("#btnGraphMetric").show();
       if (metric.graph==1) {
-        $('#metricGraphed').val(metric.graph);
-        $('#metricGraphedIcon').show();
+        $("#btnGraphMetric").addClass('graphed').css('background-color','#38C');
         $("div[ui-role='loadinggraph']").show();
         graphView.resetDomain();
         refreshGraph();
       }
       else if (metric.graph==0) {
-        $('#metricGraphed').val(metric.graph);
-        $('#metricGraphedIcon').hide();
+        $("#btnGraphMetric").removeClass('graphed').css('background-color','');
         $("div[ui-role='loadinggraph']").hide();
       }
       else {
-        $('#metricGraphedWrapper').hide();
+        $("#btnGraphMetric").hide();
         $("div[ui-role='loadinggraph']").hide();
       }
     }
@@ -857,10 +874,22 @@
 
     $('#nodeLabel').keyup(function() {$('#nodeDetailTitle').html($('#nodeLabel').val() || 'no label');});
     $('#metricLabel').keyup(function() {$('#metricDetailTitle').html($('#metricLabel').val() || 'no label');});
-    $('#metricPinned').change(function() { if ($(this).val()=='1') $('#metricPinIcon').show(); else $('#metricPinIcon').hide();});
-    $('#metricGraphed').change(function() {
-      if ($(this).val()=='1') {
-        $('#metricGraphedIcon').show();
+    
+    $("#btnPinMetric").click("tap", function(event) {
+      if ($("#btnPinMetric").hasClass('pinned'))
+        $("#btnPinMetric").removeClass('pinned').css('background-color','');
+      else $("#btnPinMetric").addClass('pinned').css('background-color','#38C');;
+    });
+
+    $("#btnGraphMetric").click("tap", function(event) {
+      if ($("#btnGraphMetric").hasClass('graphed'))
+      {
+        $("#btnGraphMetric").removeClass('graphed').css('background-color','');
+        metricGraphWrapper.hide();
+      }
+      else
+      {
+        $("#btnGraphMetric").addClass('graphed').css('background-color','#38C');;
         if (graphData.length == 0)
         {
           $("div[ui-role='loadinggraph']").show();
@@ -869,10 +898,6 @@
         }
         else metricGraphWrapper.show();
       }
-      else {
-        metricGraphWrapper.hide();
-        $('#metricGraphedIcon').hide();
-      }
     });
     
     $('#nodeMoteType').change(function(){
@@ -880,13 +905,13 @@
       notifyUpdateNode();
       refreshNodeDetails(node);
     });
-    
+
     function notifyUpdateNode() {
       var node = nodes[selectedNodeId];
       node.label = $('#nodeLabel').val();
       node.type = $('#nodeMoteType').val();
       node.descr = $('#nodeDescr').val();
-      node.hidden = $('#nodeHidden').val() == 1 ? 1 : undefined; //only persist when it's hidden
+      node.hidden = $("#btnHideNodeToggle").hasClass('hidden'); //only persist when it's hidden
       if (node.label.trim()=='' || node.label == motesDef[node.type])
         node.label = node.type ? motesDef[node.type].label : node.label;
       socket.emit('UPDATENODESETTINGS', nodes[selectedNodeId]);
@@ -922,8 +947,8 @@
       if (metric != undefined)
       {
         metric.label = $('#metricLabel').val();
-        metric.pin = $('#metricPinned').val();
-        if (metric.graph!=undefined) metric.graph = $('#metricGraphed').val();
+        metric.pin = $('#btnPinMetric').hasClass('pinned') ? 1 : 0;
+        if (metric.graph!=undefined) metric.graph = $('#btnGraphMetric').hasClass('graphed') ? 1 : 0;
         socket.emit('UPDATEMETRICSETTINGS', selectedNodeId, selectedMetricKey, metric);
         //$('#nodeList').listview('refresh');
       }
@@ -955,7 +980,12 @@
     
     $("#rawActionSend").click("tap", function(event) {
       //LOG(JSON.stringify({nodeId:$("#rawActionID").val(), action:$("#rawActionText").val()}));
-      socket.emit("NODEACTION", {nodeId:$("#rawActionID").val(), action:$("#rawActionText").val()});
+      var id = $("#rawActionID").val();
+      var value = $("#rawActionText").val();
+      if (value.toLowerCase() == 'new')
+        socket.emit("INJECTNODE", {nodeId:id, label:value});
+      else
+        socket.emit("NODEMESSAGE", {nodeId:id, action:value});
     });
     
     //enforce positive numeric input
@@ -974,10 +1004,22 @@
 			display: "none",
       fontSize: "11px",
 			border: "1px solid #fdd",
+      'border-radius':'3px',
 			padding: "2px",
 			"background-color": "#fee",
 			opacity: 0.80
 		}).appendTo("body");
+    
+    //graph query statistics
+    $("<span id='graphStat'></span>").css({
+			position: "relative",
+      bottom:"85px",
+      right:"-35px",
+      fontSize: "10px",
+      color:'#00ff11',
+      'font-weight':'bold',
+      'text-shadow':'0 1px 0 black',
+		}).appendTo("#metricGraphWrapper");
   });
   }
   </script>

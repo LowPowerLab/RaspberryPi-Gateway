@@ -8,6 +8,7 @@ exports.credentials = {
 
 exports.serial = {
   port : '/dev/ttyAMA0', //replace this with whatever serial port you have on your Pi/gateway (ttyAMA0 is the default GPIO serial port)
+                         //if you use a MoteinoUSB then your Pi will emulate a serial port like /dev/ttyUSB0
   baud : 115200,
 };
 
@@ -19,4 +20,8 @@ exports.database = {
 exports.general = {
   consoleLogDateFormat : 'mm-dd-yy_HH:MM:ss.l',
   socketPort : 8080,
+};
+
+exports.radiothermostat = {
+  ip : '192.168.0.100',
 };

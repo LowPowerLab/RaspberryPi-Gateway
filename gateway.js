@@ -69,6 +69,7 @@ var serialport = require("serialport"); //https://github.com/voodootikigod/node-
 var Datastore = require('nedb'); //https://github.com/louischatriot/nedb
 var nodemailer = require('nodemailer'); //https://github.com/andris9/Nodemailer
 var path = require('path');
+var request = require('request');
 var db = new Datastore({ filename: path.join(__dirname, 'db', settings.database.name), autoload: true });       //used to keep all node/metric data
 //var dbLog = new Datastore({ filename: path.join(__dirname, 'db', settings.database.logName), autoload: true }); //used to keep all logging/graph data
 var dbunmatched = new Datastore({ filename: path.join(__dirname, 'db', settings.database.nonMatchesName), autoload: true });
@@ -118,7 +119,7 @@ global.sendSMS = function(SUBJECT, BODY) {
 }
 
 global.sendMessageToNode = function(node) {
-  if (node.nodeId && node.action)
+  if (metricsDef.isNumeric(node.nodeId) && node.action)
   {
     serial.write(node.nodeId + ':' + node.action + '\n', function () { serial.drain(); });
     console.log('NODEACTION: ' + JSON.stringify(node));    
@@ -268,8 +269,45 @@ io.sockets.on('connection', function (socket) {
     });
   });
 
-  socket.on('NODEACTION', function (data) {
-    sendMessageToNode(data);
+  socket.on('CONTROLCLICK', function (control) {
+    if (control.action) sendMessageToNode({nodeId:control.nodeId, action:control.action});
+    //console.log('CONTROLCLICK:' + JSON.stringify(control));
+    if (control.nodeType && control.controlKey && control.stateKey)
+      if (metricsDef.motes[control.nodeType].controls[control.controlKey].states[control.stateKey].serverExecute != null)
+      {
+        db.findOne({ _id : control.nodeId }, function (err, node) {
+          if (node)
+          {
+            //console.log('CONTROLCLICK running node:' + JSON.stringify(node));
+            metricsDef.motes[control.nodeType].controls[control.controlKey].states[control.stateKey].serverExecute(node);
+          }
+        });
+      }
+  });
+  
+  socket.on('NODEMESSAGE', function (msg) {
+    sendMessageToNode(msg);
+  });
+  
+  socket.on('INJECTNODE', function(node) {
+    if (metricsDef.isNumeric(node.nodeId))
+    {
+      node.nodeId = parseInt(node.nodeId);
+      //only add node if given ID does not already exist in the DB
+      db.findOne({_id:node.nodeId}, function (err, doc) {
+        if (doc == null)
+        {
+          var entry = { _id:node.nodeId, updated:(new Date).getTime(), label:node.label || 'NEW NODE', metrics:{} };
+          db.insert(entry);
+          console.log('   ['+node.nodeId+'] DB-Insert new _id:' + node.nodeId);
+          socket.emit('LOG', 'NODE INJECTED, ID: ' + node.nodeId);
+          io.sockets.emit('UPDATENODE', entry);
+        }
+        else
+          socket.emit('LOG', 'CANNOT INJECT NODE, ID ALREADY EXISTS: ' + node.nodeId);
+      });
+    }
+    else socket.emit('LOG', 'CANNOT INJECT NODE, INVALID NEW ID: ' + node.nodeId);
   });
 
   socket.on('GETGRAPHDATA', function (nodeId, metricKey, start, end) {
@@ -293,16 +331,16 @@ io.sockets.on('connection', function (socket) {
 });
 
 global.msgHistory = new Array();
-serial.on("data", function (data) {
-  var regexMaster = /\[(\d+)\](.+)\[(?:RSSI|SS)\:-?(\d+)\].*/gi; //modifiers: g:global i:caseinsensitive
+global.processSerialData = function (data) {
+  var regexMaster = /\[(\d+)\]([^\[\]\n]+)(?:\[(?:RSSI|SS)\:-?(\d+)\])?.*/gi; //modifiers: g:global i:caseinsensitive
   var match = regexMaster.exec(data);
   console.log('>: ' + data)
-  
+
   if (match != null)
   {
     var msgTokens = match[2];
     var id = parseInt(match[1]); //get ID of node
-    var rssi = parseInt(match[3]); //get rssi (signal strength)
+    var rssi = match[3] != undefined ? parseInt(match[3]) : undefined; //get rssi (signal strength)
 
     db.find({ _id : id }, function (err, entries) {
       var existingNode = new Object();
@@ -404,7 +442,9 @@ serial.on("data", function (data) {
     //console.log('no match: ' + data);
     dbunmatched.insert({_id:(new Date().getTime()), data:data});
   }
-});
+}
+
+serial.on("data", function(data) { processSerialData(data) });
 
 //keep track of scheduler based events - these need to be kept in sych with the UI - if UI removes an event, it needs to be cancelled from here as well; if UI adds a scheduled event it needs to be scheduled and added here also
 scheduledEvents = []; //each entry should be defined like this: {nodeId, eventKey, timer}
