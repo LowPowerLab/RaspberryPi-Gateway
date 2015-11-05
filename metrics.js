@@ -2,7 +2,7 @@
 // Websocket backend for the Moteino IoT Framework
 // http://lowpowerlab.com/gateway
 // **********************************************************************************
-// This is the metrics definitions file containing the definitions of token matches 
+// This is the metrics definitions file containing the definitions of token matches
 // for each possible metric coming from any remote Moteino.
 // It also contains the specific node definitions that describe behavior of individual motes.
 // Examples are given for such motes like the Mailbox Notifier, WeatherMote, MotionMote,
@@ -33,14 +33,14 @@
 //   that is more appropriate at any time without any prior consent.
 // Otherwise all other non-conflicting and overlapping terms of the GPL terms below will apply.
 // ********************************************************************************************
-// This program is free software; you can redistribute it and/or modify it under the terms 
+// This program is free software; you can redistribute it and/or modify it under the terms
 // of the GNU General Public License as published by the Free Software Foundation;
-// either version 3 of the License, or (at your option) any later version.                    
-//                                                        
+// either version 3 of the License, or (at your option) any later version.
+//
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 // without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 // See the GNU General Public License for more details.
-//                                                        
+//
 // You should have received a copy of the GNU General Public License along with this program.
 // If not license can be viewed at: http://www.gnu.org/licenses/gpl-3.0.txt
 //
@@ -67,7 +67,7 @@
 //     - logValue - you can specify a hardcoded value that should be logged instead of the captured metric (has to always be numeric!)
 //     - graphOptions - this is a javascript object that when presend is injected directly into the FLOT graph for the metric - you can use this to highly customize the appearance of any metric graph
 //                    - it should only be specified one per each metric - the first one (ie one for each set of metrics that have multiple entries with same 'name') - ex: GarageMote 'Status' metric
-//                    - this object is overlapped over the default 'graphOptions' defined in index.php
+//                    - this object is overlapped over the default 'graphOptions' defined in index.html
 //                    - for more details how to customize FLOT graphs see this: http://www.jqueryflottutorial.com/jquery-flot-customizing-data-series-format.html
 // Important Notes:
 //     - the same node can have any number of metrics
@@ -128,14 +128,14 @@ exports.metrics = {
   GPM : { name:'GPM', regexp:/GPM\:([\d\.]+)/i, value:'', unit:'gpm', graph:1,  graphOptions : { legendLbl:'Gallons/min', lines: { lineWidth:1 }, colors:['#09c'],  /*yaxis: { ticks: [1,5,20], transform:  function(v) {return v==0?v:Math.log(v); //log scale },*/ tickDecimals: 2} },
   GLM : { name:'GLM', regexp:/GLM\:([\d\.]+)/i, value:'', unit:'glm', },
   GAL : { name:'GAL', regexp:/GAL\:([\d\.]+)/i, value:'', unit:'gal', pin:1, },
-  
+
   //Thermostat specific
   HOLD : { name:'HOLD', regexp:/HOLD\:(ON|OFF)/i, value:''},
   MODE : { name:'MODE', regexp:/MODE\:(COOL|HEAT|AUTO|OFF)/i, value:''},
   TARGET : { name:'TARGET', regexp:/TARGET\:([-\d\.]+)/i, value:'', unit:'°'},
   TSTATE : { name:'TSTATE', regexp:/TSTATE\:(COOLING|HEATING|OFF)/i, value:''},
   FSTATE : { name:'FSTATE', regexp:/FSTATE\:(AUTO|AUTOCIRC|ON)/i, value:''},
-  
+
   //special metrics
   V : { name:'V', regexp:/(?:V?BAT|VOLTS|V)\:(\d\.\d+)v?/i, value:'', unit:'v'},
   //catchAll : { name:'CatchAll', regexp:/(\w+)\:(\w+)/i, value:''},
@@ -163,7 +163,7 @@ exports.events = {
   switchMoteOFF_AM : { label:'SwitchMote OFF at 7:00AM!', icon:'clock', descr:'Turn this switch OFF at 7AM every day', nextSchedule:function(node) { return exports.timeoutOffset(7,00); /*run at 6:30AM */ }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:0'}); } },
   //for the sprinkler events, rather than scheduling with offsets, its much easir we run them every day, and check the odd/even/weekend condition in the event itself
   sprinklersOddDays : { label:'Odd days @ 6:30AM', icon:'clock', descr:'Run this sprinkler program on odd days at 6:30AM', nextSchedule:function(node) { return exports.timeoutOffset(6,30); }, scheduledExecute:function(node) { if ((new Date().getDate()%2)==1) sendMessageToNode({nodeId:node._id, action:'PRG 2:300 3:300 1:300 4:300 5:300' /*runs stations 1-5 (300sec each))*/}); } },
-  sprinklersEvenDays : { label:'Even days @ 6:30AM', icon:'clock', descr:'Run this sprinkler program on even days at 6:30AM', nextSchedule:function(node) { return exports.timeoutOffset(6,30); }, scheduledExecute:function(node) { if ((new Date().getDate()%2)==0) sendMessageToNode({nodeId:node._id, action:'PRG 2:300 3:300 1:300 4:300 5:300' /*runs stations 1-5 (300sec each)*/}); } },  
+  sprinklersEvenDays : { label:'Even days @ 6:30AM', icon:'clock', descr:'Run this sprinkler program on even days at 6:30AM', nextSchedule:function(node) { return exports.timeoutOffset(6,30); }, scheduledExecute:function(node) { if ((new Date().getDate()%2)==0) sendMessageToNode({nodeId:node._id, action:'PRG 2:300 3:300 1:300 4:300 5:300' /*runs stations 1-5 (300sec each)*/}); } },
   sprinklersWeekends : { label:'Weekends @ 6:30AM)', icon:'clock', descr:'Run this sprinkler program on weekend days at 6:30AM', nextSchedule:function(node) { return exports.timeoutOffset(6,30); }, scheduledExecute:function(node) { if ([0,6].indexOf(new Date().getDay())>-1 /*Saturday=6,Sunday=0,*/) sendMessageToNode({nodeId:node._id, action:'PRG 2:180 3:180 1:180 4:180 5:180' /*runs stations 1-5 (180sec each)*/}); } },
 
   //thermostat poll event
@@ -240,7 +240,7 @@ exports.motes = {
   SprinklerMote: {
     label  : 'Sprinkler Controller',
     icon   : 'icon_sprinklers.png',
-    controls : { 
+    controls : {
       Z1 : { states: [{ label:'1', action:'ON:1', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE'].value != '1'; }},
                       { label:'1', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE'].value == '1'; }}]},
       Z2 : { states: [{ label:'2', action:'ON:2', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE'].value != '2'; }},
@@ -270,11 +270,11 @@ exports.motes = {
     label  : 'Water Meter',
     icon   : 'icon_watermeter.png',
   },
-  
+
   RadioThermostat: { //for Radio Thermostat CT50
     label  : 'Thermostat (WiFi)',
     icon   : 'icon_thermostat.png',
-    controls : { 
+    controls : {
       //decrease target temperature by 1°
       COOLER : { states: [{ label:'Cooler', action:'', icon:'fa-chevron-down', //css:'background-color:#0077ff;color:#fff',
                             serverExecute:function(node){
