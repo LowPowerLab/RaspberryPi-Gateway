@@ -1,3 +1,4 @@
+#!/usr/bin/nodejs
 ﻿// **********************************************************************************
 // Websocket server backend for the Moteino IoT Framework
 // Hardware and software stack details: http://lowpowerlab.com/gateway
@@ -62,9 +63,97 @@
 // IMPORTANT details about NeDB:
 // _id field is special - if not used it is automatically added and used as unique index
 //                      - we can set that field when inserting to use it as an automatic unique index for fast lookups of nodes (by node Id)
+
+
+var debug = require('debug')('my-application');
+var express = require('express');
+var http = require('http');
+var https = require('https');
+var path = require('path');
+var logger = require('morgan');
+var compression = require('compression');
+var cookieParser = require('cookie-parser');
+var bodyParser = require('body-parser');
+var fs = require('fs');
+
+var auth = require('http-auth');
+
+
+var app = express();
+
+
+//var routes = require('./routes/index');
+
+var basic = auth.basic({
+    realm: "RaspberryPi-Gateway Restricted",
+    file: path.join(__dirname, "secure", ".htpasswd") // location of .htpasswd file. Preferably in persistent area.
+});
+
+
+// view engine setup
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'jade');
+
+app.use(auth.connect(basic));
+app.use(compression());
+app.use(logger('dev'));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(cookieParser());
+app.use(express.static(path.join(__dirname, 'public')));
+
+/// catch 404 and forwarding to error handler
+app.use(function(req, res, next) {
+    var err = new Error('Not Found');
+    err.status = 404;
+    next(err);
+});
+
+/// error handlers
+
+// development error handler
+// will print stacktrace
+if (app.get('env') === 'development') {
+    app.use(function(err, req, res, next) {
+        res.status(err.status || 500);
+        res.render('error', {
+            message: err.message,
+            error: err
+        });
+    });
+}
+
+// production error handler
+// no stacktraces leaked to user
+app.use(function(err, req, res, next) {
+    res.status(err.status || 500);
+    res.render('error', {
+        message: err.message,
+        error: {}
+    });
+});
+
+app.set('sport', process.env.SPORT || 7443);
+
+var httpsoptions = {
+  key: fs.readFileSync(path.join(__dirname, 'secure', 'dummytls.key')),
+  cert: fs.readFileSync(path.join(__dirname, 'secure', 'dummytls.crt'))
+};
+
+sserver = https.createServer(httpsoptions, app).listen(app.get('sport'), function(){
+  console.log('HTTPS server listening on port ' + app.get('sport'));
+});
+
+var io = require('socket.io').listen(sserver);
+
+
+
+
+
+
 var settings = require('./settings.js');
 var dbLog = require('./logUtil.js');
-io = require('socket.io').listen(settings.general.socketPort);
+
 var serialport = require("serialport"); //https://github.com/voodootikigod/node-serialport
 var Datastore = require('nedb'); //https://github.com/louischatriot/nedb
 var nodemailer = require('nodemailer'); //https://github.com/andris9/Nodemailer
@@ -75,6 +164,9 @@ var db = new Datastore({ filename: path.join(__dirname, 'db', settings.database.
 var dbunmatched = new Datastore({ filename: path.join(__dirname, 'db', settings.database.nonMatchesName), autoload: true });
 var serial = new serialport.SerialPort(settings.serial.port, { baudrate : settings.serial.baud, parser: serialport.parsers.readline("\n") });
 var metricsDef = require('./metrics.js');
+
+
+
 
 require("console-stamp")(console, settings.general.consoleLogDateFormat); //timestamp logs - https://github.com/starak/node-console-stamp
 db.persistence.setAutocompactionInterval(settings.database.compactDBInterval); //compact the database every 24hrs
@@ -155,13 +247,13 @@ global.handleNodeEvents = function(node) {
 //authorize handshake - make sure the request is coming from nginx, not from the outside world
 //if you comment out this section, you will be able to hit this socket directly at the port it's running at, from anywhere!
 //this was tested on Socket.IO v1.2.1 and will not work on older versions
-io.use(function(socket, next) {
-  var handshakeData = socket.request;
+//io.use(function(socket, next) {
+//  var handshakeData = socket.request;
   //console.log('\nAUTHORIZING CONNECTION FROM ' + handshakeData.connection.remoteAddress + ':' + handshakeData.connection.remotePort);
-  if (handshakeData.connection.remoteAddress == "localhost" || handshakeData.connection.remoteAddress == "127.0.0.1")
-    next();
-  next(new Error('REJECTED IDENTITY, not coming from localhost'));
-});
+//  if (handshakeData.connection.remoteAddress == "localhost" || handshakeData.connection.remoteAddress == "127.0.0.1")
+//    next();
+//  next(new Error('REJECTED IDENTITY, not coming from localhost'));
+//});
 
 io.sockets.on('connection', function (socket) {
   var address = socket.handshake.headers['x-forwarded-for'] || socket.request.connection.remoteAddress;
@@ -483,3 +575,5 @@ db.find({ events : { $exists: true } }, function (err, entries) {
     }
   //console.log('*** Events Register db count: ' + count);
 });
+
+module.exports = app;
