@@ -75,18 +75,15 @@ var compression = require('compression');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var fs = require('fs');
-
 var auth = require('http-auth');
 
-
 var app = express();
-
 
 //var routes = require('./routes/index');
 
 var basic = auth.basic({
     realm: "RaspberryPi-Gateway Restricted",
-    file: path.join(__dirname, "secure", ".htpasswd") // location of .htpasswd file. Preferably in persistent area.
+    file: path.join(__dirname, "data", "secure", ".htpasswd") // location of .htpasswd file. Preferably in persistent area.
 });
 
 
@@ -136,19 +133,15 @@ app.use(function(err, req, res, next) {
 app.set('sport', process.env.SPORT || 7443);
 
 var httpsoptions = {
-  key: fs.readFileSync(path.join(__dirname, 'secure', 'dummytls.key')),
-  cert: fs.readFileSync(path.join(__dirname, 'secure', 'dummytls.crt'))
+  key: fs.readFileSync(path.join(__dirname, 'data', 'secure', 'dummytls.key')),
+  cert: fs.readFileSync(path.join(__dirname, 'data', 'secure', 'dummytls.crt'))
 };
 
 sserver = https.createServer(httpsoptions, app).listen(app.get('sport'), function(){
   console.log('HTTPS server listening on port ' + app.get('sport'));
 });
 
-var io = require('socket.io').listen(sserver);
-
-
-
-
+var io = require('socket.io')().attach(sserver);
 
 
 var settings = require('./settings.js');
@@ -159,9 +152,9 @@ var Datastore = require('nedb'); //https://github.com/louischatriot/nedb
 var nodemailer = require('nodemailer'); //https://github.com/andris9/Nodemailer
 var path = require('path');
 var request = require('request');
-var db = new Datastore({ filename: path.join(__dirname, 'db', settings.database.name), autoload: true });       //used to keep all node/metric data
+var db = new Datastore({ filename: path.join(__dirname, 'data', 'db', settings.database.name), autoload: true });       //used to keep all node/metric data
 //var dbLog = new Datastore({ filename: path.join(__dirname, 'db', settings.database.logName), autoload: true }); //used to keep all logging/graph data
-var dbunmatched = new Datastore({ filename: path.join(__dirname, 'db', settings.database.nonMatchesName), autoload: true });
+var dbunmatched = new Datastore({ filename: path.join(__dirname, 'data', 'db', settings.database.nonMatchesName), autoload: true });
 var serial = new serialport.SerialPort(settings.serial.port, { baudrate : settings.serial.baud, parser: serialport.parsers.readline("\n") });
 var metricsDef = require('./metrics.js');
 
@@ -405,7 +398,7 @@ io.sockets.on('connection', function (socket) {
   socket.on('GETGRAPHDATA', function (nodeId, metricKey, start, end) {
     var sts = Math.floor(start / 1000); //get timestamp in whole seconds
     var ets = Math.floor(end / 1000); //get timestamp in whole seconds
-    var logfile = path.join(__dirname, 'db', dbLog.getLogName(nodeId,metricKey));
+    var logfile = path.join(__dirname, 'data','db', dbLog.getLogName(nodeId,metricKey));
     var graphData = dbLog.getData(logfile, sts, ets);
     var graphOptions={};
     for(var k in metricsDef.metrics)
@@ -493,7 +486,7 @@ global.processSerialData = function (data) {
               if (metricsDef.isNumeric(graphValue))
               {
                 var ts = Math.floor(Date.now() / 1000); //get timestamp in whole seconds
-                var logfile = path.join(__dirname, 'db', dbLog.getLogName(id, matchingMetric.name));
+                var logfile = path.join(__dirname, 'data', 'db', dbLog.getLogName(id, matchingMetric.name));
                 try {
                   console.log('post: ' + logfile + '[' + ts + ','+graphValue + ']');
                   dbLog.postData(logfile, ts, graphValue);
