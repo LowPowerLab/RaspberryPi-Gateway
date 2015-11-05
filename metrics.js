@@ -67,7 +67,7 @@
 //     - logValue - you can specify a hardcoded value that should be logged instead of the captured metric (has to always be numeric!)
 //     - graphOptions - this is a javascript object that when presend is injected directly into the FLOT graph for the metric - you can use this to highly customize the appearance of any metric graph
 //                    - it should only be specified one per each metric - the first one (ie one for each set of metrics that have multiple entries with same 'name') - ex: GarageMote 'Status' metric
-//                    - this object is overlapped over the default 'graphOptions' defined in index.php
+//                    - this object is overlapped over the default 'graphOptions' defined in index.html
 //                    - for more details how to customize FLOT graphs see this: http://www.jqueryflottutorial.com/jquery-flot-customizing-data-series-format.html
 // Important Notes:
 //     - the same node can have any number of metrics
