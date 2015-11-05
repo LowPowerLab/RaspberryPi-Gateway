@@ -31,14 +31,14 @@
 //   that is more appropriate at any time without any prior consent.
 // Otherwise all other non-conflicting and overlapping terms of the GPL terms below will apply.
 // ********************************************************************************************
-// This program is free software; you can redistribute it and/or modify it under the terms 
+// This program is free software; you can redistribute it and/or modify it under the terms
 // of the GNU General Public License as published by the Free Software Foundation;
-// either version 3 of the License, or (at your option) any later version.                    
-//                                                        
+// either version 3 of the License, or (at your option) any later version.
+//
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 // without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 // See the GNU General Public License for more details.
-//                                                        
+//
 // You should have received a copy of the GNU General Public License along with this program.
 // If not license can be viewed at: http://www.gnu.org/licenses/gpl-3.0.txt
 //
@@ -84,7 +84,7 @@
   #nodeControls { padding: 0 0.5em 0 0.5em; }
   .listIcon20px { max-width:20px; }
   .ui-slider { width: 10em !important; }
-  
+
   textarea.ui-input-text {
     height:auto;
     font-size:15px;
@@ -98,20 +98,20 @@
     max-width:20px;
     max-height:20px;
   }
-  
+
   .nodeDetailLabel {
     float:left;
     font-weight:bold;
     width: 110px;
   }
-  
+
   .lowbatt {
     background:red;
     color:white;
     font-weight:bold;
     display:none;
   }
-  
+
   /*styling of inline raw action controls*/
   .rawAction .ui-mini { margin:0; }
   .rawAction .ui-btn { margin:0; padding: .3em 0; }
@@ -152,7 +152,7 @@
       <div style="padding:20px 0">
         <a href="http://lowpowerlab.com/gateway" target="new" data-role="none"><img src="images/logo.png" alt="LowPowerLab" title="LowPowerLab.com" style="max-width:100px;padding:4px"/></a>
       </div>
-      
+
       <div class="ui-content center-div">
         <span id="loadingSocket" style="font-weight:bold">Waiting for socket connection..</span>
         <br/>
@@ -161,7 +161,7 @@
         </div>
       </div>
     </div>
-      
+
     <div data-role="main" class="ui-content">
       <form id="searchBox" class="ui-filterable" style="display:none">
         <input id="filter" data-type="search" placeholder="Search nodes..">
@@ -173,12 +173,12 @@
       <h1><span style="font-size:11px">© <a href="http://lowpowerlab.com">LowPowerLab.com</a> 2015. All rights reserved. <a href="http://lowpowerlab.com/gateway">About</a></span></h1>
     </div>
   </div>
-  
+
   <div data-role="page" id="nodedetails">
     <div data-role="header">
       <h3><span id="nodeDetailTitle">Node details</span> <span class="nodeUpdated">x</span></h3>
       <a id="node_update" href="#homepage" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-home ui-btn-icon-left ui-mini ui-btn-notext">Home</a>
-      
+
       <div class="ui-btn-right" data-role="controlgroup" data-type="horizontal">
         <a id="btnHideNodeToggle" href="#" data-role="button" data-icon="eye" data-iconpos="notext" title="Show/Hide on dashboard">Hide on dashboard</a>
         <a href="#deleteNode" data-role="button" data-icon="delete" data-iconpos="notext" data-transition="fade" title="Delete this node">Delete</a>
@@ -194,13 +194,13 @@
         <input type="text" name="nodeDescr" id="nodeDescr" placeholder="description/location..." />
       </div>
       <ul id="metricList" data-role="listview" data-inset="true" data-theme="a" data-dividertheme="b"></ul>
-      
+
       <div class="center-wrapper">
         <div id="nodeControls" class="center-div"></div>
       </div>
 
       <ul id="eventList" data-role="listview" data-inset="true" data-theme="a" data-dividertheme="b"></ul>
-      
+
       <div class="center-wrapper" style="margin-top:10px">
         <div id="nodeEvents" class="center-div">
           <div id="nodeControls" data-role="controlgroup" data-type="horizontal">
@@ -336,14 +336,14 @@
     var metricsDef;        //holds the definition of the metrics (from server side metrics.js)
     var eventsDef;
     var showHiddenNodes=false, showRawSend=false;
-    var socket = io.connect('<?php echo $_SERVER['HTTP_HOST']; ?>', {'connect timeout': 1000}); //limit chrome xhr-polling fall back delay
+    var socket = io();
     $('#nodeList').hide();
-    
+
     function LOG(data) {
       $('#log').val(new Date().toLocaleTimeString() + ' : ' + data + '\n' + $('#log').val());
       if ($('#log').val().length > 5000) $('#log').val($('#log').val().slice(0,5000));
     };
-    
+
     socket.on('connect', function(){
       LOG('Connected!');
       $('#loadingSocket').html('<span style="color:#2d0">Connected!</span><br/><br/>Waiting for data..');
@@ -357,12 +357,12 @@
         $.mobile.navigate('#homepage', { transition : 'slide'});
       $('#nodeList').hide();
     });
-    
+
     socket.on('UPDATENODE', function(entry) {
       updateNode(entry);
       refreshNodeListUI();
     });
-    
+
     socket.on('UPDATENODES', function(entries) {
       $("#loader").hide();
       $("#nodeList").empty();
@@ -375,7 +375,7 @@
       if ($.mobile.activePage.attr('id') != 'homepage')
         $.mobile.navigate('#homepage', { transition : 'slide'});
     });
-    
+
     socket.on('MOTESDEF', function(motesDefinition) {
       motesDef = motesDefinition;
       $("#nodeMoteType").empty();
@@ -384,11 +384,11 @@
         $('#nodeMoteType').append('<option value="' + mote + '">' + motesDef[mote].label || mote + '</option>');
       $("#nodeMoteType").selectmenu();
     });
-    
+
     socket.on('METRICSDEF', function(metricsDefinition) {
       metricsDef = metricsDefinition;
     });
-    
+
     socket.on('EVENTSDEF', function(eventsDefinition) {
       eventsDef = eventsDefinition;
       $('#addEventType').change(function() {
@@ -404,15 +404,15 @@
       });
     });
     $(document).on("pagecreate", "#eventAdd", function(){ if ($('addEventType').val()) $('#addEvent_OK').show(); else $('#addEvent_OK').hide(); });
-    
+
     socket.on('LOG', function(data) {
       LOG(data);
     });
-    
+
     socket.on('PLAYSOUND', function (soundFile) {
       new Audio(soundFile).play();
     });
-    
+
     graphData=[];
     metricGraphWrapper = $('#metricGraphWrapper');
     metricGraph = $('#metricGraph');
@@ -425,12 +425,12 @@
       $("div[ui-role='loadinggraph']").hide();
       metricGraph.width(metricGraphWrapper.width()).height(metricGraphWrapper.height() - $('#graphControls').height()); //this assumes the 'pageshow' page event already happened, otherwise will fail to set the width correctly and should be moved in that event
       plot = $.plot(metricGraph, [{label:graphOptions.legendLbl, data:graphData}], graphOptions);
-      
+
       //graph value tooltips
       metricGraph.bind("plothover", function (event, pos, item) {
         if (item) {
           var date = new Date(item.datapoint[0]);
-          
+
           for (var mkey in metricsDef)
           {
             if (metricsDef[mkey].name == graphOptions.metricName)
@@ -460,7 +460,7 @@
         } else
           $("#tooltip").hide();
       });
-      
+
       $(document).off("pageshow", "#metricdetails", renderPlot);
     }
 
@@ -478,11 +478,11 @@
         //points: { show: true, radius: 2 },
         //{series: { points: { show: true, radius: 2 } }, grid: { hoverable: true }}
       };
-      
+
       //ask socket for the data
       socket.emit('GETGRAPHDATA', selectedNodeId, selectedMetricKey, graphView.start, graphView.end);
     }
-    
+
     socket.on('GRAPHDATAREADY', function(rawData){
       graphData = [];
       var max = Number.NEGATIVE_INFINITY;
@@ -505,7 +505,7 @@
       graphOptions.xaxis.max = graphView.end;
       graphOptions.yaxis.min = min;
       graphOptions.yaxis.max = max;
-    
+
       graphOptions = $.extend(true, graphOptions, rawData.options); //http://stackoverflow.com/questions/171251/how-can-i-merge-properties-of-two-javascript-objects-dynamically
       $('#graphStat').html(rawData.graphData.data.length + 'pts, ' + rawData.graphData.queryTime + 'ms');
       //need to defer plotting until after pageshow is finished rendering, otherwise the wrapper will return an incorrect width of "100"
@@ -513,7 +513,7 @@
         $(document).on("pageshow", "#metricdetails", renderPlot);
       else renderPlot();
     });
-    
+
     $(window).resize(function(){
       if ($.mobile.activePage.attr('id') == 'metricdetails' && nodes[selectedNodeId].metrics[selectedMetricKey].graph && metricGraph.is(':visible'))
       {
@@ -523,9 +523,9 @@
         $.plot(metricGraph, [{label:graphOptions.legendLbl, data:graphData}], graphOptions);
       }
     });
-    
+
     $(window).on("navigate", function(event, data) { $("#tooltip").hide(); }); //hide graph tooltip on any navigation
-    
+
     $("#graphZoomIn").click(function () {graphView.zoomin(); refreshGraph(true);});
     $("#graphZoomOut").click(function () {graphView.zoomout(); refreshGraph(true);});
     $('#graphPanRight').click(function () {graphView.panright(); refreshGraph(true);});
@@ -538,7 +538,7 @@
         graphView.end = ranges.xaxis.to;
         refreshGraph(true);
     });
-    
+
     function addGraphDataPoint(point) {
       if (graphFrozen) return;
       graphData.push(point);
@@ -577,7 +577,7 @@
         return motesDef[nodeType].icon || 'icon_default.png';
       return 'icon_default.png';
     };
-    
+
     function resolveRSSIImage(rssi)
     {
       if (rssi == undefined) return '';
@@ -612,7 +612,7 @@
         if (node._id == selectedNodeId) refreshNodeDetails(node);
       }
     }
-    
+
     function refreshNodeListUI()
     {
       var hiddenCount = $('.hiddenNode, .hiddenNodeShow').length;
@@ -660,7 +660,7 @@
         $(this).css('color', agoResult.color);
         $(this).html(agoResult.text);
       });
-      
+
       $("span.nodeMetricAgo").each(function(){
         var timestamp = parseInt($(this).attr('data-time'));
         var agoResult = ago(timestamp);
@@ -668,10 +668,10 @@
         $(this).prop('title', agoResult.text);
       });
     }
-    
+
     //refresh "updated X ago" indicators
     var updateAgosTimer = setInterval(updateAgos,3000);
-    
+
     $("#btnSearch").click("tap", function(event) {
       if ($("#searchBox").is(":visible"))
       {
@@ -684,7 +684,7 @@
         $("#btnSearch").addClass('ui-btn-b');
       }
     });
-    
+
     $("#btnHiddenNodesToggle").click("tap", function(event) {
       if (showHiddenNodes)
       {
@@ -699,13 +699,13 @@
         showHiddenNodes = true;
       }
     });
-    
+
     $("#btnHideNodeToggle").click("tap", function(event) {
       if ($("#btnHideNodeToggle").hasClass('hidden'))
         $("#btnHideNodeToggle").removeClass('hidden').css('background-color','');
       else $("#btnHideNodeToggle").addClass('hidden').css('background-color','#D00');;
     });
-    
+
     $("#btnRawToggle").click("tap", function(event) {
       if ($(".rawAction").is(":visible"))
       {
@@ -718,7 +718,7 @@
         $("#btnRawToggle").addClass('ui-btn-b');
       }
     });
-       
+
     function refreshNodeDetails(node) {
       $('#nodeLabel').val(node.label || '');
       $('#nodeDetailTitle').html(node.label || 'Node details');
@@ -728,12 +728,12 @@
 
       if (node.hidden) $("#btnHideNodeToggle").addClass('hidden').css('background-color','#D00');
       else $("#btnHideNodeToggle").removeClass('hidden').css('background-color','');;
-      
+
       $('.nodeID').html(node._id);
       if (node.rssi) { $('#rssiinfo').show(); $('.nodeRSSI').html(node.rssi); }
       else $('#rssiinfo').hide();
       $('.nodeUpdated').html(ago(node.updated, false).tag);
-      
+
       $('#metricList').empty();
       for(var key in node.metrics)
       {
@@ -764,7 +764,7 @@
         else $('#eventList').append(newLI);
       }
       $('#eventList').listview().listview('refresh');
-      
+
       //handle node controls/buttons
       $('#nodeControls').hide();
       if (motesDef[node.type] && motesDef[node.type].controls)
@@ -779,7 +779,7 @@
             var f = eval('(' + control.showCondition + ')'); //using eval is generally a bad idea but there is no way to pass functions in JSON via websockets so we pass them as strings instead
             if (!f(node)) continue;
           }
-          
+
           for (var sKey in control.states)
           {
             var state = control.states[sKey];
@@ -795,7 +795,7 @@
               newBtn.addClass('ui-btn-icon-left');
               newBtn.addClass('ui-icon-' + state.icon);
             }
-            
+
             newBtn.bind('click', {nodeId:node._id, action:state.action, nodeType:node.type, cKey:cKey, sKey:sKey}, function(event) {
               //alert(event.data.action + ' was clicked for node ' + event.data.nodeId);
               socket.emit("CONTROLCLICK", {nodeId:event.data.nodeId, action:event.data.action, nodeType:event.data.nodeType, controlKey:event.data.cKey, stateKey:event.data.sKey});
@@ -804,11 +804,11 @@
             showControls = true;
             break;
           }
-          
+
           if (control.breakAfter == true)
             $('#nodeControls').append('<br/>');
         }
-        
+
         if (showControls)
         {
           //$('#nodeControls').controlgroup().controlgroup("refresh");
@@ -824,7 +824,7 @@
       $('.metricUpdated').html(ago(metric.updated, 0).tag);
       $('#metricValue').val(metric.value + (metric.unit || ''));
       $('#metricLabel').val(metric.label || '');
-      
+
       if (metric.pin=='1')
         $("#btnPinMetric").addClass('pinned').css('background-color','#38C');
       else $("#btnPinMetric").removeClass('pinned').css('background-color','');
@@ -854,19 +854,19 @@
       var node = nodes[selectedNodeId];
       refreshNodeDetails(node);
     });
-    
+
     $(document).on("click", ".metricdetails", function () {
       var metricKey = $(this).attr('metric-id');
       selectedMetricKey = metricKey;
       var metric = nodes[selectedNodeId].metrics[metricKey];
       refreshMetricDetails(metric);
     });
-    
+
     $(document).on("click", ".eventEnableDisable", function () {
       var eventKey = $(this).attr('event-id');
       socket.emit('EDITNODEEVENT', selectedNodeId, eventKey, !nodes[selectedNodeId].events[eventKey]);
     });
-    
+
     $(document).on("click", ".eventDelete", function () {
       var eventKey = $(this).attr('event-id');
       socket.emit('EDITNODEEVENT', selectedNodeId, eventKey, null, true);
@@ -874,7 +874,7 @@
 
     $('#nodeLabel').keyup(function() {$('#nodeDetailTitle').html($('#nodeLabel').val() || 'no label');});
     $('#metricLabel').keyup(function() {$('#metricDetailTitle').html($('#metricLabel').val() || 'no label');});
-    
+
     $("#btnPinMetric").click("tap", function(event) {
       if ($("#btnPinMetric").hasClass('pinned'))
         $("#btnPinMetric").removeClass('pinned').css('background-color','');
@@ -899,7 +899,7 @@
         else metricGraphWrapper.show();
       }
     });
-    
+
     $('#nodeMoteType').change(function(){
       var node = nodes[selectedNodeId];
       notifyUpdateNode();
@@ -916,7 +916,7 @@
         node.label = node.type ? motesDef[node.type].label : node.label;
       socket.emit('UPDATENODESETTINGS', nodes[selectedNodeId]);
     }
-    
+
     $('#addNodeEvent').click("tap", function(event) {
       $('#addEventDescr').html(' ');
       $('#addEvent_OK').hide();
@@ -925,19 +925,19 @@
         for(var key in eventsDef)
           if (!nodes[selectedNodeId].events || !nodes[selectedNodeId].events[key])
             $('#addEventType').append('<option value="' + key + '">' + (eventsDef[key].label || key) + '</option>');
-      
+
       $(document).on("pagebeforeshow", "#addEvent", function(event){
         $("#addEventType").selectmenu('refresh');
         $("#addEventType").val('');
       });
     });
-    
+
     $("#node_update").click("tap", function(event) {
       notifyUpdateNode();
       //updateNode(nodes[selectedNodeId]); //this will happen when node is sent back by server
       $('#nodeList').listview('refresh');
     });
-    
+
     $("#addEvent_OK").click("tap", function(event) {
       socket.emit('EDITNODEEVENT', selectedNodeId, $('#addEventType').val(), true);
     });
@@ -953,31 +953,31 @@
         //$('#nodeList').listview('refresh');
       }
     });
-    
+
     $("#deleteNode_yes").click("tap", function(event) {
       nodes[selectedNodeId] = undefined;
       $('#nodeList li#' + selectedNodeId).remove();
       socket.emit('DELETENODE', selectedNodeId);
     });
-    
+
     $("#deleteMetric_yes").click("tap", function(event) {
       nodes[selectedNodeId].metrics[selectedMetricKey] = undefined;
       $('#metricList li#' + selectedMetricKey).remove();
       socket.emit('DELETENODEMETRIC', selectedNodeId, selectedMetricKey);
     });
-   
+
     $("#clearbtn").click("tap", function(event) {
       $('#log').val('');
     });
-    
+
     $("#rawActionTextspan").keypress(function(event) {
       if (event.which == 13) //if ENTER pressed in the message box .. then "click" the SEND button
       {
         $("#rawActionSend").click();
-        return false;  
+        return false;
       }
     });
-    
+
     $("#rawActionSend").click("tap", function(event) {
       //LOG(JSON.stringify({nodeId:$("#rawActionID").val(), action:$("#rawActionText").val()}));
       var id = $("#rawActionID").val();
@@ -987,9 +987,9 @@
       else
         socket.emit("NODEMESSAGE", {nodeId:id, action:value});
     });
-    
+
     //enforce positive numeric input
-    $("#rawActionID").on("keypress keyup blur",function (event) {    
+    $("#rawActionID").on("keypress keyup blur",function (event) {
       $(this).val($(this).val().replace(/[^\d].+/, ""));
       if ((event.which < 48 || event.which > 57) || $(this).val().length > 3) {
         event.preventDefault();
@@ -997,7 +997,7 @@
       //max node ID is 255 with packet header defaults in RFM69 library
       if ($(this).val() > 255) $(this).val(255);
     });
-    
+
     //graph value tooltips container
     $("<div id='tooltip'></div>").css({
 			position: "absolute",
@@ -1009,7 +1009,7 @@
 			"background-color": "#fee",
 			opacity: 0.80
 		}).appendTo("body");
-    
+
     //graph query statistics
     $("<span id='graphStat'></span>").css({
 			position: "relative",
