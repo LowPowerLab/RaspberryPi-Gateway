@@ -12,12 +12,12 @@
 // NeDB is Node Embedded Database - a persistent database for Node.js, with no dependency
 // Specs and documentation at: https://github.com/louischatriot/nedb
 //
-// Under the hood, NeDB's persistence uses an append-only format, meaning that all updates 
+// Under the hood, NeDB's persistence uses an append-only format, meaning that all updates
 // and deletes actually result in lines added at the end of the datafile. The reason for
 // this is that disk space is very cheap and appends are much faster than rewrites since
 // they don't do a seek. The database is automatically compacted (i.e. put back in the
 // one-line-per-document format) everytime your application restarts.
-// 
+//
 // This script is configured to compact the database every 24 hours since time of start.
 // ********************************************************************************************
 // Copyright Felix Rusu, Low Power Lab LLC (2015), http://lowpowerlab.com/contact
@@ -44,14 +44,14 @@
 //   that is more appropriate at any time without any prior consent.
 // Otherwise all other non-conflicting and overlapping terms of the GPL terms below will apply.
 // ********************************************************************************************
-// This program is free software; you can redistribute it and/or modify it under the terms 
+// This program is free software; you can redistribute it and/or modify it under the terms
 // of the GNU General Public License as published by the Free Software Foundation;
-// either version 3 of the License, or (at your option) any later version.                    
-//                                                        
+// either version 3 of the License, or (at your option) any later version.
+//
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 // without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 // See the GNU General Public License for more details.
-//                                                        
+//
 // You should have received a copy of the GNU General Public License along with this program.
 // If not license can be viewed at: http://www.gnu.org/licenses/gpl-3.0.txt
 //
@@ -122,7 +122,7 @@ global.sendMessageToNode = function(node) {
   if (metricsDef.isNumeric(node.nodeId) && node.action)
   {
     serial.write(node.nodeId + ':' + node.action + '\n', function () { serial.drain(); });
-    console.log('NODEACTION: ' + JSON.stringify(node));    
+    console.log('NODEACTION: ' + JSON.stringify(node));
   }
 }
 
@@ -134,7 +134,7 @@ global.handleNodeEvents = function(node) {
       var enabled = node.events[key];
       if (enabled)
       {
-        var evt = metricsDef.events[key]; 
+        var evt = metricsDef.events[key];
         if (evt.serverExecute!=undefined)
           try {
             evt.serverExecute(node);
@@ -170,12 +170,12 @@ io.sockets.on('connection', function (socket) {
   socket.emit('MOTESDEF', metricsDef.motes);
   socket.emit('METRICSDEF', metricsDef.metrics);
   socket.emit('EVENTSDEF', metricsDef.events);
-  
+
   db.find({ _id : { $exists: true } }, function (err, entries) {
     //console.log("New connection found docs: " + entries.length);
     socket.emit('UPDATENODES', entries);
   });
-  
+
   socket.on('UPDATENODESETTINGS', function (node) {
     db.find({ _id : node._id }, function (err, entries) {
       if (entries.length == 1)
@@ -191,7 +191,7 @@ io.sockets.on('connection', function (socket) {
       }
     });
   });
-  
+
   socket.on('UPDATEMETRICSETTINGS', function (nodeId, metricKey, metric) {
     db.find({ _id : nodeId }, function (err, entries) {
       if (entries.length == 1)
@@ -220,7 +220,7 @@ io.sockets.on('connection', function (socket) {
             if (!dbNode.events) dbNode.events = {};
             dbNode.events[eventKey] = (remove ? undefined : (enabled ? 1 : 0));
             db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) { /*console.log('UPDATEMETRICSETTINGS records replaced:' + numReplaced);*/ });
-            
+
             if (metricsDef.events[eventKey] && metricsDef.events[eventKey].scheduledExecute)
               if (enabled && !remove)
                 schedule(dbNode, eventKey);
@@ -239,7 +239,7 @@ io.sockets.on('connection', function (socket) {
       }
     });
   });
-  
+
   socket.on('DELETENODE', function (nodeId) {
     db.remove({ _id : nodeId }, function (err, removedCount) {
       console.log('DELETED entries: ' + removedCount);
@@ -247,7 +247,7 @@ io.sockets.on('connection', function (socket) {
         io.sockets.emit('UPDATENODES', entries);
       });
     });
-    
+
     for(var s in scheduledEvents)
       if (scheduledEvents[s].nodeId == nodeId)
       {
@@ -256,7 +256,7 @@ io.sockets.on('connection', function (socket) {
         scheduledEvents.splice(scheduledEvents.indexOf(scheduledEvents[s]), 1);
       }
   });
-  
+
   socket.on('DELETENODEMETRIC', function (nodeId, metricKey) {
     db.find({ _id : nodeId }, function (err, entries) {
       if (entries.length == 1)
@@ -284,11 +284,11 @@ io.sockets.on('connection', function (socket) {
         });
       }
   });
-  
+
   socket.on('NODEMESSAGE', function (msg) {
     sendMessageToNode(msg);
   });
-  
+
   socket.on('INJECTNODE', function(node) {
     if (metricsDef.isNumeric(node.nodeId))
     {
@@ -348,14 +348,14 @@ global.processSerialData = function (data) {
       { //update
         existingNode = entries[0];
       }
-      
+
       //check for duplicate messages - this can happen when the remote node sends an ACK-ed message but does not get the ACK so it resends same message repeatedly until it receives an ACK
       if (existingNode.updated != undefined && ((new Date) - new Date(existingNode.updated).getTime()) < 500 && msgHistory[id] == msgTokens)
       { console.log("   DUPLICATE, skipping..."); return; }
-      
+
       msgHistory[id] = msgTokens;
 
-      //console.log('FOUND ENTRY TO UPDATE: ' + JSON.stringify(existingNode));    
+      //console.log('FOUND ENTRY TO UPDATE: ' + JSON.stringify(existingNode));
       existingNode._id = id;
       existingNode.rssi = rssi; //update signal strength we last heard from this node, regardless of any matches
       existingNode.updated = new Date().getTime(); //update timestamp we last heard from this node, regardless of any matches
@@ -363,7 +363,7 @@ global.processSerialData = function (data) {
         existingNode.metrics = new Object();
       if (existingNode.events == undefined)
         existingNode.events = new Object();
-        
+
       var regexpTokens = /[\w\:\.\$\!\\\'\"\?\[\]\-\(\)@%^&#+\/<>*~=,|]+/ig; //match (almost) any non space human readable character
       while (match = regexpTokens.exec(msgTokens)) //extract each token/value pair from the message and process it
       {
@@ -430,7 +430,7 @@ global.processSerialData = function (data) {
         else
           db.update({ _id: id }, { $set : entry}, {}, function (err, numReplaced) { console.log('   ['+id+'] DB-Updates:' + numReplaced);});
       });
-      
+
       //publish updated node to clients
       io.sockets.emit('UPDATENODE', entry);
       //handle any server side events (email, sms, custom actions)
@@ -467,7 +467,7 @@ function runAndReschedule(functionToExecute, node, eventKey) {
 //this runs once at startup: register scheduled events that are enabled
 db.find({ events : { $exists: true } }, function (err, entries) {
   var count=0;
-  
+
   for (var k in entries)
     for (var i in entries[k].events)
     {

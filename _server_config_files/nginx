@@ -1,5 +1,5 @@
 #! /bin/sh
- 
+
 ### BEGIN INIT INFO
 # Provides:          nginx
 # Required-Start:    $all
@@ -9,23 +9,23 @@
 # Short-Description: starts the nginx web server
 # Description:       starts nginx using start-stop-daemon
 ### END INIT INFO
- 
+
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 DAEMON=/usr/sbin/nginx
 NAME=nginx
 DESC=nginx
- 
+
 test -x $DAEMON || exit 0
- 
+
 # Include nginx defaults if available
 if [ -f /etc/default/nginx ] ; then
     . /etc/default/nginx
 fi
- 
+
 set -e
- 
+
 . /lib/lsb/init-functions
- 
+
 case "$1" in
   start)
     echo -n "Starting $DESC: "
@@ -63,6 +63,5 @@ case "$1" in
     exit 1
     ;;
 esac
- 
-exit 0
 
+exit 0
