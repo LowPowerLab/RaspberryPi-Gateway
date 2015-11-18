@@ -20,7 +20,7 @@ For more details see [license.txt](https://github.com/LowPowerLab/RaspberryPi-Ga
 http://lowpowerlab.com/gateway
 
 ###Quick reference:
-- Copy index.php, graphHelper.js and images, sounds subfolders in your /var/www/default/ folder.
+- Copy index.html, graphHelper.js and images, sounds subfolders in your /var/www/default/ folder.
 - Copy gateway.js, metrics.js, logUtil.js, settings.js in your /home/pi/moteino folder.
 - Adjust any email/password/SMS settings in settings.js
 - Connect a Moteino to your Pi through the serial port or USB if you have a MoteinoUSB. It should be running [this gateway sketch](https://github.com/LowPowerLab/RFM69/tree/master/Examples/PiGateway). Verify the settings in the sketch to match the hardware and also the encryption key and network ID should be the same on all nodes.
