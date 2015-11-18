@@ -31,7 +31,7 @@ exports.getData = function(filename, start, end, dpcount) {
   fd = fs.openSync(filename, 'r');
   filesize = exports.fileSize(filename);
   interval = (end - start) / dpcount;
-  
+
   // Ensure that interval request is less than 1, adjust number of datapoints to request if interval = 1
   if (interval<1) {
     interval = 1;
@@ -41,7 +41,7 @@ exports.getData = function(filename, start, end, dpcount) {
   data = [];
   timetmp = 0;
   buff = new Buffer(9);
-  
+
   for (var i=0; i<dpcount; i++)
   {
     pos = exports.binarySearch(fd,start+(i*interval),filesize);
@@ -125,7 +125,7 @@ exports.binarySearch = function(fileDescriptor,timestamp, filesize) {
   end = filesize-9;
   var buff = new Buffer(4);
   var time = 0;
-  
+
   // 30 here is our max number of itterations the position should usually be found within 20 iterations
   for (i=0; i<30; i++)
   {
@@ -159,7 +159,7 @@ exports.binarySearchExact = function(fileDescriptor, timestamp, filesize) {
     //console.log('tmp:' + tmp);
     if (tmp==timestamp) return mid;
     if ((end-start)==9)
-    { 
+    {
       fs.readSync(fd, buff, 0, 4, start+1);
       tmp = buff.readUInt32BE(0);
       return (tmp==timestamp) ? start : -1;

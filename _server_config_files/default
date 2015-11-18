@@ -40,7 +40,7 @@ server{
 
     # typically the fpm.sock is used, but check to make sure by using:
     # sudo -ri "listen = " /etc/php5/fpm/
-    # should get something like: 
+    # should get something like:
     #  /etc/php5/fpm/pool.d/www.conf:listen = /var/run/php5-fpm.sock
     # then you know it's fpm.sock
     fastcgi_pass unix:/var/run/php5-fpm.sock;
@@ -66,4 +66,3 @@ server{
       deny all;
   }
 }
-

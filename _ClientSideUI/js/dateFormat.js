@@ -22,29 +22,29 @@
                 while (val.length < len) val = "0" + val;
                 return val;
             };
-    
+
         // Regexes and supporting functions are cached through closure
         return function (date, mask, utc) {
             var dF = dateFormat;
-    
+
             // You can't provide utc if you skip other args (use the "UTC:" mask prefix)
             if (arguments.length == 1 && Object.prototype.toString.call(date) == "[object String]" && !/\d/.test(date)) {
                 mask = date;
                 date = undefined;
             }
-    
+
             // Passing date through Date applies Date.parse, if necessary
             date = date ? new Date(date) : new Date;
             if (isNaN(date)) throw SyntaxError("invalid date");
-    
+
             mask = String(dF.masks[mask] || mask || dF.masks["default"]);
-    
+
             // Allow setting the utc argument via the mask
             if (mask.slice(0, 4) == "UTC:") {
                 mask = mask.slice(4);
                 utc = true;
             }
-    
+
             var    _ = utc ? "getUTC" : "get",
                 d = date[_ + "Date"](),
                 D = date[_ + "Day"](),
@@ -84,13 +84,13 @@
                     o:    (o > 0 ? "-" : "+") + pad(Math.floor(Math.abs(o) / 60) * 100 + Math.abs(o) % 60, 4),
                     S:    ["th", "st", "nd", "rd"][d % 10 > 3 ? 0 : (d % 100 - d % 10 != 10) * d % 10]
                 };
-    
+
             return mask.replace(token, function ($0) {
                 return $0 in flags ? flags[$0] : $0.slice(1, $0.length - 1);
             });
         };
     }();
-    
+
     // Some common format strings
     dateFormat.masks = {
         "default":      "ddd mmm dd yyyy HH:MM:ss",
@@ -106,7 +106,7 @@
         isoDateTime:    "yyyy-mm-dd'T'HH:MM:ss",
         isoUtcDateTime: "UTC:yyyy-mm-dd'T'HH:MM:ss'Z'"
     };
-    
+
     // Internationalization strings
     dateFormat.i18n = {
         dayNames: [
@@ -118,7 +118,7 @@
             "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"
         ]
     };
-    
+
     // For convenience...
     Date.prototype.format = function (mask, utc) {
         return dateFormat(this, mask, utc);
