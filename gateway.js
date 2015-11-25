@@ -77,8 +77,8 @@ var bodyParser = require('body-parser');
 var fs = require('fs');
 var auth = require('http-auth');
 
-var app = express();
-
+var httpsApp = express();
+var httpApp = express();
 //var routes = require('./routes/index');
 
 var basic = auth.basic({
@@ -88,19 +88,21 @@ var basic = auth.basic({
 
 
 // view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
+httpsApp.set('views', path.join(__dirname, 'views'));
+httpsApp.set('view engine', 'jade');
+httpApp.set('port', process.env.PORT || 7080);
+httpsApp.set('sport', process.env.SPORT || 7443);
 
-app.use(auth.connect(basic));
-app.use(compression());
-app.use(logger('dev'));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+httpsApp.use(auth.connect(basic));
+httpsApp.use(compression());
+httpsApp.use(logger('dev'));
+httpsApp.use(bodyParser.json());
+httpsApp.use(bodyParser.urlencoded({ extended: false }));
+httpsApp.use(cookieParser());
+httpsApp.use(express.static(path.join(__dirname, 'public')));
 
 /// catch 404 and forwarding to error handler
-app.use(function(req, res, next) {
+httpsApp.use(function(req, res, next) {
     var err = new Error('Not Found');
     err.status = 404;
     next(err);
@@ -110,8 +112,8 @@ app.use(function(req, res, next) {
 
 // development error handler
 // will print stacktrace
-if (app.get('env') === 'development') {
-    app.use(function(err, req, res, next) {
+if (httpsApp.get('env') === 'development') {
+    httpsApp.use(function(err, req, res, next) {
         res.status(err.status || 500);
         res.render('error', {
             message: err.message,
@@ -122,7 +124,7 @@ if (app.get('env') === 'development') {
 
 // production error handler
 // no stacktraces leaked to user
-app.use(function(err, req, res, next) {
+httpsApp.use(function(err, req, res, next) {
     res.status(err.status || 500);
     res.render('error', {
         message: err.message,
@@ -130,18 +132,35 @@ app.use(function(err, req, res, next) {
     });
 });
 
-app.set('sport', process.env.SPORT || 7443);
-
-var httpsoptions = {
-  key: fs.readFileSync(path.join(__dirname, 'data', 'secure', 'dummytls.key')),
-  cert: fs.readFileSync(path.join(__dirname, 'data', 'secure', 'dummytls.crt'))
-};
-
-sserver = https.createServer(httpsoptions, app).listen(app.get('sport'), function(){
-  console.log('HTTPS server listening on port ' + app.get('sport'));
+// Redirect all http traffic to the https port.
+httpApp.get("*", function (req, res, next) {
+    var hostpart;
+    if (typeof req.hostname !== 'undefined') {
+        hostpart = req.hostname;
+    }else {
+        hostpart = req.ip;
+    }
+    if (httpsApp.get('sport') === 443) {
+        res.redirect("https://" + hostpart + req.originalUrl);
+    } else {
+        res.redirect("https://" + hostpart + ":" + httpsApp.get('sport') + req.originalUrl);
+    }
 });
 
-var io = require('socket.io')().attach(sserver);
+http.createServer(httpApp).listen(httpApp.get('port'), function() {
+    console.log('HTTP redirect server listening on port ' + httpApp.get('port'));
+});
+
+var httpsoptions = {
+    key: fs.readFileSync(path.join(__dirname, 'data', 'secure', 'dummytls.key')),
+    cert: fs.readFileSync(path.join(__dirname, 'data', 'secure', 'dummytls.crt'))
+};
+
+https = https.createServer(httpsoptions, httpsApp).listen(httpsApp.get('sport'), function(){
+    console.log('Express HTTPS server listening on port ' + httpsApp.get('sport'));
+});
+
+var io = require('socket.io')().attach(https);
 
 
 var settings = require('./settings.js');
@@ -220,7 +239,7 @@ global.handleNodeEvents = function(node) {
       if (enabled)
       {
         var evt = metricsDef.events[key];
-        if (evt.serverExecute!=undefined)
+        if (evt.serverExecute!==undefined)
           try {
             evt.serverExecute(node);
           }
@@ -569,4 +588,4 @@ db.find({ events : { $exists: true } }, function (err, entries) {
   //console.log('*** Events Register db count: ' + count);
 });
 
-module.exports = app;
+module.exports = httpsApp;
