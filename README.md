@@ -25,10 +25,10 @@ http://lowpowerlab.com/gateway
 - Connect a Moteino to your Pi through the serial port or USB if you have a MoteinoUSB. It should be running [this gateway sketch](https://github.com/LowPowerLab/RFM69/tree/master/Examples/PiGateway). Verify the settings in the sketch to match the hardware and also the encryption key and network ID should be the same on all nodes.
 - Iteractively start the application with `npm start` or
 - Install systemd service file to enable boot time startup and process monitoring.
- - Modify `motenio-gateway.service` file for your needs.
+ - Modify `moteino-gateway.service` file for your needs.
  - Copy file to `/etc/systemd/system/` (ubuntu)
  - Run `systemctl daemon-reload` to register new service with systemd.
- - Start application with `systemctl start motenio-gateway`
+ - Start application with `systemctl start moteino-gateway`
  - Enable across reboots with `systemctl enable moteino-gateway`
 
 ###Video Overview & Demo

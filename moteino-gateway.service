@@ -1,5 +1,5 @@
 [Unit]
-Description=Motenio Gateway Service
+Description=moteino Gateway Service
 After=network.target
 
 [Service]
@@ -9,7 +9,7 @@ ExecReload=/bin/kill -HUP $MAINPID
 Restart=always
 StandardOutput=syslog
 StandardError=syslog
-SyslogIdentifier=Motenio-Gateway
+SyslogIdentifier=moteino-Gateway
 Environment=NODE_ENV=production
 WorkingDirectory=<yourpathhere>
 
