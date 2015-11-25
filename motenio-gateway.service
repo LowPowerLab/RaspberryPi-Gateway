@@ -1,0 +1,17 @@
+[Unit]
+Description=Motenio Gateway Service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/nodejs <yourpathhere>/gateway.js
+ExecStop=/bin/kill -SIGTERM $MAINPID
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=Motenio-Gateway
+Environment=NODE_ENV=production
+WorkingDirectory=<yourpathhere>
+
+[Install]
+WantedBy=multi-user.target
