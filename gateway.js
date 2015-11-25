@@ -76,10 +76,20 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var fs = require('fs');
 var auth = require('http-auth');
+var settings = require('./settings.js');
 
 var httpsApp = express();
 var httpApp = express();
 //var routes = require('./routes/index');
+
+
+var serialport = require("serialport"); //https://github.com/voodootikigod/node-serialport
+var Datastore = require('nedb'); //https://github.com/louischatriot/nedb
+var nodemailer = require('nodemailer'); //https://github.com/andris9/Nodemailer
+var path = require('path');
+//Serial opening needs to be before dropping privildge. If not group on serial
+//device must match group defined in settings.
+var serial = new serialport.SerialPort(settings.serial.port, { baudrate : settings.serial.baud, parser: serialport.parsers.readline("\n") });
 
 var basic = auth.basic({
     realm: "RaspberryPi-Gateway Restricted",
@@ -90,8 +100,8 @@ var basic = auth.basic({
 // view engine setup
 httpsApp.set('views', path.join(__dirname, 'views'));
 httpsApp.set('view engine', 'jade');
-httpApp.set('port', process.env.PORT || 7080);
-httpsApp.set('sport', process.env.SPORT || 7443);
+httpApp.set('port', process.env.PORT || settings.general.httpport);
+httpsApp.set('sport', process.env.SPORT || settings.general.httpsport);
 
 httpsApp.use(auth.connect(basic));
 httpsApp.use(compression());
@@ -158,27 +168,29 @@ var httpsoptions = {
 
 https = https.createServer(httpsoptions, httpsApp).listen(httpsApp.get('sport'), function(){
     console.log('Express HTTPS server listening on port ' + httpsApp.get('sport'));
+    //Probably should drop privildge a different way. Its possible to have out
+    //of order execution and drop privildge before http listen has attached.
+    try {
+      console.log('Old User ID: ' + process.getuid() + ', Old Group ID: ' + process.getgid());
+      process.setgid(settings.general.group);
+      process.setuid(settings.general.user);
+      console.log('New User ID: ' + process.getuid() + ', New Group ID: ' + process.getgid());
+    } catch (err) {
+      console.log('Error dropping root privildge');
+      console.log(err);
+      process.exit(1);
+    }
 });
 
 var io = require('socket.io')().attach(https);
 
-
-var settings = require('./settings.js');
 var dbLog = require('./logUtil.js');
-
-var serialport = require("serialport"); //https://github.com/voodootikigod/node-serialport
-var Datastore = require('nedb'); //https://github.com/louischatriot/nedb
-var nodemailer = require('nodemailer'); //https://github.com/andris9/Nodemailer
-var path = require('path');
 var request = require('request');
 var db = new Datastore({ filename: path.join(__dirname, 'data', 'db', settings.database.name), autoload: true });       //used to keep all node/metric data
 //var dbLog = new Datastore({ filename: path.join(__dirname, 'db', settings.database.logName), autoload: true }); //used to keep all logging/graph data
 var dbunmatched = new Datastore({ filename: path.join(__dirname, 'data', 'db', settings.database.nonMatchesName), autoload: true });
-var serial = new serialport.SerialPort(settings.serial.port, { baudrate : settings.serial.baud, parser: serialport.parsers.readline("\n") });
+
 var metricsDef = require('./metrics.js');
-
-
-
 
 require("console-stamp")(console, settings.general.consoleLogDateFormat); //timestamp logs - https://github.com/starak/node-console-stamp
 db.persistence.setAutocompactionInterval(settings.database.compactDBInterval); //compact the database every 24hrs
