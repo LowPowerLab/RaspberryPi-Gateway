@@ -16,7 +16,7 @@
         "debug": "~2.2",
         "config": "~1.17",
         "serialport": "~1.7",
-        "nedb": "~1.1",
+        "nedb": "~1.5",
         "nodemailer": "~1.x",
         "console-stamp": "~0.2.0",
         "express": "~4.13.X",
