@@ -20,6 +20,10 @@ exports.database = {
 exports.general = {
   consoleLogDateFormat : 'mm-dd-yy_HH:MM:ss.l',
   socketPort : 8080,
+  httpport : 80,
+  httpsport : 443,
+  user : 'moteino',
+  group : 'moteino'
 };
 
 exports.radiothermostat = {

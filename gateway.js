@@ -1,3 +1,4 @@
+#!/usr/bin/nodejs
 ﻿// **********************************************************************************
 // Websocket server backend for the Moteino IoT Framework
 // Hardware and software stack details: http://lowpowerlab.com/gateway
@@ -62,18 +63,133 @@
 // IMPORTANT details about NeDB:
 // _id field is special - if not used it is automatically added and used as unique index
 //                      - we can set that field when inserting to use it as an automatic unique index for fast lookups of nodes (by node Id)
+
+
+var debug = require('debug')('my-application');
+var express = require('express');
+var http = require('http');
+var https = require('https');
+var path = require('path');
+var logger = require('morgan');
+var compression = require('compression');
+var cookieParser = require('cookie-parser');
+var bodyParser = require('body-parser');
+var fs = require('fs');
+var auth = require('http-auth');
 var settings = require('./settings.js');
-var dbLog = require('./logUtil.js');
-io = require('socket.io').listen(settings.general.socketPort);
+
+var httpsApp = express();
+var httpApp = express();
+//var routes = require('./routes/index');
+
+
 var serialport = require("serialport"); //https://github.com/voodootikigod/node-serialport
 var Datastore = require('nedb'); //https://github.com/louischatriot/nedb
 var nodemailer = require('nodemailer'); //https://github.com/andris9/Nodemailer
 var path = require('path');
-var request = require('request');
-var db = new Datastore({ filename: path.join(__dirname, 'db', settings.database.name), autoload: true });       //used to keep all node/metric data
-//var dbLog = new Datastore({ filename: path.join(__dirname, 'db', settings.database.logName), autoload: true }); //used to keep all logging/graph data
-var dbunmatched = new Datastore({ filename: path.join(__dirname, 'db', settings.database.nonMatchesName), autoload: true });
+//Serial opening needs to be before dropping privildge. If not group on serial
+//device must match group defined in settings.
 var serial = new serialport.SerialPort(settings.serial.port, { baudrate : settings.serial.baud, parser: serialport.parsers.readline("\n") });
+
+var basic = auth.basic({
+    realm: "RaspberryPi-Gateway Restricted",
+    file: path.join(__dirname, "data", "secure", ".htpasswd") // location of .htpasswd file. Preferably in persistent area.
+});
+
+
+// view engine setup
+httpsApp.set('views', path.join(__dirname, 'views'));
+httpsApp.set('view engine', 'jade');
+httpApp.set('port', process.env.PORT || settings.general.httpport);
+httpsApp.set('sport', process.env.SPORT || settings.general.httpsport);
+
+httpsApp.use(auth.connect(basic));
+httpsApp.use(compression());
+httpsApp.use(logger('dev'));
+httpsApp.use(bodyParser.json());
+httpsApp.use(bodyParser.urlencoded({ extended: false }));
+httpsApp.use(cookieParser());
+httpsApp.use(express.static(path.join(__dirname, 'public')));
+
+/// catch 404 and forwarding to error handler
+httpsApp.use(function(req, res, next) {
+    var err = new Error('Not Found');
+    err.status = 404;
+    next(err);
+});
+
+/// error handlers
+
+// development error handler
+// will print stacktrace
+if (httpsApp.get('env') === 'development') {
+    httpsApp.use(function(err, req, res, next) {
+        res.status(err.status || 500);
+        res.render('error', {
+            message: err.message,
+            error: err
+        });
+    });
+}
+
+// production error handler
+// no stacktraces leaked to user
+httpsApp.use(function(err, req, res, next) {
+    res.status(err.status || 500);
+    res.render('error', {
+        message: err.message,
+        error: {}
+    });
+});
+
+// Redirect all http traffic to the https port.
+httpApp.get("*", function (req, res, next) {
+    var hostpart;
+    if (typeof req.hostname !== 'undefined') {
+        hostpart = req.hostname;
+    }else {
+        hostpart = req.ip;
+    }
+    if (httpsApp.get('sport') === 443) {
+        res.redirect("https://" + hostpart + req.originalUrl);
+    } else {
+        res.redirect("https://" + hostpart + ":" + httpsApp.get('sport') + req.originalUrl);
+    }
+});
+
+http.createServer(httpApp).listen(httpApp.get('port'), function() {
+    console.log('HTTP redirect server listening on port ' + httpApp.get('port'));
+});
+
+var httpsoptions = {
+    key: fs.readFileSync(path.join(__dirname, 'data', 'secure', 'dummytls.key')),
+    cert: fs.readFileSync(path.join(__dirname, 'data', 'secure', 'dummytls.crt'))
+};
+
+https = https.createServer(httpsoptions, httpsApp).listen(httpsApp.get('sport'), function(){
+    console.log('Express HTTPS server listening on port ' + httpsApp.get('sport'));
+    //Probably should drop privildge a different way. Its possible to have out
+    //of order execution and drop privildge before http listen has attached.
+    try {
+      console.log('Old User ID: ' + process.getuid() + ', Old Group ID: ' + process.getgid());
+      process.setgid(settings.general.group);
+      process.setuid(settings.general.user);
+      console.log('New User ID: ' + process.getuid() + ', New Group ID: ' + process.getgid());
+    } catch (err) {
+      console.log('Error dropping root privildge');
+      console.log(err);
+      process.exit(1);
+    }
+});
+
+var io = require('socket.io')().attach(https);
+
+var dbLog = require('./logUtil.js');
+var request = require('request');
+var db = new Datastore({ filename: path.join(__dirname, 'data', 'db', settings.database.name), autoload: true });       //used to keep all node/metric data
+//var dbLog = new Datastore({ filename: path.join(__dirname, 'db', settings.database.logName), autoload: true }); //used to keep all logging/graph data
+var dbunmatched = new Datastore({ filename: path.join(__dirname, 'data', 'db', settings.database.nonMatchesName), autoload: true });
+
 var metricsDef = require('./metrics.js');
 
 require("console-stamp")(console, settings.general.consoleLogDateFormat); //timestamp logs - https://github.com/starak/node-console-stamp
@@ -135,7 +251,7 @@ global.handleNodeEvents = function(node) {
       if (enabled)
       {
         var evt = metricsDef.events[key];
-        if (evt.serverExecute!=undefined)
+        if (evt.serverExecute!==undefined)
           try {
             evt.serverExecute(node);
           }
@@ -155,13 +271,13 @@ global.handleNodeEvents = function(node) {
 //authorize handshake - make sure the request is coming from nginx, not from the outside world
 //if you comment out this section, you will be able to hit this socket directly at the port it's running at, from anywhere!
 //this was tested on Socket.IO v1.2.1 and will not work on older versions
-io.use(function(socket, next) {
-  var handshakeData = socket.request;
+//io.use(function(socket, next) {
+//  var handshakeData = socket.request;
   //console.log('\nAUTHORIZING CONNECTION FROM ' + handshakeData.connection.remoteAddress + ':' + handshakeData.connection.remotePort);
-  if (handshakeData.connection.remoteAddress == "localhost" || handshakeData.connection.remoteAddress == "127.0.0.1")
-    next();
-  next(new Error('REJECTED IDENTITY, not coming from localhost'));
-});
+//  if (handshakeData.connection.remoteAddress == "localhost" || handshakeData.connection.remoteAddress == "127.0.0.1")
+//    next();
+//  next(new Error('REJECTED IDENTITY, not coming from localhost'));
+//});
 
 io.sockets.on('connection', function (socket) {
   var address = socket.handshake.headers['x-forwarded-for'] || socket.request.connection.remoteAddress;
@@ -313,7 +429,7 @@ io.sockets.on('connection', function (socket) {
   socket.on('GETGRAPHDATA', function (nodeId, metricKey, start, end) {
     var sts = Math.floor(start / 1000); //get timestamp in whole seconds
     var ets = Math.floor(end / 1000); //get timestamp in whole seconds
-    var logfile = path.join(__dirname, 'db', dbLog.getLogName(nodeId,metricKey));
+    var logfile = path.join(__dirname, 'data','db', dbLog.getLogName(nodeId,metricKey));
     var graphData = dbLog.getData(logfile, sts, ets);
     var graphOptions={};
     for(var k in metricsDef.metrics)
@@ -401,7 +517,7 @@ global.processSerialData = function (data) {
               if (metricsDef.isNumeric(graphValue))
               {
                 var ts = Math.floor(Date.now() / 1000); //get timestamp in whole seconds
-                var logfile = path.join(__dirname, 'db', dbLog.getLogName(id, matchingMetric.name));
+                var logfile = path.join(__dirname, 'data', 'db', dbLog.getLogName(id, matchingMetric.name));
                 try {
                   console.log('post: ' + logfile + '[' + ts + ','+graphValue + ']');
                   dbLog.postData(logfile, ts, graphValue);
@@ -483,3 +599,5 @@ db.find({ events : { $exists: true } }, function (err, entries) {
     }
   //console.log('*** Events Register db count: ' + count);
 });
+
+module.exports = httpsApp;

@@ -1,0 +1,7 @@
+.git
+README.md
+node_modules
+*.log
+RaspberryPi\ case\ blueprints
+RaspberryPi\ custom\ gateway
+data/db/*
