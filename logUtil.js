@@ -14,7 +14,7 @@
 //     NOTE: timestamps are whole integers, in seconds, so javascript timestamps have to be divided by 1000 before being passed in
 // *******************************************************************************
 var fs = require('fs');
-var metrics = require('./metrics.js');
+var metrics = require(require('path').resolve(__dirname,'metrics.js'));
 
 exports.getLogName = function(nodeId, metricId) {
   return ('0000' + nodeId).slice(-4) + '_' + metricId + '.bin'; //left pad log names with zeros

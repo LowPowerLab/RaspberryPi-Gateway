@@ -12,49 +12,12 @@
 // ********************************************************************************************
 // Copyright Felix Rusu, Low Power Lab LLC (2015), http://lowpowerlab.com/contact
 // ********************************************************************************************
-//                                    LICENSE
-// ********************************************************************************************
-// This source code is released under GPL 3.0 with the following ammendments:
-// You are free to use, copy, distribute and transmit this Software for non-commercial purposes.
-// - You cannot sell this Software for profit while it was released freely to you by Low Power Lab LLC.
-// - You may freely use this Software commercially only if you also release it freely,
-//   without selling this Software portion of your system for profit to the end user or entity.
-//   If this Software runs on a hardware system that you sell for profit, you must not charge
-//   any fees for this Software, either upfront or for retainer/support purposes
-// - If you want to resell this Software or a derivative you must get permission from Low Power Lab LLC.
-// - You must maintain the attribution and copyright notices in any forks, redistributions and
-//   include the provided links back to the original location where this work is published,
-//   even if your fork or redistribution was initially an N-th tier fork of this original release.
-// - You must release any derivative work under the same terms and license included here.
-// - This Software is released without any warranty expressed or implied, and Low Power Lab LLC
-//   will accept no liability for your use of the Software (except to the extent such liability
-//   cannot be excluded as required by law).
-// - Low Power Lab LLC reserves the right to adjust or replace this license with one
-//   that is more appropriate at any time without any prior consent.
-// Otherwise all other non-conflicting and overlapping terms of the GPL terms below will apply.
-// ********************************************************************************************
-// This program is free software; you can redistribute it and/or modify it under the terms
-// of the GNU General Public License as published by the Free Software Foundation;
-// either version 3 of the License, or (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-// without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-// See the GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along with this program.
-// If not license can be viewed at: http://www.gnu.org/licenses/gpl-3.0.txt
-//
-// Please maintain this license information along with authorship
-// and copyright notices in any redistribution of this code
-// **********************************************************************************
-
-//Great reference on Javascript Arrays: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array
-//Great reference on Javascript Objects: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_Objects
-//Great reference on Javascript Regular Expressions: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
-//Great sandbox to test your Regular Expressions: http://regexr.com/
-//JqueryMobile generic icons: http://api.jquerymobile.com/icons/
-//FLOT graphs customizations: http://www.jqueryflottutorial.com/jquery-flot-customizing-data-series-format.html
-
+// Great reference on Javascript Arrays: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array
+// Great reference on Javascript Objects: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_Objects
+// Great reference on Javascript Regular Expressions: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
+// Great sandbox to test your Regular Expressions: http://regexr.com/
+// JqueryMobile generic icons: http://api.jquerymobile.com/icons/
+// FLOT graphs customizations: http://www.jqueryflottutorial.com/jquery-flot-customizing-data-series-format.html
 // ******************************************************************************************************************************************
 //                                            SAMPLE EVENTS/ALERTS
 // ******************************************************************************************************************************************
@@ -75,7 +38,10 @@
 //       so when garage goes through different states it will update a single metric called 'Status'
 //       Another good example is SwitchMote where we have 6 different metric definitions here but only 3 resultant actual metrics (Button1, Button2 and Button3)
 var request = require('request');
-var settings = require('./settings.js');
+var config = require('nconf');
+var JSON5 = require('json5');
+config.argv().file({ file: require('path').resolve(__dirname, 'settings.json5'), format: JSON5 }); //old settings using exports: //var settings = require('./settings.js');
+var settings = config.get('settings');
 
 exports.metrics = {
   //GarageMote
@@ -159,8 +125,11 @@ exports.events = {
   doorbellSound : { label:'Doorbell : Sound', icon:'audio', descr:'Play sound when doorbell rings', serverExecute:function(node) { if (node.metrics['RING'] && node.metrics['RING'].value == 'RING' && (Date.now() - new Date(node.metrics['RING'].updated).getTime() < 2000)) { io.sockets.emit('PLAYSOUND', 'sounds/doorbell.wav'); }; } },
   doorbellSMS : { label:'Doorbell : SMS', icon:'comment', descr:'Send SMS when Doorbell button is pressed', serverExecute:function(node) { if (node.metrics['RING'] && node.metrics['RING'].value == 'RING' && (Date.now() - new Date(node.metrics['RING'].updated).getTime() < 2000)) { sendSMS('DOORBELL', 'DOORBELL WAS RINGED: [' + node._id + '] ' + node.label + ' @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
   sumpSMS : { label:'SumpPump : SMS (below 20cm)', icon:'comment', descr:'Send SMS if water < 20cm below surface', serverExecute:function(node) { if (node.metrics['CM'] && node.metrics['CM'].value < 20 && (Date.now() - new Date(node.metrics['CM'].updated).getTime() < 2000)) { sendSMS('SUMP PUMP ALERT', 'Water is only 20cm below surface and rising - [' + node._id + '] ' + node.label + ' @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
-  switchMoteON_PM : { label:'SwitchMote ON at 8:00PM!', icon:'clock', descr:'Turn this switch ON at 8PM every day', nextSchedule:function(node) { return exports.timeoutOffset(20,0); /*run at 8:15PM*/ }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:1'}); } },
-  switchMoteOFF_AM : { label:'SwitchMote OFF at 7:00AM!', icon:'clock', descr:'Turn this switch OFF at 7AM every day', nextSchedule:function(node) { return exports.timeoutOffset(7,00); /*run at 6:30AM */ }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:0'}); } },
+
+  garageSMS : { label:'Garage : SMS', icon:'comment', descr:'Send SMS when garage is OPENING', serverExecute:function(node) { if (node.metrics['Status'] && node.metrics['Status'].value == 'OPENING' && (Date.now() - new Date(node.metrics['Status'].updated).getTime() < 2000)) { sendSMS('Garage event', 'Garage was opening on node : [' + node._id + ':' + node.label + '] @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
+
+  switchMoteON_PM : { label:'SwitchMote ON at 5:30PM!', icon:'clock', descr:'Turn this switch ON every evening', nextSchedule:function(node) { return exports.timeoutOffset(17,30); }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:1'}); } },
+  switchMoteOFF_AM : { label:'SwitchMote OFF at 7:30AM!', icon:'clock', descr:'Turn this switch OFF every morning', nextSchedule:function(node) { return exports.timeoutOffset(7,30); }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:0'}); } },
   //for the sprinkler events, rather than scheduling with offsets, its much easir we run them every day, and check the odd/even/weekend condition in the event itself
   sprinklersOddDays : { label:'Odd days @ 6:30AM', icon:'clock', descr:'Run this sprinkler program on odd days at 6:30AM', nextSchedule:function(node) { return exports.timeoutOffset(6,30); }, scheduledExecute:function(node) { if ((new Date().getDate()%2)==1) sendMessageToNode({nodeId:node._id, action:'PRG 2:300 3:300 1:300 4:300 5:300' /*runs stations 1-5 (300sec each))*/}); } },
   sprinklersEvenDays : { label:'Even days @ 6:30AM', icon:'clock', descr:'Run this sprinkler program on even days at 6:30AM', nextSchedule:function(node) { return exports.timeoutOffset(6,30); }, scheduledExecute:function(node) { if ((new Date().getDate()%2)==0) sendMessageToNode({nodeId:node._id, action:'PRG 2:300 3:300 1:300 4:300 5:300' /*runs stations 1-5 (300sec each)*/}); } },
@@ -258,7 +227,8 @@ exports.motes = {
       Z8 : { states: [{ label:'8', action:'ON:8', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE'].value != '8'; }},
                       { label:'8', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE'].value == '8'; }}]},
       Z9 : { states: [{ label:'9', action:'ON:9', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE'].value != '9'; }},
-                      { label:'9', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE'].value == '9'; }}]},
+                      { label:'9', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE'].value == '9'; }}], breakAfter:true},
+      MN : { states: [{ label:'Run z1-5 3min', action:'PRG 1:180 2:180 3:180 4:180 5:180'}]},
     },
   },
   WeatherMote: {

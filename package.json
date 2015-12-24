@@ -1,54 +1,29 @@
 {
-    "name": "RaspberryPi-Gateway",
-    "version": "0.1.0",
-    "description": "RaspberryPi Home Automation Gateway Sample Implementation",
-    "main": "gateway.js",
-    "repository": "https://github.com/LowPowerLab/RaspberryPi-Gateway.git",
-    "author": "Felix Rusu (https://github.com/LowPowerLab)",
-    "homepage": "http://lowpowerlab.com/gateway",
-    "bugs": {
-        "url": "https://github.com/LowPowerLab/RaspberryPi-Gateway/issues"
-    },
-    "license" : "SEE LICENSE IN license.txt",
-    "contributors": "Felix Rusu (https://github.com/LowPowerLab)",
-    "dependencies": {
-        "socket.io": "~1.2",
-        "debug": "~2.1",
-        "config": "~1.11",
-        "serialport": "~1.6",
-        "nedb": "~1.1",
-        "nodemailer": "~0.7",
-        "console-stamp": "~0.2.0",
-        "express": "~4.0.0",
-        "serve-favicon": "~2.3.0",
-        "morgan": "~1.0.0",
-        "cookie-parser": "~1.0.1",
-        "body-parser": "~1.0.0",
-        "jade": "~1.3.0",
-        "http-auth": "~2.2",
-        "compression": "~1.5",
-        "request": "~2.65"
-    },
-    "engines": {
-        "node": ">=0.12",
-        "npm": "1.2.x"
-    },
-    "scripts": {
-        "preinstall": "",
-        "start": "node gateway.js"
-    },
-    "jshintConfig": {
-        "camelcase": true,
-        "curly": true,
-        "eqeqeq": true,
-        "freeze": true,
-        "indent": 2,
-        "newcap": true,
-        "maxdepth": 3,
-        "maxstatements": 15,
-        "maxlen": 165,
-        "eqnull": true,
-        "funcscope": true,
-        "node": true
-    }
+  "name": "RaspberryPi-Gateway",
+  "version": "0.1.0",
+  "description": "RaspberryPi Home Automation Gateway Sample Implementation",
+  "main": "gateway.js",
+  "repository": "https://github.com/LowPowerLab/RaspberryPi-Gateway.git",
+  "author": "Felix Rusu (https://github.com/LowPowerLab)",
+  "homepage": "http://lowpowerlab.com/gateway",
+  "bugs": {
+    "url": "https://github.com/LowPowerLab/RaspberryPi-Gateway/issues"
+  },
+  "license": "SEE LICENSE IN license.txt",
+  "contributors": "Felix Rusu (https://github.com/LowPowerLab)",
+  "dependencies": {
+    "serialport": "~2.0",
+    "socket.io": "~1.3",
+    "nedb": "~1.5",
+    "json5": "~0.4.0",
+    "nconf": "~0.8.2",
+    "nodemailer": "~1.10",
+    "console-stamp": "~0.2.0",
+    "colors": "~1.1.2",
+    "request": "~2.67"
+  },
+  "scripts": {
+    "preinstall": "",
+    "start": "node gateway.js"
+  }
 }

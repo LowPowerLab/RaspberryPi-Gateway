@@ -2,6 +2,7 @@
 // Websocket server backend for the Moteino IoT Framework
 // Hardware and software stack details: http://lowpowerlab.com/gateway
 // This is a work in progress and is released without any warranties expressed or implied.
+// See license.txt for license and limitations of use of this software.
 // **********************************************************************************
 // Based on Node.js, and following node packages:
 //      socket.io, node-serialport, neDB, nodemailer, console-stamp
@@ -12,74 +13,39 @@
 // NeDB is Node Embedded Database - a persistent database for Node.js, with no dependency
 // Specs and documentation at: https://github.com/louischatriot/nedb
 //
-// Under the hood, NeDB's persistence uses an append-only format, meaning that all updates
+// Under the hood, NeDB's persistence uses an append-only format, meaning that all updates 
 // and deletes actually result in lines added at the end of the datafile. The reason for
 // this is that disk space is very cheap and appends are much faster than rewrites since
 // they don't do a seek. The database is automatically compacted (i.e. put back in the
 // one-line-per-document format) everytime your application restarts.
-//
+// 
 // This script is configured to compact the database every 24 hours since time of start.
 // ********************************************************************************************
 // Copyright Felix Rusu, Low Power Lab LLC (2015), http://lowpowerlab.com/contact
 // ********************************************************************************************
-// ********************************************************************************************
-//                                    LICENSE
-// ********************************************************************************************
-// This source code is released under GPL 3.0 with the following ammendments:
-// You are free to use, copy, distribute and transmit this Software for non-commercial purposes.
-// - You cannot sell this Software for profit while it was released freely to you by Low Power Lab LLC.
-// - You may freely use this Software commercially only if you also release it freely,
-//   without selling this Software portion of your system for profit to the end user or entity.
-//   If this Software runs on a hardware system that you sell for profit, you must not charge
-//   any fees for this Software, either upfront or for retainer/support purposes
-// - If you want to resell this Software or a derivative you must get permission from Low Power Lab LLC.
-// - You must maintain the attribution and copyright notices in any forks, redistributions and
-//   include the provided links back to the original location where this work is published,
-//   even if your fork or redistribution was initially an N-th tier fork of this original release.
-// - You must release any derivative work under the same terms and license included here.
-// - This Software is released without any warranty expressed or implied, and Low Power Lab LLC
-//   will accept no liability for your use of the Software (except to the extent such liability
-//   cannot be excluded as required by law).
-// - Low Power Lab LLC reserves the right to adjust or replace this license with one
-//   that is more appropriate at any time without any prior consent.
-// Otherwise all other non-conflicting and overlapping terms of the GPL terms below will apply.
-// ********************************************************************************************
-// This program is free software; you can redistribute it and/or modify it under the terms
-// of the GNU General Public License as published by the Free Software Foundation;
-// either version 3 of the License, or (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-// without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-// See the GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along with this program.
-// If not license can be viewed at: http://www.gnu.org/licenses/gpl-3.0.txt
-//
-// Please maintain this license information along with authorship
-// and copyright notices in any redistribution of this code
-// **********************************************************************************
-//
 // IMPORTANT details about NeDB:
 // _id field is special - if not used it is automatically added and used as unique index
 //                      - we can set that field when inserting to use it as an automatic unique index for fast lookups of nodes (by node Id)
-var settings = require('./settings.js');
-var dbLog = require('./logUtil.js');
-io = require('socket.io').listen(settings.general.socketPort);
-var serialport = require("serialport"); //https://github.com/voodootikigod/node-serialport
-var Datastore = require('nedb'); //https://github.com/louischatriot/nedb
-var nodemailer = require('nodemailer'); //https://github.com/andris9/Nodemailer
+// ********************************************************************************************
+var nconf = require('nconf');                                   //https://github.com/indexzero/nconf
+var JSON5 = require('json5');                                   //https://github.com/aseemk/json5
 var path = require('path');
+var dbDir = 'data/db';
+nconf.argv().file({ file: path.resolve(__dirname, 'settings.json5'), format: JSON5 }); //old settings using exports: //var settings = require('./settings.js');
+var settings = nconf.get('settings');
+var dbLog = require(path.resolve(__dirname,'logUtil.js'));
+io = require('socket.io').listen(settings.general.socketPort);
+var serialport = require("serialport");                         //https://github.com/voodootikigod/node-serialport
+var Datastore = require('nedb');                                //https://github.com/louischatriot/nedb
+var nodemailer = require('nodemailer');                         //https://github.com/andris9/Nodemailer
 var request = require('request');
-var db = new Datastore({ filename: path.join(__dirname, 'db', settings.database.name), autoload: true });       //used to keep all node/metric data
-//var dbLog = new Datastore({ filename: path.join(__dirname, 'db', settings.database.logName), autoload: true }); //used to keep all logging/graph data
-var dbunmatched = new Datastore({ filename: path.join(__dirname, 'db', settings.database.nonMatchesName), autoload: true });
+var db = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.name), autoload: true });       //used to keep all node/metric data
+var dbunmatched = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.nonMatchesName), autoload: true });
 var serial = new serialport.SerialPort(settings.serial.port, { baudrate : settings.serial.baud, parser: serialport.parsers.readline("\n") });
-var metricsDef = require('./metrics.js');
+var metricsDef = require(path.resolve(__dirname,'metrics.js'));
 
 require("console-stamp")(console, settings.general.consoleLogDateFormat); //timestamp logs - https://github.com/starak/node-console-stamp
 db.persistence.setAutocompactionInterval(settings.database.compactDBInterval); //compact the database every 24hrs
-//dbLog.ensureIndex({ fieldName: 'n' }, function (err) { if (err) console.log('dbLog EnsureIndex[n] Error:' + err); });
-//dbLog.ensureIndex({ fieldName: 'm' }, function (err) { if (err) console.log('dbLog EnsureIndex[m] Error:' + err); });
 
 var transporter = nodemailer.createTransport({
     service: settings.credentials.emailservice, //"gmail" is preconfigured by nodemailer, but you can setup any other email client supported by nodemailer
@@ -313,7 +279,7 @@ io.sockets.on('connection', function (socket) {
   socket.on('GETGRAPHDATA', function (nodeId, metricKey, start, end) {
     var sts = Math.floor(start / 1000); //get timestamp in whole seconds
     var ets = Math.floor(end / 1000); //get timestamp in whole seconds
-    var logfile = path.join(__dirname, 'db', dbLog.getLogName(nodeId,metricKey));
+    var logfile = path.join(__dirname, dbDir, dbLog.getLogName(nodeId,metricKey));
     var graphData = dbLog.getData(logfile, sts, ets);
     var graphOptions={};
     for(var k in metricsDef.metrics)
@@ -401,7 +367,7 @@ global.processSerialData = function (data) {
               if (metricsDef.isNumeric(graphValue))
               {
                 var ts = Math.floor(Date.now() / 1000); //get timestamp in whole seconds
-                var logfile = path.join(__dirname, 'db', dbLog.getLogName(id, matchingMetric.name));
+                var logfile = path.join(__dirname, dbDir, dbLog.getLogName(id, matchingMetric.name));
                 try {
                   console.log('post: ' + logfile + '[' + ts + ','+graphValue + ']');
                   dbLog.postData(logfile, ts, graphValue);

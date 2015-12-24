@@ -1,66 +1,72 @@
+#use upstream when you want to do load balancing on your websocket
 #upstream backend {
-#  server 127.0.0.1:8080;
+#  server localhost:8080;
+#  server localhost:8081;
 #}
-
+ 
 server{
   listen 80;
   listen 443 ssl;
   server_name default;
-
+ 
+  # enable basic authentication and point to the credentials file
   auth_basic "Restricted";
-  auth_basic_user_file /var/www/default/.htpasswd;
-
-  #ssl on; #uncomment to reject any non-SSL connections
-  ssl_certificate /etc/nginx/ssl/server.crt;
-  ssl_certificate_key /etc/nginx/ssl/server.key;
-
+  auth_basic_user_file /home/pi/gateway/data/secure/.htpasswd;
+ 
+  # point to the SSL certificate required for SSL
+  ssl_certificate /home/pi/gateway/data/secure/server.crt;
+  ssl_certificate_key /home/pi/gateway/data/secure/server.key;
+ 
   access_log /var/log/nginx/default.access.log;
   error_log /var/log/nginx/default.error.log;
-
+ 
   # Redirect all non-SSL traffic to SSL.
   if ($ssl_protocol = "") {
     rewrite ^ https://$host$request_uri? permanent;
   }
-
-  root /var/www/default;
+ 
+  # point to the www directory of this site, and setup the index pages
+  root /home/pi/gateway/www;
   index index.html index.php index.htm; ## first that is found is matched
-
+ 
+  # enable websocket proxying to a backend socket server running on a custom port
+  # by default, the endpoint for the socket.io websocket server is .socket.io.
   location /socket.io/ {
     proxy_pass http://localhost:8080;
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection upgrade;
-	proxy_set_header X-Real-IP  $remote_addr;
+    proxy_set_header X-Real-IP  $remote_addr;
     proxy_set_header X-Forwarded-For $remote_addr;
   }
-
-  # setup PHP
+ 
+  # enable and configure PHP
   location ~* \.php$ {
     fastcgi_split_path_info ^(.+\.php)(.*)$;
-
+ 
     # typically the fpm.sock is used, but check to make sure by using:
-    # sudo -ri "listen = " /etc/php5/fpm/
-    # should get something like:
+    # sudo grep -ri "listen = " /etc/php5/fpm/
+    # should get something like: 
     #  /etc/php5/fpm/pool.d/www.conf:listen = /var/run/php5-fpm.sock
     # then you know it's fpm.sock
-    fastcgi_pass unix:/var/run/php5-fpm.sock;
-    #fastcgi_pass 127.0.0.1:9000;
-
+    fastcgi_pass unix:/var/run/php5-fpm.sock; #uncomment if PHP runs on fpm.sock
+    #fastcgi_pass 127.0.0.1:9000; #uncomment if PHP is running on port 9000
+ 
     fastcgi_index index.php;
-    fastcgi_param SCRIPT_FILENAME /var/www/default$fastcgi_script_name;
+    fastcgi_param SCRIPT_FILENAME /home/pi/gateway/www$fastcgi_script_name;
     fastcgi_param QUERY_STRING $query_string;
     fastcgi_param REQUEST_METHOD $request_method;
     fastcgi_param CONTENT_TYPE $content_type;
     fastcgi_param CONTENT_LENGTH $content_length;
     include fastcgi_params;
   }
-
+ 
   # redirect server error pages to the static page /50x.html
   error_page 500 502 503 504 /50x.html;
   location = /50x.html {
       root html;
   }
-
+ 
   ## Disable viewing .htaccess & .htpassword
   location ~ /\.ht {
       deny all;
