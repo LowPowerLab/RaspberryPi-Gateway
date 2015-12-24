@@ -19,7 +19,7 @@ You are free to use, copy, distribute and transmit this Software for non-commerc
 For more details see [LICENSE](https://github.com/LowPowerLab/RaspberryPi-Gateway/blob/master/LICENSE)
 
 ###Details & Setup Guide
-http://lowpowerlab.com/gateway
+The full details of how to install this stack along with supporting webserver are published [here](http://lowpowerlab.com/gateway). There you will also find a pre-compiled Pi image that has this stack installed and ready to go. In addition there are hardware guidelines and requirements.
 
 ###Quick reference:
 - Copy the contents of this directory in `/home/pi/gateway`
