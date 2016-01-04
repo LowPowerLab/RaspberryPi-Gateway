@@ -19,7 +19,7 @@
 // JqueryMobile generic icons: http://api.jquerymobile.com/icons/
 // FLOT graphs customizations: http://www.jqueryflottutorial.com/jquery-flot-customizing-data-series-format.html
 // ******************************************************************************************************************************************
-//                                            SAMPLE EVENTS/ALERTS
+//                                            SAMPLE METRIC DEFINITIONS
 // ******************************************************************************************************************************************
 // These metrics definitions consist of a regular expression that will be attempted to be matched to any incoming tokens from the gateway Moteino serial port
 // If one matches you should see a new node/metric show up in the UI or be updated if previously matched
