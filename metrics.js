@@ -142,6 +142,36 @@ exports.events = {
       exports.tstatPoll(node._id);
     }},
   //END thermostat poll event
+  
+  thermostat_H68_AM : { label:'Thermostat heat 68° @ 8AM weekdays', icon:'clock', descr:'Request heat point of 68° weekdays at 8am',
+    nextSchedule:function(node) { return exports.timeoutOffset(8,0); }, //ie 8:00 (8am)
+    scheduledExecute:function(node) {
+      if ([1,2,3,4,5].indexOf(new Date().getDay())>-1 /*Monday=1..Friday=5,*/)
+      {
+        var targetNow=0, modeNow='';
+        if (node.metrics['MODE']) modeNow = node.metrics['MODE'].value;
+        if (node.metrics['TARGET']) targetNow = node.metrics['TARGET'].value;
+        if (targetNow == 68 && modeNow=='HEAT') return;
+        var thejson = { 'tmode':1, 't_heat':68, 'hold':1 };
+        exports.tstatRequest(thejson, node._id);
+      }
+    }
+  },
+    
+  thermostat_H73_PM : { label:'Thermostat heat 73° @ 4:00PM weekdays', icon:'clock', descr:'Request heat point of 73° weekdays at 4pm',
+    nextSchedule:function(node) { return exports.timeoutOffset(16,0); }, //ie 16:00 (4pm)
+    scheduledExecute:function(node) {
+      if ([1,2,3,4,5].indexOf(new Date().getDay())>-1 /*Monday=1..Friday=5,*/)
+      {
+        var targetNow=0, modeNow='';
+        if (node.metrics['MODE']) modeNow = node.metrics['MODE'].value;
+        if (node.metrics['TARGET']) targetNow = node.metrics['TARGET'].value;
+        if (targetNow == 73 && modeNow=='HEAT') return;
+        var thejson = { 'tmode':1, 't_heat':73, 'hold':1 };
+        exports.tstatRequest(thejson, node._id);
+      }
+    }
+  },
 };
 
 // ******************************************************************************************************************************************
