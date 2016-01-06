@@ -154,13 +154,13 @@ exports.binarySearchExact = function(fileDescriptor, timestamp, filesize) {
   {
     mid = start + Math.round((end-start)/18)*9;
     //console.log('mid:' + mid);
-    fs.readSync(fd, buff, 0, 4, mid+1);
+    fs.readSync(fileDescriptor, buff, 0, 4, mid+1);
     tmp = buff.readUInt32BE(0);
     //console.log('tmp:' + tmp);
     if (tmp==timestamp) return mid;
     if ((end-start)==9)
     {
-      fs.readSync(fd, buff, 0, 4, start+1);
+      fs.readSync(fileDescriptor, buff, 0, 4, start+1);
       tmp = buff.readUInt32BE(0);
       return (tmp==timestamp) ? start : -1;
     }
