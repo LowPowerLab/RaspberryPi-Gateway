@@ -31,6 +31,9 @@ var nconf = require('nconf');                                   //https://github
 var JSON5 = require('json5');                                   //https://github.com/aseemk/json5
 var path = require('path');
 var dbDir = 'data/db';
+var metricsFile = 'metrics.js';
+nconf.argv().file({ file: path.resolve(__dirname, 'settings.json5'), format: JSON5 });
+settings = nconf.get('settings');
 var dbLog = require(path.resolve(__dirname,'logUtil.js'));
 io = require('socket.io').listen(settings.general.socketPort.value);
 var serialport = require("serialport");                         //https://github.com/voodootikigod/node-serialport
