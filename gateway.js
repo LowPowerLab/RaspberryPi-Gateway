@@ -8,7 +8,7 @@
 //      socket.io, node-serialport, neDB, nodemailer, console-stamp
 // **********************************************************************************
 //                    BEFORE THE FIRST USE:
-//       Adjust settings in settings.js and read the rest of this readme.
+//       Adjust settings in settings.json5 and read the rest of this readme.
 // **********************************************************************************
 // NeDB is Node Embedded Database - a persistent database for Node.js, with no dependency
 // Specs and documentation at: https://github.com/louischatriot/nedb
@@ -31,27 +31,25 @@ var nconf = require('nconf');                                   //https://github
 var JSON5 = require('json5');                                   //https://github.com/aseemk/json5
 var path = require('path');
 var dbDir = 'data/db';
-nconf.argv().file({ file: path.resolve(__dirname, 'settings.json5'), format: JSON5 }); //old settings using exports: //var settings = require('./settings.js');
-var settings = nconf.get('settings');
 var dbLog = require(path.resolve(__dirname,'logUtil.js'));
-io = require('socket.io').listen(settings.general.socketPort);
+io = require('socket.io').listen(settings.general.socketPort.value);
 var serialport = require("serialport");                         //https://github.com/voodootikigod/node-serialport
 var Datastore = require('nedb');                                //https://github.com/louischatriot/nedb
 var nodemailer = require('nodemailer');                         //https://github.com/andris9/Nodemailer
 var request = require('request');
-var db = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.name), autoload: true });       //used to keep all node/metric data
-var dbunmatched = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.nonMatchesName), autoload: true });
-var serial = new serialport.SerialPort(settings.serial.port, { baudrate : settings.serial.baud, parser: serialport.parsers.readline("\n") });
-var metricsDef = require(path.resolve(__dirname,'metrics.js'));
+var db = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.name.value), autoload: true });       //used to keep all node/metric data
+var dbunmatched = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.nonMatchesName.value), autoload: true });
+serial = new serialport.SerialPort(settings.serial.port.value, { baudrate : settings.serial.baud.value, parser: serialport.parsers.readline("\n") });
+metricsDef = require(path.resolve(__dirname, metricsFile));
 
-require("console-stamp")(console, settings.general.consoleLogDateFormat); //timestamp logs - https://github.com/starak/node-console-stamp
-db.persistence.setAutocompactionInterval(settings.database.compactDBInterval); //compact the database every 24hrs
+require("console-stamp")(console, settings.general.consoleLogDateFormat.value); //timestamp logs - https://github.com/starak/node-console-stamp
+db.persistence.setAutocompactionInterval(settings.database.compactDBInterval.value); //compact the database every 24hrs
 
 var transporter = nodemailer.createTransport({
-    service: settings.credentials.emailservice, //"gmail" is preconfigured by nodemailer, but you can setup any other email client supported by nodemailer
+    service: settings.credentials.emailservice.value, //"gmail" is preconfigured by nodemailer, but you can setup any other email client supported by nodemailer
     auth: {
-        user: settings.credentials.email,
-        pass: settings.credentials.emailpass,
+        user: settings.credentials.email.value,
+        pass: settings.credentials.emailpass.value,
     }
 });
 
@@ -60,7 +58,7 @@ var transporter = nodemailer.createTransport({
 global.sendEmail = function(SUBJECT, BODY) {
   var mailOptions = {
       from: 'Moteino Gateway <gateway@moteino.com>',
-      to: settings.credentials.emailAlertsTo, // list of receivers, comma separated
+      to: settings.credentials.emailAlertsTo.value, // list of receivers, comma separated
       subject: SUBJECT,
       text: BODY
       //html: '<b>Hello world ?</b>' // html body
@@ -74,7 +72,7 @@ global.sendEmail = function(SUBJECT, BODY) {
 global.sendSMS = function(SUBJECT, BODY) {
   var mailOptions = {
       from: 'Moteino Gateway <gateway@moteino.com>',
-      to: settings.credentials.smsAlertsTo, //your mobile carrier should have an email address that will generate a SMS to your phone
+      to: settings.credentials.smsAlertsTo.value, //your mobile carrier should have an email address that will generate a SMS to your phone
       subject: SUBJECT,
       text: BODY
   };
@@ -90,6 +88,15 @@ global.sendMessageToNode = function(node) {
     serial.write(node.nodeId + ':' + node.action + '\n', function () { serial.drain(); });
     console.log('NODEACTION: ' + JSON.stringify(node));
   }
+  else if (node.action)
+  {
+    serial.write(node.action + '\n', function () { serial.drain(); });
+    console.log('NODEACTION: ' + JSON.stringify(node));
+  }
+}
+
+global.sendMessageToGateway = function(msg) {
+  serial.write(msg + '\n', function () { serial.drain(); });
 }
 
 global.handleNodeEvents = function(node) {
@@ -136,6 +143,7 @@ io.sockets.on('connection', function (socket) {
   socket.emit('MOTESDEF', metricsDef.motes);
   socket.emit('METRICSDEF', metricsDef.metrics);
   socket.emit('EVENTSDEF', metricsDef.events);
+  socket.emit('SETTINGSDEF', settings);
 
   db.find({ _id : { $exists: true } }, function (err, entries) {
     //console.log("New connection found docs: " + entries.length);
@@ -254,6 +262,10 @@ io.sockets.on('connection', function (socket) {
   socket.on('NODEMESSAGE', function (msg) {
     sendMessageToNode(msg);
   });
+  
+  socket.on('GATEWAYMESSAGE', function (msg) {
+    sendMessageToGateway(msg);
+  });
 
   socket.on('INJECTNODE', function(node) {
     if (metricsDef.isNumeric(node.nodeId))
@@ -294,6 +306,40 @@ io.sockets.on('connection', function (socket) {
     graphOptions.metricName=metricKey;
     socket.emit('GRAPHDATAREADY', { graphData:graphData, options : graphOptions });
   });
+  
+  socket.on('UPDATESETTINGSDEF', function (newSettings) {
+    var settings = nconf.get('settings');
+    
+    for(var sectionName in settings)
+    {
+      var sectionSettings = settings[sectionName];
+      if (sectionSettings.exposed===false || sectionSettings.editable===false) continue;
+      for(var settingName in sectionSettings)
+      {
+        var setting = sectionSettings[settingName];
+        if (setting.exposed===false || setting.editable===false) continue
+        if (setting.value == undefined || newSettings[sectionName][settingName].value == undefined) continue;
+        setting.value = newSettings[sectionName][settingName].value;
+      }
+    }
+
+    global.settings = settings;
+    
+    nconf.save(function (err) {
+      if (err !=null)
+        socket.emit('LOG', 'UPDATESETTINGSDEF ERROR: '+err);
+      else
+      {
+        global.metricsDef = require(path.resolve(__dirname, metricsFile))
+        io.sockets.emit('SETTINGSDEF', settings);
+      }
+    });
+  });
+  
+  socket.on('PROCESSEXIT', function () {
+    console.log('PROCESS EXIT REQUESTED from ' + address);
+    process.exit();
+  });
 });
 
 global.msgHistory = new Array();
@@ -310,11 +356,12 @@ global.processSerialData = function (data) {
 
     db.find({ _id : id }, function (err, entries) {
       var existingNode = new Object();
+      var hasMatchedMetrics = false;
       if (entries.length == 1)
       { //update
         existingNode = entries[0];
       }
-
+      
       //check for duplicate messages - this can happen when the remote node sends an ACK-ed message but does not get the ACK so it resends same message repeatedly until it receives an ACK
       if (existingNode.updated != undefined && ((new Date) - new Date(existingNode.updated).getTime()) < 500 && msgHistory[id] == msgTokens)
       { console.log("   DUPLICATE, skipping..."); return; }
@@ -377,6 +424,7 @@ global.processSerialData = function (data) {
             }
 
             //console.log('TOKEN MATCHED OBJ:' + JSON.stringify(existingNode));
+            hasMatchedMetrics = true;
             break; //--> this stops matching as soon as 1 metric definition regex is matched on the data. You could keep trying to match more definitions and that would create multiple metrics from the same data token, but generally this is not desired behavior.
           }
         }
@@ -390,17 +438,24 @@ global.processSerialData = function (data) {
       db.findOne({_id:id}, function (err, doc) {
         if (doc == null)
         {
-          db.insert(entry);
-          console.log('   ['+id+'] DB-Insert new _id:' + id);
+          if (settings.general.genNodeIfNoMatch.value == true || settings.general.genNodeIfNoMatch.value == 'true' || hasMatchedMetrics)
+          {
+            db.insert(entry);
+            console.log('   ['+id+'] DB-Insert new _id:' + id);
+          } 
+          else
+          {
+            return;
+          }
         }
         else
           db.update({ _id: id }, { $set : entry}, {}, function (err, numReplaced) { console.log('   ['+id+'] DB-Updates:' + numReplaced);});
-      });
 
-      //publish updated node to clients
-      io.sockets.emit('UPDATENODE', entry);
-      //handle any server side events (email, sms, custom actions)
-      handleNodeEvents(entry);
+        //publish updated node to clients
+        io.sockets.emit('UPDATENODE', entry);
+        //handle any server side events (email, sms, custom actions)
+        handleNodeEvents(entry);
+      });
     });
   }
   else

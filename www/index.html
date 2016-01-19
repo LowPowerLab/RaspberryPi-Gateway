@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <!--
 // ********************************************************************************************
 // Websocket front end and web UI for the Moteino IoT Framework
@@ -61,6 +61,7 @@
   <script language="javascript" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.selection.min.js"></script>
   <script language="javascript" type="text/javascript" src="js/graphHelper.js"></script>
   <script language="javascript" type="text/javascript" src="js/dateFormat.js"></script> <!-- for demo see http://jsfiddle.net/phZr7/1/ -->
+  <script language="javascript" type="text/javascript" src="https://rawgit.com/remy/bind/master/dist/bind.min.js"></script>
 
   <style type="text/css">
   .ui-content { padding-top:0; }
@@ -145,6 +146,7 @@
         <a id="btnHiddenNodesToggle" href="#" data-role="button" data-icon="eye" data-iconpos="notext" title="Show hidden nodes">Show hidden</a>
         <a id="btnSearch" href="#" data-role="button" data-icon="search" data-iconpos="notext" title="search nodes">Search</a>
         <a href="#logpage" data-role="button" data-icon="fa-terminal" data-iconpos="notext" title="terminal/log">Log</a>
+        <a href="#settingspage" data-role="button" data-icon="fa-gear" data-iconpos="notext" title="settings">Settings</a>
       </div>
     </div>
 
@@ -170,7 +172,7 @@
     </div>
 
     <div data-role="footer">
-      <h1><span style="font-size:11px">© <a href="http://lowpowerlab.com">LowPowerLab.com</a> 2015. All rights reserved. <a href="http://lowpowerlab.com/gateway">About</a></span></h1>
+      <h1><span style="font-size:11px">� <a href="http://lowpowerlab.com">LowPowerLab.com</a> 2015. All rights reserved. <a href="http://lowpowerlab.com/gateway">About</a></span></h1>
     </div>
   </div>
 
@@ -296,12 +298,28 @@
       </div>
     </div>
   </div>
+  
+  <div data-role="page" id="processExit" data-dialog="true">
+    <div data-role="main" class="ui-content">
+      <div class="center-wrapper" style="padding:20px">
+        <h3>Are you sure you want to restart the app?</h3>
+      </div>
+      <div class="center-wrapper" style="padding:10px">
+        <span><strong>NOTE:</strong> This command will actually execute a process.exit() which stops the gateway app.<br/>If upstart is running it should automatically detect the app has stopped and restart it.</span>
+      </div>
+      <div class="center-wrapper" style="padding:20px">
+        <a id="processExit_yes" href="#nodedetails" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-check ui-btn-icon-left ui-mini" data-rel="nodedetails" style="background: red; color: white;">Restart!</a>
+        <a href="#" class="ui-btn ui-btn-inline ui-shadow ui-corner-all ui-mini ui-icon-back ui-btn-icon-left" data-rel="back">Cancel</a>
+      </div>
+    </div>
+  </div>
 
   <div data-role="page" id="logpage">
     <div data-role="header">
       <a href="#homepage" class="ui-btn ui-corner-all ui-shadow ui-icon-home ui-btn-icon-left">Home</a>
       <h1>Terminal</h1>
       <div class="ui-btn-right" data-role="controlgroup" data-type="horizontal" data-mini="true">
+        <!--<a id="beepBtn" data-role="button" data-icon="fa-bell-o" data-iconpos="notext" title="Beep">Beep</a>-->
         <a id="btnRawToggle" href="#" data-role="button" data-icon="arrow-u" data-iconpos="notext" title="Send raw data to gateway Moteino">Raw send</a>
         <a id="clearbtn" href="#" data-role="button" data-icon="fa-remove" data-iconpos="notext" title="clear console/log textbox">Clear</a>
       </div>
@@ -324,6 +342,26 @@
     </div>
   </div>
 
+  <div data-role="page" id="settingspage">
+    <div data-role="header">
+      <a href="#homepage" class="ui-btn ui-corner-all ui-shadow ui-icon-home ui-btn-icon-left">Home</a>
+      <h1>Settings</h1>
+
+      <div class="ui-btn-right" data-role="controlgroup" data-type="horizontal" data-mini="true">
+        <a href="#logpage" data-role="button" data-icon="fa-terminal" data-iconpos="notext" title="terminal/log">Log</a>
+        <a href="#processExit" data-role="button" data-icon="power" data-iconpos="notext" data-transition="fade" title="Restart gateway app">Restart app</a>
+      </div>
+    </div>
+    
+    
+    <div data-role="main" class="ui-content">
+      <ul id="settingsList" data-role="listview" data-inset="true" data-theme="a" data-dividertheme="b"></ul>
+      <button id="settingsSave" class="ui-btn ui-btn-inline ui-btn-icon-left ui-icon-check">Save</button>
+      <button id="settingsCancel" class="ui-btn ui-btn-inline ui-btn-icon-left ui-icon-delete">Cancel</button>
+    </div>
+    
+  </div>
+
   <script type="text/javascript">
   if (!window.jQuery || typeof $.mobile == 'undefined')
     document.body.innerHTML = unescape('Error: jQuery/mobile could not be loaded from the CDNs. Check the internet connection.');
@@ -335,6 +373,9 @@
     var motesDef;          //holds the definition of the motes (from server side metrics.js)
     var metricsDef;        //holds the definition of the metrics (from server side metrics.js)
     var eventsDef;
+    var settingsDef;
+    var settingsDefBindMap;
+    var boundSettings;
     var showHiddenNodes=false, showRawSend=false;
     var socket = io();
     $('#nodeList').hide();
@@ -403,6 +444,38 @@
         }
       });
     });
+    
+    socket.on('SETTINGSDEF', function(newSettingsDef) {
+      settingsDef = newSettingsDef;
+      $('#settingsList').empty();
+      settingsDefBindMap = {};
+      for(var sectionName in settingsDef)
+      {
+        var sectionSettings = settingsDef[sectionName];
+        if (!sectionSettings.exposed) continue;
+        var sectionLI = $('<li data-role="list-divider">'+sectionName+'</li>');
+        $('#settingsList').append(sectionLI);
+        
+        for(var settingName in sectionSettings)
+        {
+          var setting = sectionSettings[settingName];
+          if (setting.exposed === false) continue;
+          if (setting.value == undefined) continue;
+          var settingLI = $('<li class="ui-field-contain"><label for="'+sectionName+'-'+settingName+'">'+settingName+':</label><input '+(setting.password?'type="password"':'type="text"')+' name="'+sectionName+'-'+settingName+'" id="'+sectionName+'-'+settingName+'" value="'+setting.value+'" data-clear-btn="true"'+(setting.editable===false?' disabled="disabled"':'')+'></li>');
+          settingsDefBindMap[sectionName+'.'+settingName+'.value'] = '#'+sectionName+'-'+settingName;
+          $('#settingsList').append(settingLI);
+        }
+      }
+      
+      $('#settingsList').listview().listview('refresh');
+      boundSettings = Bind(settingsDef, settingsDefBindMap);
+      $("#settingsSave").click(function () { 
+        socket.emit('UPDATESETTINGSDEF', boundSettings);
+        //$('#settingsList').empty();
+        $.mobile.navigate('#homepage', { transition : 'fade'});
+      });
+    });
+    
     $(document).on("pagecreate", "#eventAdd", function(){ if ($('addEventType').val()) $('#addEvent_OK').show(); else $('#addEvent_OK').hide(); });
 
     socket.on('LOG', function(data) {
@@ -718,6 +791,10 @@
         $("#btnRawToggle").addClass('ui-btn-b');
       }
     });
+    
+    $("#beepBtn").click("tap", function(event) {
+      socket.emit('GATEWAYMESSAGE', 'BEEP');
+    });
 
     function refreshNodeDetails(node) {
       $('#nodeLabel').val(node.label || '');
@@ -964,6 +1041,11 @@
       nodes[selectedNodeId].metrics[selectedMetricKey] = undefined;
       $('#metricList li#' + selectedMetricKey).remove();
       socket.emit('DELETENODEMETRIC', selectedNodeId, selectedMetricKey);
+    });
+    
+    $("#processExit_yes").click("tap", function(event) {
+      socket.emit('PROCESSEXIT');
+      $.mobile.navigate('#homepage', { transition : 'fade'});
     });
 
     $("#clearbtn").click("tap", function(event) {

@@ -19,7 +19,7 @@
 // JqueryMobile generic icons: http://api.jquerymobile.com/icons/
 // FLOT graphs customizations: http://www.jqueryflottutorial.com/jquery-flot-customizing-data-series-format.html
 // ******************************************************************************************************************************************
-//                                            SAMPLE METRIC DEFINITIONS
+//                                            SAMPLE EVENTS/ALERTS
 // ******************************************************************************************************************************************
 // These metrics definitions consist of a regular expression that will be attempted to be matched to any incoming tokens from the gateway Moteino serial port
 // If one matches you should see a new node/metric show up in the UI or be updated if previously matched
@@ -40,8 +40,8 @@
 var request = require('request');
 var config = require('nconf');
 var JSON5 = require('json5');
-config.argv().file({ file: require('path').resolve(__dirname, 'settings.json5'), format: JSON5 }); //old settings using exports: //var settings = require('./settings.js');
-var settings = config.get('settings');
+config.argv().file({ file: require('path').resolve(__dirname, 'settings.json5'), format: JSON5 });
+var settings = config.get('settings'); //these are local to avoid runtime errors but in events they will reference the global settings declared in gateway.js
 
 exports.metrics = {
   //GarageMote
@@ -122,14 +122,17 @@ exports.events = {
   motionSMS : { label:'Motion : SMS', icon:'comment', descr:'Send SMS when MOTION is detected', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendSMS('MOTION DETECTED', 'MOTION WAS DETECTED ON NODE: [' + node._id + ':' + node.label + '] @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
   mailboxSMS : { label:'Mailbox open : SMS', icon:'comment', descr:'Send SMS when mailbox is opened', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendSMS('MAILBOX OPENED', 'Mailbox opened [' + node._id + ':' + node.label + '] @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
   motionLightON23 : { label:'Motion: SM23 ON!', icon:'action', descr:'Turn SwitchMote:23 ON when MOTION is detected', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendMessageToNode({nodeId:23, action:'MOT:1'}); }; } },
+  
   doorbellSound : { label:'Doorbell : Sound', icon:'audio', descr:'Play sound when doorbell rings', serverExecute:function(node) { if (node.metrics['RING'] && node.metrics['RING'].value == 'RING' && (Date.now() - new Date(node.metrics['RING'].updated).getTime() < 2000)) { io.sockets.emit('PLAYSOUND', 'sounds/doorbell.wav'); }; } },
   doorbellSMS : { label:'Doorbell : SMS', icon:'comment', descr:'Send SMS when Doorbell button is pressed', serverExecute:function(node) { if (node.metrics['RING'] && node.metrics['RING'].value == 'RING' && (Date.now() - new Date(node.metrics['RING'].updated).getTime() < 2000)) { sendSMS('DOORBELL', 'DOORBELL WAS RINGED: [' + node._id + '] ' + node.label + ' @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
   sumpSMS : { label:'SumpPump : SMS (below 20cm)', icon:'comment', descr:'Send SMS if water < 20cm below surface', serverExecute:function(node) { if (node.metrics['CM'] && node.metrics['CM'].value < 20 && (Date.now() - new Date(node.metrics['CM'].updated).getTime() < 2000)) { sendSMS('SUMP PUMP ALERT', 'Water is only 20cm below surface and rising - [' + node._id + '] ' + node.label + ' @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
 
-  garageSMS : { label:'Garage : SMS', icon:'comment', descr:'Send SMS when garage is OPENING', serverExecute:function(node) { if (node.metrics['Status'] && node.metrics['Status'].value == 'OPENING' && (Date.now() - new Date(node.metrics['Status'].updated).getTime() < 2000)) { sendSMS('Garage event', 'Garage was opening on node : [' + node._id + ':' + node.label + '] @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
+  garageSMS : { label:'Garage : SMS', icon:'comment', descr:'Send SMS when garage is OPENING', serverExecute:function(node) { if (node.metrics['Status'] && (node.metrics['Status'].value.indexOf('OPENING')>-1) && (Date.now() - new Date(node.metrics['Status'].updated).getTime() < 2000)) { sendSMS('Garage event', 'Garage was opening on node : [' + node._id + ':' + node.label + '] @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
 
   switchMoteON_PM : { label:'SwitchMote ON at 5:30PM!', icon:'clock', descr:'Turn this switch ON every evening', nextSchedule:function(node) { return exports.timeoutOffset(17,30); }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:1'}); } },
   switchMoteOFF_AM : { label:'SwitchMote OFF at 7:30AM!', icon:'clock', descr:'Turn this switch OFF every morning', nextSchedule:function(node) { return exports.timeoutOffset(7,30); }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:0'}); } },
+  switchMoteONBUZZ : { label:'SwitchMote ON Buzzer beep!', icon:'clock', descr:'Buzz gateway when switchmote is ON',  serverExecute:function(node) { if (node.metrics['B1'] && node.metrics['B1'].value == 'ON' && (Date.now() - new Date(node.metrics['B1'].updated).getTime() < 2000)) { setTimeout(function() { sendMessageToGateway('BEEP'); }, 50); } }},
+  
   //for the sprinkler events, rather than scheduling with offsets, its much easir we run them every day, and check the odd/even/weekend condition in the event itself
   sprinklersOddDays : { label:'Odd days @ 6:30AM', icon:'clock', descr:'Run this sprinkler program on odd days at 6:30AM', nextSchedule:function(node) { return exports.timeoutOffset(6,30); }, scheduledExecute:function(node) { if ((new Date().getDate()%2)==1) sendMessageToNode({nodeId:node._id, action:'PRG 2:300 3:300 1:300 4:300 5:300' /*runs stations 1-5 (300sec each))*/}); } },
   sprinklersEvenDays : { label:'Even days @ 6:30AM', icon:'clock', descr:'Run this sprinkler program on even days at 6:30AM', nextSchedule:function(node) { return exports.timeoutOffset(6,30); }, scheduledExecute:function(node) { if ((new Date().getDate()%2)==0) sendMessageToNode({nodeId:node._id, action:'PRG 2:300 3:300 1:300 4:300 5:300' /*runs stations 1-5 (300sec each)*/}); } },
@@ -142,19 +145,20 @@ exports.events = {
       exports.tstatPoll(node._id);
     }},
   //END thermostat poll event
-  
+
   thermostat_H68_AM : { label:'Thermostat heat 68° @ 8AM weekdays', icon:'clock', descr:'Request heat point of 68° weekdays at 8am',
     nextSchedule:function(node) { return exports.timeoutOffset(8,0); }, //ie 8:00 (8am)
     scheduledExecute:function(node) {
       if ([1,2,3,4,5].indexOf(new Date().getDay())>-1 /*Monday=1..Friday=5,*/)
       {
         var targetNow=0, modeNow='';
-        if (node.metrics['MODE']) modeNow = node.metrics['MODE'].value;
-        if (node.metrics['TARGET']) targetNow = node.metrics['TARGET'].value;
-        if (targetNow == 68 && modeNow=='HEAT') return;
+        // if (node.metrics['MODE']) modeNow = node.metrics['MODE'].value;
+        // if (node.metrics['TARGET']) targetNow = node.metrics['TARGET'].value;
+        // if (targetNow == 68 && modeNow=='HEAT') return;
         var thejson = { 'tmode':1, 't_heat':68, 'hold':1 };
         exports.tstatRequest(thejson, node._id);
       }
+      else console.log('thermostat_H73_PM IF(FAIL): day=' + (new Date().getDay()));
     }
   },
     
@@ -164,12 +168,13 @@ exports.events = {
       if ([1,2,3,4,5].indexOf(new Date().getDay())>-1 /*Monday=1..Friday=5,*/)
       {
         var targetNow=0, modeNow='';
-        if (node.metrics['MODE']) modeNow = node.metrics['MODE'].value;
-        if (node.metrics['TARGET']) targetNow = node.metrics['TARGET'].value;
-        if (targetNow == 73 && modeNow=='HEAT') return;
+        //if (node.metrics['MODE']) modeNow = node.metrics['MODE'].value;
+        //if (node.metrics['TARGET']) targetNow = node.metrics['TARGET'].value;
+        //if (targetNow == 73 && modeNow=='HEAT') return;
         var thejson = { 'tmode':1, 't_heat':73, 'hold':1 };
         exports.tstatRequest(thejson, node._id);
       }
+      else console.log('thermostat_H73_PM IF(FAIL): day=' + (new Date().getDay()));
     }
   },
 };
@@ -515,22 +520,23 @@ exports.timeoutOffset = function(hour, minute, second, millisecond, offset) {
 // ******************************************************************************************************************************************
 //this function sends an HTTP GET request to the thermostat to refresh metrics like current temperature, target temp, mode (heat/cool), hold etc.
 exports.tstatPoll = function(nodeId) {
-  request('http://'+settings.radiothermostat.ip+'/tstat', function (error, response, body) {
+  var requestJson = 'http://'+settings.radiothermostat.ip.value+'/tstat';
+  request(requestJson, function (error, response, body) {
     if (!error && response.statusCode == 200) {
       var info = JSON.parse(body);
       var target = info.t_cool || info.t_heat || undefined;
       var fakeSerialMsg = '['+nodeId+'] '+'F:'+(info.temp*100) + (target ? ' TARGET:'+target : '') + ' HOLD:'+(info.hold==1?'ON':'OFF')+' TSTATE:'+(info.tstate==0?'OFF':(info.tstate==1?'HEATING':'COOLING'))+' FSTATE:'+(info.fstate==0?'AUTO':(info.fstate==1?'ON':'AUTOCIRC'))+' MODE:'+(info.tmode==3?'AUTO':(info.tmode==2?'COOL':(info.tmode==1?'HEAT':'OFF')));
       processSerialData(fakeSerialMsg);
-      io.sockets.emit('LOG', fakeSerialMsg);
+      //io.sockets.emit('LOG', fakeSerialMsg);
     }
-    else io.sockets.emit('LOG', 'THERMOSTAT STATUS GET FAIL:' + error);
+    else io.sockets.emit('LOG', 'THERMOSTAT STATUS GET FAIL for request \''+requestJson+'\':' + error);
   });
 }
 
 //this function sends an HTTP POST request to the thermostat (usually to change temperature/mode etc).
 exports.tstatRequest = function(thejson, nodeId) {
   //console.log('tstatRequest:' + JSON.stringify(thejson));
-  request.post({ url:'http://'+settings.radiothermostat.ip+'/tstat', json: thejson},
+  request.post({ url:'http://'+settings.radiothermostat.ip.value+'/tstat', json: thejson},
                 function(error,response,body){
                   //console.log('BODY: ' + JSON.stringify(body));
                   if (error) console.log('ERROR in tstatRequest(): ' + JSON.stringify(thejson) + ' nodeId:' + nodeId + ' - ' + error);

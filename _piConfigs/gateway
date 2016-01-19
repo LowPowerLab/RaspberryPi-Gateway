@@ -1,0 +1,16 @@
+#this is used by logrotate and should be placed in /etc/logrotate.d/
+#rotate the gateway logs and keep a limit of how many are archived
+#note: archives are rotated in /home/pi/gateway/logs so that dir must exist prior to rotation
+/home/pi/gateway/logs/*.log {
+        size 20M
+        missingok
+        rotate 10
+        dateext
+        dateformat -%Y-%m-%d
+        compress
+        #delaycompress
+        notifempty
+        nocreate
+        copytruncate
+}
+
