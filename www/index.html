@@ -672,7 +672,7 @@
         nodes[node._id] = node;
         var nodeValue = metricsValues(node.metrics);
         var lowBat = node.metrics.V != null && node.metrics.V.value < 3.55;
-        var newLI = $('<li id="' +  node._id + '"><a node-id="' + node._id + '" href="#nodedetails" class="nodedetails"><img class="productimg" src="images/'+getNodeIcon(node.type)+'"><h2>' + (node.label || node._id) + ' ' + resolveRSSIImage(node.rssi) + ' ' + (lowBat ? '<img src="images/lowbattery.png" style="max-width:12px"/> ' : '') + ago(node.updated, 0).tag + (node.hidden ? ' <img class="listIcon20px" src="images/icon_hidden.png" />' : '') + '</h2><p>' + (node.descr || '&nbsp;') + '</p>' + (nodeValue ? '<span class="ui-li-count ui-li-count16">' + nodeValue + '</span>' : '') + '</a></li>');
+        var newLI = $('<li id="' +  node._id + '"><a node-id="' + node._id + '" href="#nodedetails" class="nodedetails"><img class="productimg" src="images/'+getNodeIcon(node.type)+'"><h2>' + (node.label || node._id) + ' ' + resolveRSSIImage(node.rssi) + ' ' + (lowBat ? '<img src="images/lowbattery.png" style="max-width:32px"/> ' : '') + ago(node.updated, 0).tag + (node.hidden ? ' <img class="listIcon20px" src="images/icon_hidden.png" />' : '') + '</h2><p>' + (node.descr || '&nbsp;') + '</p>' + (nodeValue ? '<span class="ui-li-count ui-li-count16">' + nodeValue + '</span>' : '') + '</a></li>');
         var existingNode = $('#nodeList li#' + node._id);
         if (node.hidden)
           if (showHiddenNodes)
