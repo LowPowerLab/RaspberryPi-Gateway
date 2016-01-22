@@ -13,12 +13,12 @@
 // NeDB is Node Embedded Database - a persistent database for Node.js, with no dependency
 // Specs and documentation at: https://github.com/louischatriot/nedb
 //
-// Under the hood, NeDB's persistence uses an append-only format, meaning that all updates 
+// Under the hood, NeDB's persistence uses an append-only format, meaning that all updates
 // and deletes actually result in lines added at the end of the datafile. The reason for
 // this is that disk space is very cheap and appends are much faster than rewrites since
 // they don't do a seek. The database is automatically compacted (i.e. put back in the
 // one-line-per-document format) everytime your application restarts.
-// 
+//
 // This script is configured to compact the database every 24 hours since time of start.
 // ********************************************************************************************
 // Copyright Felix Rusu, Low Power Lab LLC (2015), http://lowpowerlab.com/contact
@@ -42,7 +42,18 @@ var nodemailer = require('nodemailer');                         //https://github
 var request = require('request');
 var db = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.name.value), autoload: true });       //used to keep all node/metric data
 var dbunmatched = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.nonMatchesName.value), autoload: true });
-serial = new serialport.SerialPort(settings.serial.port.value, { baudrate : settings.serial.baud.value, parser: serialport.parsers.readline("\n") });
+serial = new serialport.SerialPort(settings.serial.port.value, { baudrate : settings.serial.baud.value, parser: serialport.parsers.readline("\n") }, false);
+
+serial.on('error', function serialError(error) {
+    //Send serial error messages to console.
+    //Better error handling needs to be here in the future.
+    console.log(error.message);
+});
+
+serial.on("data", function(data) { processSerialData(data); });
+
+serial.open();
+
 metricsDef = require(path.resolve(__dirname, metricsFile));
 
 require("console-stamp")(console, settings.general.consoleLogDateFormat.value); //timestamp logs - https://github.com/starak/node-console-stamp
@@ -265,7 +276,7 @@ io.sockets.on('connection', function (socket) {
   socket.on('NODEMESSAGE', function (msg) {
     sendMessageToNode(msg);
   });
-  
+
   socket.on('GATEWAYMESSAGE', function (msg) {
     sendMessageToGateway(msg);
   });
@@ -309,10 +320,10 @@ io.sockets.on('connection', function (socket) {
     graphOptions.metricName=metricKey;
     socket.emit('GRAPHDATAREADY', { graphData:graphData, options : graphOptions });
   });
-  
+
   socket.on('UPDATESETTINGSDEF', function (newSettings) {
     var settings = nconf.get('settings');
-    
+
     for(var sectionName in settings)
     {
       var sectionSettings = settings[sectionName];
@@ -327,7 +338,7 @@ io.sockets.on('connection', function (socket) {
     }
 
     global.settings = settings;
-    
+
     nconf.save(function (err) {
       if (err !=null)
         socket.emit('LOG', 'UPDATESETTINGSDEF ERROR: '+err);
@@ -338,7 +349,7 @@ io.sockets.on('connection', function (socket) {
       }
     });
   });
-  
+
   socket.on('PROCESSEXIT', function () {
     console.log('PROCESS EXIT REQUESTED from ' + address);
     process.exit();
@@ -364,7 +375,7 @@ global.processSerialData = function (data) {
       { //update
         existingNode = entries[0];
       }
-      
+
       //check for duplicate messages - this can happen when the remote node sends an ACK-ed message but does not get the ACK so it resends same message repeatedly until it receives an ACK
       if (existingNode.updated != undefined && ((new Date) - new Date(existingNode.updated).getTime()) < 500 && msgHistory[id] == msgTokens)
       { console.log("   DUPLICATE, skipping..."); return; }
@@ -445,7 +456,7 @@ global.processSerialData = function (data) {
           {
             db.insert(entry);
             console.log('   ['+id+'] DB-Insert new _id:' + id);
-          } 
+          }
           else
           {
             return;
@@ -468,7 +479,7 @@ global.processSerialData = function (data) {
   }
 }
 
-serial.on("data", function(data) { processSerialData(data) });
+
 
 //keep track of scheduler based events - these need to be kept in sych with the UI - if UI removes an event, it needs to be cancelled from here as well; if UI adds a scheduled event it needs to be scheduled and added here also
 scheduledEvents = []; //each entry should be defined like this: {nodeId, eventKey, timer}
