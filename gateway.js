@@ -44,11 +44,18 @@ var db = new Datastore({ filename: path.join(__dirname, dbDir, settings.database
 var dbunmatched = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.nonMatchesName.value), autoload: true });
 serial = new serialport.SerialPort(settings.serial.port.value, { baudrate : settings.serial.baud.value, parser: serialport.parsers.readline("\n") }, false);
 
-serial.on('error', function serialError(error) {
+serial.on('error', function serialErrorHandler(error) {
     //Send serial error messages to console.
     //Better error handling needs to be here in the future.
     console.log(error.message);
 });
+
+serial.on('close', function serialCloseHandler(error) {
+    //Give user a sane error message and exit. Future possibilities could include
+    //sending message to front end via socket.io & setup timer to retry opening serial.
+    console.log(error.message);
+    exit(1);
+})
 
 serial.on("data", function(data) { processSerialData(data); });
 
