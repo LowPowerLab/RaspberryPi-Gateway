@@ -50,13 +50,39 @@
         value: "mm-dd-yy_HH:MM:ss.l",
         exposed: false
       },
-      socketPort: {
-        value: 8080,
-        editable: false
-      },
       genNodeIfNoMatch: {
         value: "false"
       }
+    },
+    application: {
+        editable: false,
+        exposed: false,
+        httpport: {
+          value: 80
+        },
+        httpsport: {
+          value: 443
+        },
+        user: {
+          value:'moteino'
+        },
+        group: {
+          value: 'moteino'
+        },
+        droppriv: {
+          value: true
+        },
+        tls: {
+            key: {
+                value: "./data/secure/dummytls.key"
+            },
+            cert: {
+                value: "./data/secure/dummytls.crt"
+            }
+        },
+        httpauthfile: {
+            value: "./data/secure/.htpasswd"
+        },
     },
     radiothermostat: {
       editable: true,

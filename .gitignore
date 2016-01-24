@@ -1,3 +1,6 @@
 node_modules
-db/*
+data/db/*
+.htpasswd
 *.log
+data/config/local.json5
+coverage.html
