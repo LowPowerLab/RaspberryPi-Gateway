@@ -54,7 +54,7 @@ serial.on('close', function serialCloseHandler(error) {
     //Give user a sane error message and exit. Future possibilities could include
     //sending message to front end via socket.io & setup timer to retry opening serial.
     console.log(error.message);
-    exit(1);
+    process.exit(1);
 })
 
 serial.on("data", function(data) { processSerialData(data); });
