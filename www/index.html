@@ -55,6 +55,7 @@
   <link type="text/css" rel="stylesheet" href="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css" />
   <link type="text/css" rel="stylesheet" href="css/jqm-font-awesome-usvg-upng.min.css" />
   <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+  <script src="https://code.jquery.com/ui/1.11.4/jquery-ui.min.js"></script>
   <script src="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
   <script language="javascript" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.min.js"></script>
   <script language="javascript" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.time.min.js"></script>
@@ -62,7 +63,6 @@
   <script language="javascript" type="text/javascript" src="js/graphHelper.js"></script>
   <script language="javascript" type="text/javascript" src="js/dateFormat.js"></script> <!-- for demo see http://jsfiddle.net/phZr7/1/ -->
   <script language="javascript" type="text/javascript" src="https://cdn.rawgit.com/remy/bind.js/v1.0.1/dist/bind.min.js"></script>
-
   <style type="text/css">
   .ui-content { padding-top:0; }
   .btn-text, #loadingsocket { font-size: 32px; }
@@ -77,6 +77,13 @@
     position:static !important;
     float:right;
     font-size:16px;
+  }
+
+  h1, #nodeList li {
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    cursor: default;
   }
 
   .center-div{ margin: 0 auto; }
@@ -346,20 +353,18 @@
     <div data-role="header">
       <a href="#homepage" class="ui-btn ui-corner-all ui-shadow ui-icon-home ui-btn-icon-left">Home</a>
       <h1>Settings</h1>
-
       <div class="ui-btn-right" data-role="controlgroup" data-type="horizontal" data-mini="true">
         <a href="#logpage" data-role="button" data-icon="fa-terminal" data-iconpos="notext" title="terminal/log">Log</a>
         <a href="#processExit" data-role="button" data-icon="power" data-iconpos="notext" data-transition="fade" title="Restart gateway app">Restart app</a>
       </div>
     </div>
-    
-    
     <div data-role="main" class="ui-content">
       <ul id="settingsList" data-role="listview" data-inset="true" data-theme="a" data-dividertheme="b"></ul>
-      <button id="settingsSave" class="ui-btn ui-btn-inline ui-btn-icon-left ui-icon-check">Save</button>
-      <button id="settingsCancel" class="ui-btn ui-btn-inline ui-btn-icon-left ui-icon-delete">Cancel</button>
     </div>
-    
+    <div data-role="footer">
+      <a href="#homepage" class="ui-btn ui-btn-right ui-corner-all ui-shadow ui-btn-icon-left ui-icon-delete" style="background-color:#FF9B9B;margin:.5em;">Cancel</a>
+      <a id="settingsSave" class="ui-btn ui-corner-all ui-shadow ui-btn-icon-left ui-icon-check" style="background-color:#9BFFBE;color:#000000;margin:.5em;">Save</a>
+    </div>
   </div>
 
   <script type="text/javascript">
@@ -379,6 +384,17 @@
     var showHiddenNodes=false, showRawSend=false;
     var socket = io();
     $('#nodeList').hide();
+
+    function isNumeric(n) {
+      return !isNaN(parseFloat(n)) && isFinite(n); //http://stackoverflow.com/questions/18082/validate-decimal-numbers-in-javascript-isnumeric/1830844#1830844
+    }
+    
+    function sortNodeListByOrderCSV(newOrderCSV) {
+      var orderArray = newOrderCSV.split(',');
+      $('#nodeList').find('li:not(:first)').sort(function (a, b) {
+        return orderArray.indexOf($(a).attr('id')) - orderArray.indexOf($(b).attr('id'));
+      }).appendTo('#nodeList');
+    }
 
     function LOG(data) {
       $('#log').val(new Date().toLocaleTimeString() + ' : ' + data + '\n' + $('#log').val());
@@ -409,7 +425,6 @@
       $("#nodeList").empty();
       $('#nodeList').append('<li id="uldivider" data-role="divider"><h2>Nodes</h2><span class="ui-li-count ui-li-count16">Count: 0</span></li>');
       $('#nodeList').show();
-      entries.sort(function(a,b){ if (a.label && b.label) return a.label < b.label ? -1 : 1; if (a.label) return -1; if (b.label) return 1; return a._id > b._id; });
       for (var i = 0; i < entries.length; ++i)
         updateNode(entries[i]);
       refreshNodeListUI();
@@ -471,11 +486,14 @@
       boundSettings = Bind(settingsDef, settingsDefBindMap);
       $("#settingsSave").click(function () { 
         socket.emit('UPDATESETTINGSDEF', boundSettings);
-        //$('#settingsList').empty();
         $.mobile.navigate('#homepage', { transition : 'fade'});
       });
     });
     
+    socket.on('NODELISTREORDER', function(orderCSV) {
+      sortNodeListByOrderCSV(orderCSV);
+    });
+
     $(document).on("pagecreate", "#eventAdd", function(){ if ($('addEventType').val()) $('#addEvent_OK').show(); else $('#addEvent_OK').hide(); });
 
     socket.on('LOG', function(data) {
@@ -667,7 +685,7 @@
 
     function updateNode(node) {
       LOG(JSON.stringify(node));
-      if (node._id)
+      if (isNumeric(node._id))
       {
         nodes[node._id] = node;
         var nodeValue = metricsValues(node.metrics);
@@ -697,6 +715,22 @@
         showHiddenNodes = false;
         $('#btnHiddenNodesToggle').css('background-color', '').hide();
       }
+      
+      //default jquery sortable - will only work in desktop browsers but is the best and most consistent (+ it's jquery native)
+      $('#nodeList').sortable({
+        items: 'li:not(:first)',
+        containment: 'parent',
+        opacity: 0.5,
+        delay: 200,
+        scroll: true,
+        update: function(event, ui) {
+          var listIds = [];
+          var items = $('#nodeList li:not(:first)');
+          for(var i=0;typeof(items[i])!='undefined';listIds.push(items[i++].getAttribute('id')));
+          socket.emit('UPDATENODELISTORDER', listIds.join(','));
+        },
+      });
+
       $('#nodeList').listview('refresh'); //re-render the listview
     }
 
@@ -998,10 +1032,10 @@
       $('#addEventDescr').html(' ');
       $('#addEvent_OK').hide();
       $("#addEventType").empty();
-        $('#addEventType').append('<option value="">Select type...</option>');
-        for(var key in eventsDef)
-          if (!nodes[selectedNodeId].events || !nodes[selectedNodeId].events[key])
-            $('#addEventType').append('<option value="' + key + '">' + (eventsDef[key].label || key) + '</option>');
+      $('#addEventType').append('<option value="">Select type...</option>');
+      for(var key in eventsDef)
+        if (!nodes[selectedNodeId].events || !nodes[selectedNodeId].events[key])
+          $('#addEventType').append('<option value="' + key + '">' + (eventsDef[key].label || key) + '</option>');
 
       $(document).on("pagebeforeshow", "#addEvent", function(event){
         $("#addEventType").selectmenu('refresh');
@@ -1012,7 +1046,7 @@
     $("#node_update").click("tap", function(event) {
       notifyUpdateNode();
       //updateNode(nodes[selectedNodeId]); //this will happen when node is sent back by server
-      $('#nodeList').listview('refresh');
+      refreshNodeListUI();
     });
 
     $("#addEvent_OK").click("tap", function(event) {
@@ -1027,7 +1061,6 @@
         metric.pin = $('#btnPinMetric').hasClass('pinned') ? 1 : 0;
         if (metric.graph!=undefined) metric.graph = $('#btnGraphMetric').hasClass('graphed') ? 1 : 0;
         socket.emit('UPDATEMETRICSETTINGS', selectedNodeId, selectedMetricKey, metric);
-        //$('#nodeList').listview('refresh');
       }
     });
 

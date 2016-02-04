@@ -22,7 +22,6 @@ exports.getLogName = function(nodeId, metricId) {
 
 exports.getData = function(filename, start, end, dpcount) {
   dpcount = dpcount || 600;
-  //console.log('getData: ' + filename + ',' + start + ','+end+','+dpcount);
   if (dpcount>1500) dpcount = 1500;
   if (dpcount<1) dpcount = 1;
   if (dpcount<1 || start > end) return {};
@@ -45,7 +44,6 @@ exports.getData = function(filename, start, end, dpcount) {
   for (var i=0; i<dpcount; i++)
   {
     pos = exports.binarySearch(fd,start+(i*interval),filesize);
-    //console.log(i +' pos: ' + pos);
     last_time = timetmp;
     fs.readSync(fd, buff, 0, 9, pos);
     timetmp = buff.readUInt32BE(1);
@@ -53,9 +51,9 @@ exports.getData = function(filename, start, end, dpcount) {
 
     if ((timetmp!=last_time && timetmp>last_time) || last_time==0) {
       var item = {t:timetmp*1000, v:value/10000};
-      //console.log('pos: ' + pos + ':' + JSON.stringify(item));
       data.push(item);
     }
+    if (pos == filesize-9) break;
   }
   fs.closeSync(fd);
 
@@ -98,7 +96,6 @@ exports.postData = function post(filename, timestamp, value) {
       //timestamp is somewhere in the middle of the log, identify exact timestamp to update
       fd = fs.openSync(filename, 'r');
       pos = exports.binarySearchExact(fd,timestamp,logsize);
-      //console.log('pos found:' + pos);
       fs.closeSync(fd);
 
       if (pos!=-1)
@@ -126,12 +123,15 @@ exports.binarySearch = function(fileDescriptor,timestamp, filesize) {
   var buff = new Buffer(4);
   var time = 0;
 
-  // 30 here is our max number of itterations the position should usually be found within 20 iterations
+  fs.readSync(fileDescriptor, buff, 0, 4, end+1);
+  time = buff.readUInt32BE(0);
+  if (timestamp >= time) return end;
+  
+  // 30 here is our max number of iterations, the position should usually be found within 20 iterations
   for (i=0; i<30; i++)
   {
-    //console.log('.');
     // Get the value in the middle of our range
-    mid = start + Math.round((end-start)/16)*9;
+    mid = start + Math.round((end-start)/18)*9;
     fs.readSync(fileDescriptor, buff, 0, 4, mid+1);
     time = buff.readUInt32BE(0);
     // If it is the value we want then exit
@@ -143,6 +143,7 @@ exports.binarySearch = function(fileDescriptor,timestamp, filesize) {
     // If the time of the last middle of the range is more than our query time then next itteration is lower half less than our query time then nest ittereation is higher half
     if (timestamp>time) start = mid; else end = mid;
   }
+  return mid;
 }
 
 exports.binarySearchExact = function(fileDescriptor, timestamp, filesize) {
@@ -153,10 +154,8 @@ exports.binarySearchExact = function(fileDescriptor, timestamp, filesize) {
   for (i=0; i<30; i++)
   {
     mid = start + Math.round((end-start)/18)*9;
-    //console.log('mid:' + mid);
     fs.readSync(fileDescriptor, buff, 0, 4, mid+1);
     tmp = buff.readUInt32BE(0);
-    //console.log('tmp:' + tmp);
     if (tmp==timestamp) return mid;
     if ((end-start)==9)
     {

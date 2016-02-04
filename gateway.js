@@ -55,7 +55,7 @@ serial.on('close', function serialCloseHandler(error) {
     //sending message to front end via socket.io & setup timer to retry opening serial.
     console.log(error.message);
     process.exit(1);
-})
+});
 
 serial.on("data", function(data) { processSerialData(data); });
 
@@ -166,11 +166,38 @@ io.sockets.on('connection', function (socket) {
   socket.emit('EVENTSDEF', metricsDef.events);
   socket.emit('SETTINGSDEF', settings);
 
+  //pull all nodes from the database
   db.find({ _id : { $exists: true } }, function (err, entries) {
-    //console.log("New connection found docs: " + entries.length);
+    var orderCSV;
+    for (var i = entries.length-1; i>=0; i--)
+      if (!metricsDef.isNumeric(entries[i]._id)) //remove non-numeric id nodes
+      {
+        if (entries[i]._id == 'NODELISTORDER') //if node order entry was found, remember it
+          orderCSV = entries[i].order;
+        entries.splice(i,1);
+      }
+
+    //sort the list if nodes order entry was found, otherwise do a default ordering by label or by id when no label is set
+    entries.sort(orderCSV !== undefined ?
+      function (a, b) { return orderCSV.indexOf(a._id) - orderCSV.indexOf(b._id); }
+      :
+      function(a,b){ if (a.label && b.label) return a.label < b.label ? -1 : 1; if (a.label) return -1; if (b.label) return 1; return a._id > b._id; }
+    );
+
     socket.emit('UPDATENODES', entries);
   });
 
+  socket.on('UPDATENODELISTORDER', function (newOrder) {
+    db.findOne({_id:'NODELISTORDER'}, function (err, doc) {
+      var entry = {_id:'NODELISTORDER', order:newOrder};
+      if (doc == null)
+        db.insert(entry);
+      else
+        db.update({ _id: 'NODELISTORDER' }, { $set : entry});
+      io.sockets.emit('NODELISTREORDER', newOrder);
+    });
+  });
+          
   socket.on('UPDATENODESETTINGS', function (node) {
     db.find({ _id : node._id }, function (err, entries) {
       if (entries.length == 1)
@@ -495,7 +522,19 @@ scheduledEvents = []; //each entry should be defined like this: {nodeId, eventKe
 function schedule(node, eventKey) {
   var nextRunTimeout = metricsDef.events[eventKey].nextSchedule(node);
   console.log('**** SCHEDULING EVENT - nodeId:' + node._id+' event:'+eventKey+' to run in ~' + (nextRunTimeout/3600000).toFixed(2) + 'hrs');
+
+  //clear any previous instances of the event
+  for(var s in scheduledEvents)
+    if (scheduledEvents[s].nodeId == node._id && scheduledEvents[s].eventKey == eventKey)
+    {
+      clearTimeout(scheduledEvents[s].timer);
+      scheduledEvents.splice(scheduledEvents.indexOf(scheduledEvents[s]), 1);
+    }
+
+  //schedule event in the future at calculated timer delay
   var theTimer = setTimeout(runAndReschedule, nextRunTimeout, metricsDef.events[eventKey].scheduledExecute, node, eventKey); //http://www.w3schools.com/jsref/met_win_settimeout.asp
+
+  //remember the timer ID so we can clear it later
   scheduledEvents.push({nodeId:node._id, eventKey:eventKey, timer:theTimer}); //save nodeId, eventKey and timer (needs to be removed if the event is disabled/removed from the UI)
 }
 
