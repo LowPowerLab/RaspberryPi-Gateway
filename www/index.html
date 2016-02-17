@@ -598,7 +598,7 @@
       graphOptions.yaxis.max = max;
 
       graphOptions = $.extend(true, graphOptions, rawData.options); //http://stackoverflow.com/questions/171251/how-can-i-merge-properties-of-two-javascript-objects-dynamically
-      $('#graphStat').html(rawData.graphData.data.length + 'pts, ' + rawData.graphData.queryTime + 'ms');
+      $('#graphStat').html(rawData.graphData.msg != undefined ? rawData.graphData.msg : (rawData.graphData.data.length + 'pts, ' + rawData.graphData.queryTime + 'ms'));
       //need to defer plotting until after pageshow is finished rendering, otherwise the wrapper will return an incorrect width of "100"
       if (metricGraphWrapper.width()==100)
         $(document).on("pageshow", "#metricdetails", renderPlot);

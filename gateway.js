@@ -47,13 +47,13 @@ serial = new serialport.SerialPort(settings.serial.port.value, { baudrate : sett
 serial.on('error', function serialErrorHandler(error) {
     //Send serial error messages to console.
     //Better error handling needs to be here in the future.
-    console.log(error.message);
+    console.error(error.message);
 });
 
 serial.on('close', function serialCloseHandler(error) {
     //Give user a sane error message and exit. Future possibilities could include
     //sending message to front end via socket.io & setup timer to retry opening serial.
-    console.log(error.message);
+    console.error(error.message);
     process.exit(1);
 });
 
@@ -85,7 +85,7 @@ global.sendEmail = function(SUBJECT, BODY) {
       //html: '<b>Hello world ?</b>' // html body
   };
   transporter.sendMail(mailOptions, function(error, info) {
-    if(error) console.log('SENDEMAIL ERROR: ' + error);
+    if(error) console.error('SENDEMAIL ERROR: ' + error);
     else console.log('SENDEMAIL SUCCESS: ' + info.response);
   });
 }
@@ -98,7 +98,7 @@ global.sendSMS = function(SUBJECT, BODY) {
       text: BODY
   };
   transporter.sendMail(mailOptions, function(error, info) {
-    if(error) console.log('SENDSMS error: ' + error);
+    if(error) console.error('SENDSMS error: ' + error);
     else console.log('SENDSMS SUCCESS: ' + info.response);
   });
 }
@@ -133,7 +133,7 @@ global.handleNodeEvents = function(node) {
           try {
             evt.serverExecute(node);
           }
-          catch(ex) {console.log('Event ' + key + ' execution failed: ' + ex.message);}
+          catch(ex) {console.warn('Event ' + key + ' execution failed: ' + ex.message);}
       }
     }
   }
@@ -160,7 +160,7 @@ io.use(function(socket, next) {
 io.sockets.on('connection', function (socket) {
   var address = socket.handshake.headers['x-forwarded-for'] || socket.request.connection.remoteAddress;
   //var port = socket.request.connection.remotePort;
-  console.log("NEW CONNECTION FROM " + address /*+ ":" + port*/);
+  console.info("NEW CONNECTION FROM " + address /*+ ":" + port*/);
   socket.emit('MOTESDEF', metricsDef.motes);
   socket.emit('METRICSDEF', metricsDef.metrics);
   socket.emit('EVENTSDEF', metricsDef.events);
@@ -466,7 +466,7 @@ global.processSerialData = function (data) {
                 try {
                   console.log('post: ' + logfile + '[' + ts + ','+graphValue + ']');
                   dbLog.postData(logfile, ts, graphValue);
-                } catch (err) { console.log('   POST ERROR: ' + err.message); /*console.log('   POST ERROR STACK TRACE: ' + err.stack); */ } //because this is a callback concurrent calls to the same log, milliseconds apart, can cause a file handle concurrency exception
+                } catch (err) { console.error('   POST ERROR: ' + err.message); /*console.log('   POST ERROR STACK TRACE: ' + err.stack); */ } //because this is a callback concurrent calls to the same log, milliseconds apart, can cause a file handle concurrency exception
               }
               else console.log('   METRIC NOT NUMERIC, logging skipped... (extracted value:' + graphValue + ')');
             }

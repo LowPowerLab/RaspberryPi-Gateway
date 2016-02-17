@@ -27,8 +27,11 @@ exports.getData = function(filename, start, end, dpcount) {
   if (dpcount<1 || start > end) return {};
 
   var ts = new Date();
-  fd = fs.openSync(filename, 'r');
+  data = [];
+  
   filesize = exports.fileSize(filename);
+  if (filesize == -1) return {data:data, queryTime:0, msg:'no log data'};
+  fd = fs.openSync(filename, 'r');
   interval = (end - start) / dpcount;
 
   // Ensure that interval request is less than 1, adjust number of datapoints to request if interval = 1
@@ -37,7 +40,6 @@ exports.getData = function(filename, start, end, dpcount) {
     dpcount = (end - start) / interval;
   }
 
-  data = [];
   timetmp = 0;
   buff = new Buffer(9);
 
