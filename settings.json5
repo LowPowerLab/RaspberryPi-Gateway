@@ -64,10 +64,10 @@
           value: 443
         },
         user: {
-          value:'moteino'
+          value:'pi'
         },
         group: {
-          value: 'moteino'
+          value: 'pi'
         },
         droppriv: {
           value: true
