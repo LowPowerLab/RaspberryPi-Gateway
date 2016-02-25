@@ -62,7 +62,6 @@ var dbLog = require(path.resolve(__dirname,'logUtil.js'));
 var serialport = require('serialport');                         //https://github.com/voodootikigod/node-serialport
 var Datastore = require('nedb');                                //https://github.com/louischatriot/nedb
 var nodemailer = require('nodemailer');                         //https://github.com/andris9/Nodemailer
-var request = require('request');
 var db = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.name.value), autoload: true });       //used to keep all node/metric data
 var dbunmatched = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.nonMatchesName.value), autoload: true });
 
