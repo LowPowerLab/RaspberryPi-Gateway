@@ -69,16 +69,24 @@ var dbunmatched = new Datastore({ filename: path.join(__dirname, dbDir, settings
 var serial = new serialport.SerialPort(settings.serial.port.value, { baudrate : settings.serial.baud.value, parser: serialport.parsers.readline('\n') }, false);
 
 serial.on('error', function serialErrorHandler(error) {
-    //Send serial error messages to console.
-    //Better error handling needs to be here in the future.
+  //Send serial error messages to console.
+  //Better error handling needs to be here in the future.
+  if (error) {
     console.error(error.message);
+  } else {
+    console.error('Serialport emitted unknown error.');
+  }
 });
 
 serial.on('close', function serialCloseHandler(error) {
     //Give user a sane error message and exit. Future possibilities could include
     //sending message to front end via socket.io & setup timer to retry opening serial.
+  if (error) {
     console.error(error.message);
-    process.exit(1);
+  } else {
+    debug.app('Serialport closed cleanly.');
+  }
+  process.exit(1);
 });
 
 serial.on('data', function(data) { processSerialData(data); });
