@@ -1,4 +1,4 @@
-﻿// **********************************************************************************
+// **********************************************************************************
 // Websocket server backend for the Moteino IoT Framework
 // Hardware and software stack details: http://lowpowerlab.com/gateway
 // This is a work in progress and is released without any warranties expressed or implied.
@@ -32,36 +32,89 @@ var JSON5 = require('json5');                                   //https://github
 var path = require('path');
 var dbDir = 'data/db';
 var metricsFile = 'metrics.js';
-nconf.argv().file({ file: path.resolve(__dirname, 'settings.json5'), format: JSON5 });
-settings = nconf.get('settings');
+
+var debug = {
+  app: require('debug')('moteino-gateway'),
+  error: require('debug')('moteino-gateway:error')
+};
+debug.error.log = console.error.bind(console);
+
+//Order of presidence CLI arguments, environment vars, user config, global config.
+//To simplify CLI and environment variables it may be worth removing the outer
+//settings wrapper.
+nconf.argv()
+      .env({
+        separator: '_',
+        match: /^settings_/,
+        lowerCase: true
+      })
+    .add('user', {
+      type:'file',
+      file: path.resolve(__dirname, 'data','config','local.json5'),
+      format: JSON5 })
+    .add('global', {
+      type:'file',
+      file: path.resolve(__dirname, 'settings.json5'),
+      format: JSON5 });
+
+var settings = nconf.get('settings');
 var dbLog = require(path.resolve(__dirname,'logUtil.js'));
-io = require('socket.io').listen(settings.general.socketPort.value);
-var serialport = require("serialport");                         //https://github.com/voodootikigod/node-serialport
+var serialport = require('serialport');                         //https://github.com/voodootikigod/node-serialport
 var Datastore = require('nedb');                                //https://github.com/louischatriot/nedb
 var nodemailer = require('nodemailer');                         //https://github.com/andris9/Nodemailer
-var request = require('request');
 var db = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.name.value), autoload: true });       //used to keep all node/metric data
 var dbunmatched = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.nonMatchesName.value), autoload: true });
-serial = new serialport.SerialPort(settings.serial.port.value, { baudrate : settings.serial.baud.value, parser: serialport.parsers.readline("\n") }, false);
+
+//Setup serial port
+var serial = new serialport.SerialPort(settings.serial.port.value, { baudrate : settings.serial.baud.value, parser: serialport.parsers.readline('\n') }, false);
 
 serial.on('error', function serialErrorHandler(error) {
-    //Send serial error messages to console.
-    //Better error handling needs to be here in the future.
+  //Send serial error messages to console.
+  //Better error handling needs to be here in the future.
+  if (error) {
     console.error(error.message);
+  } else {
+    console.error('Serialport emitted unknown error.');
+  }
 });
 
 serial.on('close', function serialCloseHandler(error) {
     //Give user a sane error message and exit. Future possibilities could include
     //sending message to front end via socket.io & setup timer to retry opening serial.
+  if (error) {
     console.error(error.message);
-    process.exit(1);
+  } else {
+    debug.app('Serialport closed cleanly.');
+  }
+  process.exit(1);
 });
 
-serial.on("data", function(data) { processSerialData(data); });
+serial.on('data', function(data) { processSerialData(data); });
 
 serial.open();
 
-metricsDef = require(path.resolve(__dirname, metricsFile));
+var httpsSrv = require('./httpServer.js').createServer(settings.application, function dropPrivCB() {
+  debug.app('Drop privilege: ' + settings.application.droppriv.value);
+  if(settings.application.droppriv.value) {
+    try {
+      debug.app('Old User ID: ' + process.getuid() + ', Old Group ID: ' + process.getgid());
+      process.setgid(settings.application.group.value);
+      process.setuid(settings.application.user.value);
+      debug.app('New User ID: ' + process.getuid() + ', New Group ID: ' + process.getgid());
+    } catch (err) {
+      debug.error('Error dropping root privildge');
+      debug.error(err);
+      console.log('Error dropping root privildge');
+      console.log(err);
+      process.exit(1);
+    }
+  }
+});
+
+//Bind socket.io to the https server.
+var io = require('socket.io')().attach(httpsSrv);
+
+var metricsDef = require(path.resolve(__dirname, metricsFile));
 
 require("console-stamp")(console, settings.general.consoleLogDateFormat.value); //timestamp logs - https://github.com/starak/node-console-stamp
 db.persistence.setAutocompactionInterval(settings.database.compactDBInterval.value); //compact the database every 24hrs
@@ -146,17 +199,6 @@ global.handleNodeEvents = function(node) {
     // }
 }
 
-//authorize handshake - make sure the request is coming from nginx, not from the outside world
-//if you comment out this section, you will be able to hit this socket directly at the port it's running at, from anywhere!
-//this was tested on Socket.IO v1.2.1 and will not work on older versions
-io.use(function(socket, next) {
-  var handshakeData = socket.request;
-  //console.log('\nAUTHORIZING CONNECTION FROM ' + handshakeData.connection.remoteAddress + ':' + handshakeData.connection.remotePort);
-  if (handshakeData.connection.remoteAddress == "localhost" || handshakeData.connection.remoteAddress == "127.0.0.1")
-    next();
-  next(new Error('REJECTED IDENTITY, not coming from localhost'));
-});
-
 io.sockets.on('connection', function (socket) {
   var address = socket.handshake.headers['x-forwarded-for'] || socket.request.connection.remoteAddress;
   //var port = socket.request.connection.remotePort;
@@ -197,7 +239,7 @@ io.sockets.on('connection', function (socket) {
       io.sockets.emit('NODELISTREORDER', newOrder);
     });
   });
-          
+
   socket.on('UPDATENODESETTINGS', function (node) {
     db.find({ _id : node._id }, function (err, entries) {
       if (entries.length == 1)

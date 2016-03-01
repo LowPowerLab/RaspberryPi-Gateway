@@ -1,0 +1,17 @@
+[Unit]
+Description=Moteino Gateway Service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/nodejs /home/pi/gateway/gateway.js
+ExecStop=/bin/kill -s SIGTERM $MAINPID
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=always
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=moteino-gateway
+Environment=NODE_ENV=production
+WorkingDirectory=/home/pi/gateway/
+
+[Install]
+WantedBy=multi-user.target

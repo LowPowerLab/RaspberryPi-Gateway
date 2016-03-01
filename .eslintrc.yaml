@@ -1,0 +1,33 @@
+---
+extends: "eslint:recommended"
+rules:
+  no-path-concat: 2
+  no-multi-spaces: 2
+  no-new-require: 2
+  eol-last: 2
+  yoda: 2
+  no-use-before-define: 2
+  no-spaced-func: 2
+  no-func-assign: 2
+  valid-typeof: 2
+  no-unreachable: 2
+  no-irregular-whitespace: 2
+  no-trailing-spaces: 2
+  quotes:
+    - 2
+    - "single"
+    - "avoid-escape"
+  indent:
+    - 2
+    - 2
+  dot-location:
+    - 2
+    - "property"
+  no-warning-comments:
+    - 1
+    -
+     terms:
+     - "fixme"
+     location: "start"
+env:
+  node: true
