@@ -12,7 +12,7 @@
   "license": "SEE LICENSE IN license.txt",
   "contributors": "Felix Rusu (https://github.com/LowPowerLab)",
   "dependencies": {
-    "body-parser": "^1.14.2",
+    "body-parser": "^1.15.0",
     "colors": "~1.1.2",
     "compression": "^1.6.1",
     "console-stamp": "~0.2.0",
@@ -22,8 +22,8 @@
     "express-force-ssl": "^0.3.0",
     "http-auth": "^2.2.8",
     "json5": "~0.4.0",
-    "morgan": "^1.6.1",
-    "nconf": "~0.8.2",
+    "morgan": "^1.7.0",
+    "nconf": "^0.8.4",
     "nedb": "~1.5",
     "nodemailer": "~1.10",
     "request": "^2.69.0",
@@ -38,11 +38,11 @@
     "test": "node ./node_modules/mocha/bin/mocha test"
   },
   "devDependencies": {
-    "blanket": "^1.2.1",
+    "blanket": "^1.2.2",
     "chai": "^3.4.1",
     "chai-spies": "^0.7.1",
     "mocha": "^2.3.4",
     "really-need": "^1.9.0",
-    "supertest": "^1.1.0"
+    "supertest": "^1.2.0"
   }
 }
