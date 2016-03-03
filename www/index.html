@@ -54,7 +54,7 @@
   <script src="/socket.io/socket.io.js"></script>
   <link type="text/css" rel="stylesheet" href="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css" />
   <link type="text/css" rel="stylesheet" href="css/jqm-font-awesome-usvg-upng.min.css" />
-  <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+  <script src="https://code.jquery.com/jquery-1.12.1.min.js"></script>
   <script src="https://code.jquery.com/ui/1.11.4/jquery-ui.min.js"></script>
   <script src="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
   <script language="javascript" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.min.js"></script>
@@ -1078,7 +1078,6 @@
     
     $("#processExit_yes").click("tap", function(event) {
       socket.emit('PROCESSEXIT');
-      $.mobile.navigate('#homepage', { transition : 'fade'});
     });
 
     $("#clearbtn").click("tap", function(event) {
