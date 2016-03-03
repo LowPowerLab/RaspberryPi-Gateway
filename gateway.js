@@ -166,25 +166,9 @@ io.sockets.on('connection', function (socket) {
   socket.emit('EVENTSDEF', metricsDef.events);
   socket.emit('SETTINGSDEF', settings);
 
-  //pull all nodes from the database
+  //pull all nodes from the database and send them to client
   db.find({ _id : { $exists: true } }, function (err, entries) {
-    var orderCSV;
-    for (var i = entries.length-1; i>=0; i--)
-      if (!metricsDef.isNumeric(entries[i]._id)) //remove non-numeric id nodes
-      {
-        if (entries[i]._id == 'NODELISTORDER') //if node order entry was found, remember it
-          orderCSV = entries[i].order;
-        entries.splice(i,1);
-      }
-
-    //sort the list if nodes order entry was found, otherwise do a default ordering by label or by id when no label is set
-    entries.sort(orderCSV !== undefined ?
-      function (a, b) { return orderCSV.indexOf(a._id) - orderCSV.indexOf(b._id); }
-      :
-      function(a,b){ if (a.label && b.label) return a.label < b.label ? -1 : 1; if (a.label) return -1; if (b.label) return 1; return a._id > b._id; }
-    );
-
-    socket.emit('UPDATENODES', entries);
+    socket.emit('UPDATENODES', sortNodes(entries));
   });
 
   socket.on('UPDATENODELISTORDER', function (newOrder) {
@@ -265,8 +249,10 @@ io.sockets.on('connection', function (socket) {
   socket.on('DELETENODE', function (nodeId) {
     db.remove({ _id : nodeId }, function (err, removedCount) {
       console.log('DELETED entries: ' + removedCount);
+      
+      //pull all nodes from the database and send them to client
       db.find({ _id : { $exists: true } }, function (err, entries) {
-        io.sockets.emit('UPDATENODES', entries);
+        io.sockets.emit('UPDATENODES', sortNodes(entries));
       });
     });
 
@@ -389,6 +375,26 @@ io.sockets.on('connection', function (socket) {
     process.exit();
   });
 });
+
+//entries should contain the node list and also a node that contains the order (if this was ever added)
+function sortNodes(entries) {
+  var orderCSV;
+  for (var i = entries.length-1; i>=0; i--)
+    if (!metricsDef.isNumeric(entries[i]._id)) //remove non-numeric id nodes
+    {
+      if (entries[i]._id == 'NODELISTORDER') //if node order entry was found, remember it
+        orderCSV = entries[i].order;
+      entries.splice(i,1);
+    }
+
+  //sort the list if nodes order entry was found, otherwise do a default ordering by label or by id when no label is set
+  entries.sort(orderCSV !== undefined ?
+    function (a, b) { return orderCSV.indexOf(a._id) - orderCSV.indexOf(b._id); }
+    :
+    function(a,b){ if (a.label && b.label) return a.label < b.label ? -1 : 1; if (a.label) return -1; if (b.label) return 1; return a._id > b._id; }
+  );
+  return entries;
+}
 
 global.msgHistory = new Array();
 global.processSerialData = function (data) {
@@ -521,7 +527,16 @@ scheduledEvents = []; //each entry should be defined like this: {nodeId, eventKe
 //schedule and register a scheduled type event
 function schedule(node, eventKey) {
   var nextRunTimeout = metricsDef.events[eventKey].nextSchedule(node);
-  console.log('**** SCHEDULING EVENT - nodeId:' + node._id+' event:'+eventKey+' to run in ~' + (nextRunTimeout/3600000).toFixed(2) + 'hrs');
+  if (nextRunTimeout < 1000)
+  {
+    console.ERROR('**** SCHEDULING EVENT ERROR - nodeId:' + node._id+' event:'+eventKey+' cannot schedule event in ' + nextRunTimeout + 'ms (less than 1s)');
+    return;
+  }
+  var hrs = parseInt(nextRunTimeout/3600000);
+  var min = parseInt((nextRunTimeout - hrs*3600000) / 60000);
+  var sec = parseInt((nextRunTimeout - hrs*3600000 - min*60000) / 1000);
+  var timeoutStr = (hrs > 0 ? hrs+'h': '') + (min>0?min+'m':'') + (sec>0&&hrs==0?sec+'s':'');
+  console.log('**** SCHEDULING EVENT - nodeId:' + node._id+' event:'+eventKey+' to run in ~' + timeoutStr);
 
   //clear any previous instances of the event
   for(var s in scheduledEvents)

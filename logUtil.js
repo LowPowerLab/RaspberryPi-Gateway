@@ -43,6 +43,23 @@ exports.getData = function(filename, start, end, dpcount) {
   timetmp = 0;
   buff = new Buffer(9);
 
+  //first check if sequential reads (much faster) make sense
+  posStart = exports.binarySearch(fd,start-interval,filesize);
+  posEnd = exports.binarySearch(fd,end+interval,filesize);
+  if (posStart < posEnd && (posEnd-posStart)/9 < dpcount*1.1)
+  {
+    //console.info('getData() reading ' + ((posEnd-posStart)/9) + ' sequential points!');
+    for (var i=posStart; i<=posEnd; i+=9)
+    {
+      fs.readSync(fd, buff, 0, 9, i);
+      timetmp = buff.readUInt32BE(1);
+      value = buff.readInt32BE(5);
+      data.push({t:timetmp*1000, v:value/10000});
+    }
+    return {data:data, queryTime:(new Date() - ts)};
+  }
+  
+  //too many data points, use binarySearch to aggregate
   for (var i=0; i<dpcount; i++)
   {
     pos = exports.binarySearch(fd,start+(i*interval),filesize);
@@ -119,7 +136,7 @@ exports.postData = function post(filename, timestamp, value) {
   return value;
 }
 
-exports.binarySearch = function(fileDescriptor,timestamp, filesize) {
+exports.binarySearch = function(fileDescriptor, timestamp, filesize) {
   start = 0;
   end = filesize-9;
   var buff = new Buffer(4);
