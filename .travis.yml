@@ -3,12 +3,20 @@ cache:
   directories:
     - node_modules
 node_js:
- - '0.10'
- - '0.12'
- - '4.1'
+  - '0.10'
+  - '0.12'
+  - '4.1'
+env:
+  - CXX=g++-4.8
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - g++-4.8
 before_install:
   - npm -g install npm@latest
 install:
- - npm install
+  - npm install
 script:
- - npm test
+  - npm test
