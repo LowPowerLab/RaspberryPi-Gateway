@@ -868,7 +868,7 @@
         var evt = eventsDef[key];
         var enabled = node.events[key];
         if (!evt) continue;
-        var newLI = $('<li style="background-color:' + (enabled ? '#2d0' : '#d00') + '"><span class="ui-btn-icon-notext ui-icon-'+ (enabled ? (evt.icon ? evt.icon : 'action') : 'minus') + '" style="position:relative;float:left;padding:15px 10px;"></span><a event-id="' + key + '" href="#" class="eventEnableDisable" style="padding-top:0;padding-bottom:0;"><h2>' + evt.label + '</h2><p>' + (evt.descr || '&nbsp;') + '</p>' + '</a><a event-id="' + key + '" href="#" class="eventDelete" data-transition="pop" data-icon="delete"></a></li>');
+        var newLI = $('<li><a data-icon="delete" event-id="' + key + '" href="#" class="eventEnableDisable" style="padding-top:0;padding-bottom:0;padding-left:0"><span class="ui-btn-icon-notext ui-icon-'+ (enabled ? (evt.icon ? evt.icon : 'action') : 'minus') + '" style="position:relative;float:left;padding:15px 10px;background-color:' + (enabled ? '#2d0' : '#d00') + '"></span><h2 style="padding-left:10px">' + evt.label + '</h2><p style="padding-left:10px">' + (evt.descr || '&nbsp;') + '</p>' + '</a><a event-id="' + key + '" href="#" class="eventDelete" data-transition="pop" data-icon="delete"></a></li>');
         var existingNode = $('#eventList li#evt_' + key);
         if(existingNode.length)
           existingNode.replaceWith(newLI);
