@@ -383,6 +383,7 @@
     var boundSettings;
     var showHiddenNodes=false, showRawSend=false;
     var socket = io();
+    var serverTimeOffset=0;
     $('#nodeList').hide();
 
     function isNumeric(n) {
@@ -398,7 +399,7 @@
 
     function LOG(data) {
       $('#log').val(new Date().toLocaleTimeString() + ' : ' + data + '\n' + $('#log').val());
-      if ($('#log').val().length > 5000) $('#log').val($('#log').val().slice(0,5000));
+      if ($('#log').val().length > 10000) $('#log').val($('#log').val().slice(0,10000));
     };
 
     socket.on('connect', function(){
@@ -492,6 +493,11 @@
     
     socket.on('NODELISTREORDER', function(orderCSV) {
       sortNodeListByOrderCSV(orderCSV);
+    });
+    
+    socket.on('SERVERTIME', function(serverMillisSinceEpoch) {
+      serverTimeOffset = new Date().getTime() - serverMillisSinceEpoch;
+      LOG('SERVERTIME OFFSET: ' + serverTimeOffset + 'ms');
     });
 
     $(document).on("pagecreate", "#eventAdd", function(){ if ($('addEventType').val()) $('#addEvent_OK').show(); else $('#addEvent_OK').hide(); });
@@ -737,7 +743,7 @@
     function ago(time, agoPrefix)
     {
       agoPrefix = (typeof agoPrefix !== 'undefined') ?  agoPrefix : true;
-      var now = new Date().getTime();
+      var now = new Date().getTime() - serverTimeOffset;
       var update = new Date(time).getTime();
       var lastupdate = (now-update)/1000;
       var s = (now-update)/1000;
@@ -856,7 +862,7 @@
         {
           $('.metricUpdated').html(ago(metric.updated, 0).tag);
           $('#metricValue').val(metric.value + (metric.unit || ''));
-          if (metric.graph) addGraphDataPoint([(new Date()).getTime(), metric.value]); //TODO: assumes same timezone as server, update this according to timezone
+          if (metric.graph) addGraphDataPoint([(new Date()).getTime()-serverTimeOffset, metric.value]);
         }
       }
       $('#metricList').listview().listview('refresh');

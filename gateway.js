@@ -207,6 +207,7 @@ io.sockets.on('connection', function (socket) {
   socket.emit('METRICSDEF', metricsDef.metrics);
   socket.emit('EVENTSDEF', metricsDef.events);
   socket.emit('SETTINGSDEF', settings);
+  socket.emit('SERVERTIME', new Date().getTime());
 
   //pull all nodes from the database and send them to client
   db.find({ _id : { $exists: true } }, function (err, entries) {
