@@ -1,7 +1,7 @@
 {
   "name": "RaspberryPi-Gateway",
-  "version": "0.1.0",
-  "description": "RaspberryPi Home Automation Gateway Sample Implementation",
+  "version": "0.2.0",
+  "description": "RaspberryPi Home Automation Gateway",
   "main": "gateway.js",
   "repository": "https://github.com/LowPowerLab/RaspberryPi-Gateway.git",
   "author": "Felix Rusu (https://github.com/LowPowerLab)",

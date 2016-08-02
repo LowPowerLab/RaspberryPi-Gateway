@@ -251,7 +251,7 @@
       <div class="ui-field-contain">
         <label for="metricLabel" class="labelbold">Label:</label>
         <input type="text" name="metricLabel" id="metricLabel" placeholder="metric label..." />
-        <label for="metricValue" class="labelbold">Value:</label>
+        <label for="metricValue" class="labelbold">Last value:</label>
         <input type="text" name="metricValue" id="metricValue" placeholder="value" readonly />
       </div>
       <div id="metricGraphWrapper" style="width:100%; height:280px;">
@@ -265,6 +265,7 @@
           <a id="graphZoomOut" href="#" data-role="button" data-icon="minus" data-iconpos="notext" data-theme="b" title="zoom out">ZoomOut</a>
           <a id="graphPanLeft" href="#" data-role="button" data-icon="arrow-l" data-iconpos="notext" data-theme="b" title="scroll left">Left</a>
           <a id="graphPanRight" href="#" data-role="button" data-icon="arrow-r" data-iconpos="notext" data-theme="b" title="scroll right">Right</a>
+          <a id="graphExport" href="#" data-role="button" data-icon="fa-download" data-iconpos="notext" data-theme="b" title="export raw data">Right</a>
           <!--<a id="graphReset" href="#" data-role="button" data-icon="refresh" data-iconpos="notext" data-theme="b" title="reset graph">Reset</a>-->
         </div>
       </div>
@@ -579,6 +580,30 @@
       //ask socket for the data
       socket.emit('GETGRAPHDATA', selectedNodeId, selectedMetricKey, graphView.start, graphView.end);
     }
+    
+    function exportGraph() {
+      socket.emit('GETGRAPHDATA', selectedNodeId, selectedMetricKey, graphView.start, graphView.end, true);
+    }
+
+    socket.on('EXPORTDATAREADY', function(rawData) {
+      //package and stream the data to the browser
+      graphData = [];
+      var csv = 'data:text/csv;charset=utf-8,unix_timestamp(ms),'+rawData.options.legendLbl+'\n';
+
+      rawData.graphData.data.forEach(function(logItem, index){
+         dataString = logItem.t + ',' + logItem.v;
+         csv += index < rawData.graphData.data.length ? dataString+ '\n' : dataString;
+      });
+     
+      var encodedUri = encodeURI(csv);
+      var link = document.createElement('a');
+      link.setAttribute('id', 'exportLink');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', selectedNodeId+'_'+rawData.options.legendLbl+'.csv');
+      document.body.appendChild(link); // Required for FF
+      link.click(); //make it stream to the browser
+      $('#exportLink').remove();
+    });
 
     socket.on('GRAPHDATAREADY', function(rawData){
       graphData = [];
@@ -604,11 +629,17 @@
       graphOptions.yaxis.max = max;
 
       graphOptions = $.extend(true, graphOptions, rawData.options); //http://stackoverflow.com/questions/171251/how-can-i-merge-properties-of-two-javascript-objects-dynamically
-      $('#graphStat').html(rawData.graphData.msg != undefined ? rawData.graphData.msg : (rawData.graphData.data.length + 'pts, ' + rawData.graphData.queryTime + 'ms'));
+      $(graphStat).html(rawData.graphData.msg != undefined ? rawData.graphData.msg : (rawData.graphData.data.length + (rawData.graphData.totalIntervalDatapoints != rawData.graphData.data.length ? ' / '+rawData.graphData.totalIntervalDatapoints : '') +'pts ('+ rawData.graphData.queryTime+'ms)'));
       //need to defer plotting until after pageshow is finished rendering, otherwise the wrapper will return an incorrect width of "100"
       if (metricGraphWrapper.width()==100)
-        $(document).on("pageshow", "#metricdetails", renderPlot);
-      else renderPlot();
+        $(document).on("pageshow", "#metricdetails", function() { 
+          renderPlot();
+          $(graphStat).clone().appendTo('#metricGraph');
+        });
+      else {
+        renderPlot();
+        $(graphStat).clone().appendTo('#metricGraph');
+      }
     });
 
     $(window).resize(function(){
@@ -618,6 +649,7 @@
         graphOptions.xaxis.min = graphView.start;
         graphOptions.xaxis.max = graphView.end;
         $.plot(metricGraph, [{label:graphOptions.legendLbl, data:graphData}], graphOptions);
+        $(graphStat).clone().appendTo('#metricGraph');
       }
     });
 
@@ -628,6 +660,7 @@
     $('#graphPanRight').click(function () {graphView.panright(); refreshGraph(true);});
     $('#graphPanLeft').click(function () {graphView.panleft(); refreshGraph(true);});
     //$('#graphReset').click(function () {graphView.resetDomain(); refreshGraph();});
+    $('#graphExport').click(function (e) { e.preventDefault(); exportGraph(); });
     $('.graphControl').click(function () {graphView.setDomain($(this).attr("hours")); refreshGraph();});
     metricGraph.bind("plotselected", function (event, ranges)
     {
@@ -649,6 +682,7 @@
       //plot.setData([graphData]);
       //plot.setupGrid(); //only necessary if your new data will change the axes or grid
       //plot.draw();
+      $(graphStat).clone().appendTo('#metricGraph');
     }
 
     function metricsValues(metrics) {
@@ -1131,15 +1165,15 @@
 		}).appendTo("body");
 
     //graph query statistics
-    $("<span id='graphStat'></span>").css({
+    var graphStat = $("<span id='graphStat'></span>").css({
 			position: "relative",
-      bottom:"85px",
-      right:"-35px",
+      top:"5px",
+      right:"-45px",
       fontSize: "10px",
       color:'#00ff11',
       'font-weight':'bold',
       'text-shadow':'0 1px 0 black',
-		}).appendTo("#metricGraphWrapper");
+		});
   });
   }
   </script>

@@ -56,6 +56,12 @@
       },
       genNodeIfNoMatch: {
         value: "false"
+      },
+	  keepMetricLogsOnDelete: {
+        value: "false"
+      },
+      graphMaxPoints: {
+        value: 800
       }
     },
     radiothermostat: {

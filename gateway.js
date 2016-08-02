@@ -182,7 +182,7 @@ io.sockets.on('connection', function (socket) {
       io.sockets.emit('NODELISTREORDER', newOrder);
     });
   });
-          
+
   socket.on('UPDATENODESETTINGS', function (node) {
     db.find({ _id : node._id }, function (err, entries) {
       if (entries.length == 1)
@@ -248,15 +248,31 @@ io.sockets.on('connection', function (socket) {
   });
 
   socket.on('DELETENODE', function (nodeId) {
+    //delete all node-metric log files
+    console.log("DELETENODE settings.general.keepMetricLogsOnDelete.value: " + settings.general.keepMetricLogsOnDelete.value);
+    if (settings.general.keepMetricLogsOnDelete.value != 'true')
+      db.find({ _id : nodeId }, function (err, entries) {
+        if (entries.length == 1)
+        {
+          var dbNode = entries[0];
+          Object.keys(dbNode.metrics).forEach(function(mKey,index) {
+            if (dbNode.metrics[mKey].graph == 1)
+              dbLog.removeMetricLog(path.join(__dirname, dbDir, dbLog.getLogName(dbNode._id, mKey)));
+          });
+        }
+      });
+
+    //delete the node from the DB
     db.remove({ _id : nodeId }, function (err, removedCount) {
       console.log('DELETED entries: ' + removedCount);
-      
+
       //pull all nodes from the database and send them to client
       db.find({ _id : { $exists: true } }, function (err, entries) {
         io.sockets.emit('UPDATENODES', sortNodes(entries));
       });
     });
 
+    //remove scheduled events associated with the deleted node
     for(var s in scheduledEvents)
       if (scheduledEvents[s].nodeId == nodeId)
       {
@@ -273,6 +289,8 @@ io.sockets.on('connection', function (socket) {
         var dbNode = entries[0];
         dbNode.metrics[metricKey] = undefined;
         db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) { console.log('DELETENODEMETRIC DB-Replaced:' + numReplaced); });
+        if (settings.general.keepMetricLogsOnDelete.value != 'true')
+          dbLog.removeMetricLog(path.join(__dirname, dbDir, dbLog.getLogName(dbNode._id, metricKey)));
         io.sockets.emit('UPDATENODE', dbNode); //post it back to all clients to confirm UI changes
       }
     });
@@ -323,11 +341,11 @@ io.sockets.on('connection', function (socket) {
     else socket.emit('LOG', 'CANNOT INJECT NODE, INVALID NEW ID: ' + node.nodeId);
   });
 
-  socket.on('GETGRAPHDATA', function (nodeId, metricKey, start, end) {
+  socket.on('GETGRAPHDATA', function (nodeId, metricKey, start, end, exportMode) {
     var sts = Math.floor(start / 1000); //get timestamp in whole seconds
     var ets = Math.floor(end / 1000); //get timestamp in whole seconds
     var logfile = path.join(__dirname, dbDir, dbLog.getLogName(nodeId,metricKey));
-    var graphData = dbLog.getData(logfile, sts, ets);
+    var graphData = dbLog.getData(logfile, sts, ets, exportMode ? 100000 : settings.general.graphMaxPoints.value); //100k points when exporting, more points is really pointless
     var graphOptions={};
     for(var k in metricsDef.metrics)
     {
@@ -339,7 +357,11 @@ io.sockets.on('connection', function (socket) {
       }
     }
     graphOptions.metricName=metricKey;
-    socket.emit('GRAPHDATAREADY', { graphData:graphData, options : graphOptions });
+
+    if (exportMode)
+      socket.emit('EXPORTDATAREADY', { graphData:graphData, options : graphOptions });
+    else
+      socket.emit('GRAPHDATAREADY', { graphData:graphData, options : graphOptions });
   });
 
   socket.on('UPDATESETTINGSDEF', function (newSettings) {

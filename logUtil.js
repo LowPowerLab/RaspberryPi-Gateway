@@ -14,15 +14,16 @@
 //     NOTE: timestamps are whole integers, in seconds, so javascript timestamps have to be divided by 1000 before being passed in
 // *******************************************************************************
 var fs = require('fs');
-var metrics = require(require('path').resolve(__dirname,'metrics.js'));
+var path = require('path');
+var metrics = require(path.resolve(__dirname,'metrics.js'));
 
 exports.getLogName = function(nodeId, metricId) {
   return ('0000' + nodeId).slice(-4) + '_' + metricId + '.bin'; //left pad log names with zeros
 }
 
 exports.getData = function(filename, start, end, dpcount) {
-  dpcount = dpcount || 600;
-  if (dpcount>1500) dpcount = 1500;
+  dpcount = dpcount || 1500;
+  //if (dpcount>1500) dpcount = 1500;
   if (dpcount<1) dpcount = 1;
   if (dpcount<1 || start > end) return {};
 
@@ -56,7 +57,7 @@ exports.getData = function(filename, start, end, dpcount) {
       value = buff.readInt32BE(5);
       data.push({t:timetmp*1000, v:value/10000});
     }
-    return {data:data, queryTime:(new Date() - ts)};
+    return {data:data, queryTime:(new Date() - ts), totalIntervalDatapoints: (posEnd-posStart)/9+1 };
   }
   
   //too many data points, use binarySearch to aggregate
@@ -76,7 +77,7 @@ exports.getData = function(filename, start, end, dpcount) {
   }
   fs.closeSync(fd);
 
-  return {data:data, queryTime:(new Date() - ts)};
+  return {data:data, queryTime:(new Date() - ts), totalIntervalDatapoints: (posEnd-posStart)/9+1 };
 }
 
 exports.postData = function post(filename, timestamp, value) {
@@ -189,4 +190,14 @@ exports.binarySearchExact = function(fileDescriptor, timestamp, filesize) {
 
 exports.fileSize = function(filename) {
   return fs.existsSync(filename) ? fs.statSync(filename)['size'] : -1;
+}
+
+exports.removeMetricLog = function(logfile) {
+  if (exports.fileSize(logfile) >= 0)
+  {
+    fs.unlinkSync(logfile);
+    console.warn('removeMetricLog(): removed (' + logfile + ')');
+  }
+  else
+    console.log('removeMetricLog(): no log file found (' + logfile + ')');
 }
