@@ -40,7 +40,7 @@ var serialport = require("serialport");                         //https://github
 var Datastore = require('nedb');                                //https://github.com/louischatriot/nedb
 var nodemailer = require('nodemailer');                         //https://github.com/andris9/Nodemailer
 var request = require('request');
-var db = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.name.value), autoload: true });       //used to keep all node/metric data
+db = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.name.value), autoload: true });       //used to keep all node/metric data
 var dbunmatched = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.nonMatchesName.value), autoload: true });
 serial = new serialport.SerialPort(settings.serial.port.value, { baudrate : settings.serial.baud.value, parser: serialport.parsers.readline("\n") }, false);
 
@@ -579,7 +579,15 @@ function schedule(node, eventKey) {
 //run a scheduled event and reschedule it
 function runAndReschedule(functionToExecute, node, eventKey) {
   console.log('**** RUNNING SCHEDULED EVENT - nodeId:' + node._id + ' event:' + eventKey + '...');
-  functionToExecute(node, eventKey);
+  try {
+    functionToExecute(node, eventKey);
+  }
+  catch (ex)
+  {
+    var msg = 'Event ' + eventKey + ' execution failed: ' + ex.message;
+    console.error(msg);
+    io.sockets.emit('LOG', msg);
+  }
   schedule(node, eventKey);
 }
 
