@@ -1,6 +1,6 @@
 {
   "name": "RaspberryPi-Gateway",
-  "version": "0.2.0",
+  "version": "8.6",
   "description": "RaspberryPi Home Automation Gateway",
   "main": "gateway.js",
   "repository": "https://github.com/LowPowerLab/RaspberryPi-Gateway.git",
