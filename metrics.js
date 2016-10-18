@@ -27,6 +27,8 @@
 //     - value - this can be hardcoded, or if left blank the value will be the first captured parentheses from the regex expression
 //     - pin:1/0 - if '1' then by default this metric will show up in the main homepage view for that node, otherwise it will only show in the node page; it can then manually be flipped in the UI
 //     - graph:1/0 - if '1' then by default this metric will be logged in gatewayLog.db every time it comes in
+//                 - if '0' then this would not be logged but can be turned on from the metric details page
+//                 - if not defined then metric is not logged and toggle button is hidden in metric detail page
 //     - logValue - you can specify a hardcoded value that should be logged instead of the captured metric (has to always be numeric!)
 //     - graphOptions - this is a javascript object that when presend is injected directly into the FLOT graph for the metric - you can use this to highly customize the appearance of any metric graph
 //                    - it should only be specified one per each metric - the first one (ie one for each set of metrics that have multiple entries with same 'name') - ex: GarageMote 'Status' metric
@@ -107,7 +109,7 @@ exports.metrics = {
   FSTATE : { name:'FSTATE', regexp:/FSTATE\:(AUTO|AUTOCIRC|ON)/i, value:''},
 
   //special metrics
-  V : { name:'V', regexp:/(?:V?BAT|VOLTS|V)\:(\d+\.\d+)v?/i, value:'', unit:'v'},
+  V : { name:'V', regexp:/(?:V?BAT|VOLTS|V)\:([\d\.]+)v?/i, value:'', unit:'v', graph:1, graphOptions:{ legendLbl:'Voltage', lines: { fill:false, lineWidth:1 }, grid: { backgroundColor: {colors:['#000', '#03c', '#08c']}}, yaxis: { min: 0, autoscaleMargin: 0.25 }}},
   //catchAll : { name:'CatchAll', regexp:/(\w+)\:(\w+)/i, value:''},
 };
 
@@ -124,6 +126,63 @@ exports.events = {
   mailboxAlert : { label:'Mailbox Open Alert!', icon:'audio', descr:'Message sound when mailbox is opened', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { io.sockets.emit('PLAYSOUND', 'sounds/incomingmessage.wav'); }; } },
   motionEmail : { label:'Motion : Email', icon:'mail', descr:'Send email when MOTION is detected', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendEmail('MOTION DETECTED', 'MOTION WAS DETECTED ON NODE: [' + node._id + ':' + node.label + '] @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
   motionSMS : { label:'Motion : SMS', icon:'comment', descr:'Send SMS when MOTION is detected', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendSMS('MOTION DETECTED', 'MOTION WAS DETECTED ON NODE: [' + node._id + ':' + node.label + '] @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
+  
+  motionSMSLimiter : { label:'Motion : SMS Limited', icon:'comment', descr:'Send SMS when MOTION is detected, once per hour', 
+    serverExecute:function(node) { 
+      if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - node.metrics['M'].updated < 2000)) /*check if M metric exists and value is MOTION, received less than 2s ago*/
+      {
+        var approveSMS = false;
+        if (node.metrics['M'].lastSMS) /*check if lastSMS value is not NULL ... */
+        {
+          if (Date.now() - node.metrics['M'].lastSMS > 1800000) /*check if lastSMS timestamp is more than 1hr ago*/
+          {
+            approveSMS = true;
+          }
+        }
+        else
+        {
+          approveSMS = true;
+        }
+        
+        if (approveSMS)
+        {
+          node.metrics['M'].lastSMS = Date.now();
+          sendSMS('MOTION DETECTED', 'MOTION WAS DETECTED ON NODE: [' + node._id + ':' + node.label + '] @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM')));
+          db.update({ _id: node._id }, { $set : node}, {}, function (err, numReplaced) { console.log('   ['+node._id+'] DB-Updates:' + numReplaced);}); /*save lastSMS timestamp to DB*/
+        }
+        else console.log('   ['+node._id+'] MOTION SMS skipped.');
+      };
+    }
+  },
+
+  temperatureSMSLimiter : { label:'THAlert : SMS Limited', icon:'comment', descr:'Send SMS when F>75°, once per hour', 
+    serverExecute:function(node) { 
+      if (node.metrics['F'] && node.metrics['F'].value > 75 && (Date.now() - node.metrics['F'].updated < 2000)) /*check if M metric exists and value is MOTION, received less than 2s ago*/
+      {
+        var approveSMS = false;
+        if (node.metrics['F'].lastSMS) /*check if lastSMS value is not NULL ... */
+        {
+          if (Date.now() - node.metrics['F'].lastSMS > 1800000) /*check if lastSMS timestamp is more than 1hr ago*/
+          {
+            approveSMS = true;
+          }
+        }
+        else
+        {
+          approveSMS = true;
+        }
+        
+        if (approveSMS)
+        {
+          node.metrics['F'].lastSMS = Date.now();
+          sendSMS('Temperature > 75° !', 'Temperature alert (>75°F!): [' + node._id + ':' + node.label + '] @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM')));
+          db.update({ _id: node._id }, { $set : node}, {}, function (err, numReplaced) { console.log('   ['+node._id+'] DB-Updates:' + numReplaced);}); /*save lastSMS timestamp to DB*/
+        }
+        else console.log('   ['+node._id+'] THAlert SMS skipped.');
+      };
+    }
+  },
+  
   mailboxSMS : { label:'Mailbox open : SMS', icon:'comment', descr:'Send SMS when mailbox is opened', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendSMS('MAILBOX OPENED', 'Mailbox opened [' + node._id + ':' + node.label + '] @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
   motionLightON23 : { label:'Motion: SM23 ON!', icon:'action', descr:'Turn SwitchMote:23 ON when MOTION is detected', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendMessageToNode({nodeId:23, action:'MOT:1'}); }; } },
 

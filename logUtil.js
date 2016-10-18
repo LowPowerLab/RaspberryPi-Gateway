@@ -1,5 +1,5 @@
 // *******************************************************************************
-// This is the logging storage engine for the Moteino Gateway.
+// This is the logging storage engine for the Moteino IoT Gateway.
 // It is a vast improvement over storing data in memory (previously done in neDB)
 // http://lowpowerlab.com/gateway
 // Some of this work was inspired by work done by Timestore and OpenEnergyMonitor:
@@ -80,6 +80,9 @@ exports.getData = function(filename, start, end, dpcount) {
   return {data:data, queryTime:(new Date() - ts), totalIntervalDatapoints: (posEnd-posStart)/9+1 };
 }
 
+// filename:  binary file to append new data point to
+// timestamp: data point timestamp (seconds since unix epoch)
+// value:     data point value (signed integer)
 exports.postData = function post(filename, timestamp, value) {
   if (!metrics.isNumeric(value)) value = 999; //catch all value
   var logsize = exports.fileSize(filename);
@@ -87,7 +90,7 @@ exports.postData = function post(filename, timestamp, value) {
 
   var fd;
   var buff = new Buffer(9);
-  var tmp = 0, pos = 0;
+  var lastTime = 0, lastValue = 0, pos = 0;
   value=Math.round(value*10000); //round to make an exactly even integer
 
   //prepare 9 byte buffer to write
@@ -99,17 +102,22 @@ exports.postData = function post(filename, timestamp, value) {
   if (logsize>=9) {
     // read the last value appended to the file
     fd = fs.openSync(filename, 'r');
-    var buf4 = new Buffer(4);
-    fs.readSync(fd, buf4, 0, 4, logsize-8);
-    tmp = buf4.readInt32BE(0); //read timestamp (bytes 1-4 bytes in buffer)
+    var buf8 = new Buffer(8);
+    
+    fs.readSync(fd, buf8, 0, 8, logsize-8);
+    lastTime = buf8.readUInt32BE(0); //read timestamp (bytes 0-3 in buffer)
+    lastValue = buf8.readInt32BE(4); //read value (bytes 4-7 in buffer)
     fs.closeSync(fd);
 
-    if (timestamp > tmp)
+    if (timestamp > lastTime)
     {
-      //timestamp is in the future, append
-      fd = fs.openSync(filename, 'a');
-      fs.writeSync(fd, buff, 0, 9, logsize);
-      fs.closeSync(fd);
+      if (value != lastValue || (timestamp-lastTime>3600)) //only write new value if different than last value or 1 hour has passed (should be a setting?)
+      {
+        //timestamp is in the future, append
+        fd = fs.openSync(filename, 'a');
+        fs.writeSync(fd, buff, 0, 9, logsize);
+        fs.closeSync(fd);
+      }
     }
     else
     {

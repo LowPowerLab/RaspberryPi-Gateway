@@ -145,12 +145,11 @@
   
   .hiddenNodeShow a { background-color: #ffe5e5 !important; }
   
-  #nodeList > li.ui-li-has-count > a { padding-right:2.5em;  }
+  #nodeList > li.ui-li-has-thumb > a { padding-right:2.5em;  }
   @media (max-width: 599px) {
-    #nodeList > li.ui-li-has-count > a { padding-left: 5.25em; }
-    #nodeList > li.ui-li-has-count > a > span.ui-li-count {
-      top:70%;
-  }}
+    #nodeList > li.ui-li-has-thumb > a { padding-left: 5.25em; }
+    #nodeList > li.ui-li-has-thumb > a > span.ui-li-count { top:70%; }
+  }
   @media (max-width: 767px) {
     .sideButton { display:none !important; }
   }
@@ -191,6 +190,7 @@
   
   @media (max-width: 448px) {
     label.labelbold { margin: .4em .4em .1em .4em; }
+    .ui-content { padding:.3em; }
   }
   
   @media (min-width: 540px) {
@@ -210,6 +210,8 @@
     .nodeDetailImageWrapper { padding-left: 20%; }
     #nodeDetailInputList { padding-left: 30%; padding-right: 25%; }
   }
+  
+  
   </style>
 </head>
 <body>
@@ -650,7 +652,7 @@
           $("#tooltip").hide();
       });
 
-      $(document).off("pageshow", "#metricdetails", renderPlot);
+      $(document).off("pageshow", "#metricdetails", renderAndCloneStat);
     }
 
     function refreshGraph(freezeGraph) {
@@ -674,6 +676,11 @@
     
     function exportGraph() {
       socket.emit('GETGRAPHDATA', selectedNodeId, selectedMetricKey, graphView.start, graphView.end, true);
+    }
+    
+    function renderAndCloneStat() { 
+      renderPlot();
+      $(graphStat).clone().appendTo('#metricGraph');
     }
 
     socket.on('EXPORTDATAREADY', function(rawData) {
@@ -708,6 +715,11 @@
         min = Math.min(min, rawData.graphData.data[key].v);
       }
 
+      //override autoscaleMargin and min/max from metrics graphOptions (if any defined); allows custom Y scaling of graphs
+      if (rawData.options.yaxis) graphOptions.yaxis.autoscaleMargin = rawData.options.yaxis.autoscaleMargin || graphOptions.yaxis.autoscaleMargin;
+      if (rawData.options.yaxis) min = rawData.options.yaxis.min != undefined ? rawData.options.yaxis.min : min;
+      if (rawData.options.yaxis) max = rawData.options.yaxis.max != undefined ? rawData.options.yaxis.max : max;
+
       //defining the upper and lower margin
       minmax=(max-min) * graphOptions.yaxis.autoscaleMargin;
       if (min==max)  // in case of only one value in the dataset (motion detection)
@@ -723,13 +735,9 @@
       $(graphStat).html(rawData.graphData.msg != undefined ? rawData.graphData.msg : (rawData.graphData.data.length + (rawData.graphData.totalIntervalDatapoints != rawData.graphData.data.length ? ' / '+rawData.graphData.totalIntervalDatapoints : '') +'pts ('+ rawData.graphData.queryTime+'ms)'));
       //need to defer plotting until after pageshow is finished rendering, otherwise the wrapper will return an incorrect width of "100"
       if (metricGraphWrapper.width()==100)
-        $(document).on("pageshow", "#metricdetails", function() { 
-          renderPlot();
-          $(graphStat).clone().appendTo('#metricGraph');
-        });
+        $(document).on("pageshow", "#metricdetails", renderAndCloneStat);
       else {
-        renderPlot();
-        $(graphStat).clone().appendTo('#metricGraph');
+        renderAndCloneStat()
       }
     });
 

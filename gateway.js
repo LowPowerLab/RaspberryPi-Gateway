@@ -328,7 +328,7 @@ io.sockets.on('connection', function (socket) {
       db.findOne({_id:node.nodeId}, function (err, doc) {
         if (doc == null)
         {
-          var entry = { _id:node.nodeId, updated:(new Date).getTime(), label:node.label || 'NEW NODE', metrics:{} };
+          var entry = { _id:node.nodeId, updated:Date.now(), label:node.label || 'NEW NODE', metrics:{} };
           db.insert(entry);
           console.log('   ['+node.nodeId+'] DB-Insert new _id:' + node.nodeId);
           socket.emit('LOG', 'NODE INJECTED, ID: ' + node.nodeId);
@@ -440,7 +440,7 @@ global.processSerialData = function (data) {
       }
 
       //check for duplicate messages - this can happen when the remote node sends an ACK-ed message but does not get the ACK so it resends same message repeatedly until it receives an ACK
-      if (existingNode.updated != undefined && ((new Date) - new Date(existingNode.updated).getTime()) < 500 && msgHistory[id] == msgTokens)
+      if (existingNode.updated != undefined && (Date.now() - existingNode.updated < 500) && msgHistory[id] == msgTokens)
       { console.log("   DUPLICATE, skipping..."); return; }
 
       msgHistory[id] = msgTokens;
@@ -448,7 +448,7 @@ global.processSerialData = function (data) {
       //console.log('FOUND ENTRY TO UPDATE: ' + JSON.stringify(existingNode));
       existingNode._id = id;
       existingNode.rssi = rssi; //update signal strength we last heard from this node, regardless of any matches
-      existingNode.updated = new Date().getTime(); //update timestamp we last heard from this node, regardless of any matches
+      existingNode.updated = Date.now(); //update timestamp we last heard from this node, regardless of any matches
       if (existingNode.metrics == undefined)
         existingNode.metrics = new Object();
       if (existingNode.events == undefined)
@@ -508,7 +508,7 @@ global.processSerialData = function (data) {
       }
 
       //prepare entry to save to DB, undefined values will not be saved, hence saving space
-      var entry = {_id:id, updated:existingNode.updated, type:existingNode.type||undefined, label:existingNode.label||undefined, descr:existingNode.descr||undefined, hidden:existingNode.hidden||undefined, /*V:existingNode.V||undefined,*/ rssi:existingNode.rssi, metrics:Object.keys(existingNode.metrics).length > 0 ? existingNode.metrics : {}, events: Object.keys(existingNode.events).length > 0 ? existingNode.events : undefined };
+      var entry = {_id:id, updated:existingNode.updated, type:existingNode.type||undefined, label:existingNode.label||undefined, descr:existingNode.descr||undefined, hidden:existingNode.hidden||undefined, rssi:existingNode.rssi, metrics:Object.keys(existingNode.metrics).length > 0 ? existingNode.metrics : {}, events: Object.keys(existingNode.events).length > 0 ? existingNode.events : undefined };
       //console.log('UPDATING ENTRY: ' + JSON.stringify(entry));
 
       //save to DB
@@ -552,7 +552,7 @@ function schedule(node, eventKey) {
   var nextRunTimeout = metricsDef.events[eventKey].nextSchedule(node);
   if (nextRunTimeout < 1000)
   {
-    console.ERROR('**** SCHEDULING EVENT ERROR - nodeId:' + node._id+' event:'+eventKey+' cannot schedule event in ' + nextRunTimeout + 'ms (less than 1s)');
+    console.error('**** SCHEDULING EVENT ERROR - nodeId:' + node._id+' event:'+eventKey+' cannot schedule event in ' + nextRunTimeout + 'ms (less than 1s)');
     return;
   }
   var hrs = parseInt(nextRunTimeout/3600000);
