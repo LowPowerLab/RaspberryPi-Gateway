@@ -68,7 +68,7 @@
       editable: true,
       exposed: true,
       ip: {
-        value: "192.168.0.100"
+        value: "192.168.1.100"
       }
     }
   }

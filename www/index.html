@@ -68,7 +68,7 @@
   .btn-text, #loadingsocket { font-size: 32px; }
   #loadingsocket, #loadinggraph {padding:15px;}
   .labelbold { font-weight:bold !important; overflow:hidden; text-overflow:ellipsis;white-space:nowrap; }
-  #wrap { padding: 12px; }
+  .wrap { padding: 12px; }
   .ui-listview>li.hiddenNode { display:none; }
   .ui-listview>li.hiddenNodeShow { display:block; }
   .ui-li-count18 { font-size:18px; }
@@ -438,9 +438,12 @@
       </span>
     </div>
 
-    <div id="wrap">
+    <div class="wrap">
       <textarea name="log" id="log" rows="10" style="font-size:10px;"></textarea>
     </div>
+    <div style="font-weight:bold;padding:0 12px;">
+      <span>Server uptime: </span><span id="status-uptime" data-time="147676078" class="nodeAgo">X</span>
+    </div>  
   </div>
 
   <div data-role="page" id="settingspage">
@@ -590,8 +593,12 @@
     });
     
     socket.on('SERVERTIME', function(serverMillisSinceEpoch) {
-      serverTimeOffset = new Date().getTime() - serverMillisSinceEpoch;
+      serverTimeOffset = Date.now() - serverMillisSinceEpoch;
       LOG('SERVERTIME OFFSET: ' + serverTimeOffset + 'ms');
+    });
+    
+    socket.on('SERVERSTARTTIME', function(serverMillisSinceProcessStart) {
+      $('#status-uptime').attr('data-time', serverMillisSinceProcessStart + serverTimeOffset);
     });
 
     $(document).on("pagecreate", "#eventAdd", function(){ if ($('addEventType').val()) $('#addEvent_OK').show(); else $('#addEvent_OK').hide(); });
@@ -732,7 +739,7 @@
       graphOptions.yaxis.max = max;
 
       graphOptions = $.extend(true, graphOptions, rawData.options); //http://stackoverflow.com/questions/171251/how-can-i-merge-properties-of-two-javascript-objects-dynamically
-      $(graphStat).html(rawData.graphData.msg != undefined ? rawData.graphData.msg : (rawData.graphData.data.length + (rawData.graphData.totalIntervalDatapoints != rawData.graphData.data.length ? ' / '+rawData.graphData.totalIntervalDatapoints : '') +'pts ('+ rawData.graphData.queryTime+'ms)'));
+      $(graphStat).html(rawData.graphData.msg != undefined ? rawData.graphData.msg : (rawData.graphData.data.length + (rawData.graphData.totalIntervalDatapoints != rawData.graphData.data.length ? ' / '+rawData.graphData.totalIntervalDatapoints : '') +'pts ('+ rawData.graphData.queryTime+'ms) ('+humanFileSize(rawData.graphData.totalIntervalDatapoints*9)+'/'+humanFileSize(rawData.graphData.logSize)+')'));
       //need to defer plotting until after pageshow is finished rendering, otherwise the wrapper will return an incorrect width of "100"
       if (metricGraphWrapper.width()==100)
         $(document).on("pageshow", "#metricdetails", renderAndCloneStat);
@@ -893,6 +900,12 @@
 
       $('#nodeList').listview('refresh'); //re-render the listview
     }
+
+    /// http://stackoverflow.com/a/20732091
+    function humanFileSize(size) {
+      var i = Math.floor( Math.log(size) / Math.log(1024) );
+      return ( size / Math.pow(1024, i) ).toFixed(2) * 1 + ' ' + ['B', 'kB', 'MB', 'GB', 'TB'][i];
+    };
 
     /// calculated a style for an "ago" label based on a given timestamp in the past
     function ago(time, agoPrefix)

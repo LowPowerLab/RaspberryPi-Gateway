@@ -32,6 +32,7 @@ var JSON5 = require('json5');                                   //https://github
 var path = require('path');
 var dbDir = 'data/db';
 var metricsFile = 'metrics.js';
+var userMetricsDir = 'userMetrics';
 nconf.argv().file({ file: path.resolve(__dirname, 'settings.json5'), format: JSON5 });
 settings = nconf.get('settings');
 var dbLog = require(path.resolve(__dirname,'logUtil.js'));
@@ -58,12 +59,38 @@ serial.on('close', function serialCloseHandler(error) {
 });
 
 serial.on("data", function(data) { processSerialData(data); });
-
 serial.open();
 
-metricsDef = require(path.resolve(__dirname, metricsFile));
-
 require("console-stamp")(console, settings.general.consoleLogDateFormat.value); //timestamp logs - https://github.com/starak/node-console-stamp
+
+//LOAD METRICS:
+// - First load main metrics.js definitions (metrics, motes, events etc)
+metricsDef = require(path.resolve(__dirname, metricsFile));
+// - Then load user metrics which can override default metrics
+try {
+  console.info('LOADING USER METRICS...');
+  fs = require('fs');
+  merge = require('merge');
+  if (fs.existsSync(__dirname + '/' + userMetricsDir))
+  {
+    fs.readdirSync(__dirname + '/' + userMetricsDir).forEach(function(file) {
+      if (file.match(/\.js$/) !== null) {
+        var name = file.replace('.js', '');
+        console.info('LOADING USER METRICS MODULE [' + name + ']');
+        try {
+          var tmp = require(__dirname + '/' + userMetricsDir + '/' + file);
+          metricsDef = merge(true, metricsDef, tmp);
+        } catch (ex) {
+          console.error('FAIL LOADING USER METRICS MODULE ['+ name + ']: ' + ex.message);
+        }
+      }
+    });
+  } else console.info('NO USER METRICS DEFINED (dir: /' + userMetricsDir + '), SKIPPING');
+}
+catch (ex) {
+  console.error('FAIL ACCESSING USER METRICS: '+ ex.message);
+}
+
 db.persistence.setAutocompactionInterval(settings.database.compactDBInterval.value); //compact the database every 24hrs
 
 var transporter = nodemailer.createTransport({
@@ -165,7 +192,8 @@ io.sockets.on('connection', function (socket) {
   socket.emit('METRICSDEF', metricsDef.metrics);
   socket.emit('EVENTSDEF', metricsDef.events);
   socket.emit('SETTINGSDEF', settings);
-  socket.emit('SERVERTIME', new Date().getTime());
+  socket.emit('SERVERTIME', Date.now());
+  socket.emit('SERVERSTARTTIME', Date.now() - process.uptime()*1000);
 
   //pull all nodes from the database and send them to client
   db.find({ _id : { $exists: true } }, function (err, entries) {
@@ -538,7 +566,7 @@ global.processSerialData = function (data) {
   else
   {
     //console.log('no match: ' + data);
-    dbunmatched.insert({_id:(new Date().getTime()), data:data});
+    dbunmatched.insert({_id:Date.now(), data:data});
   }
 }
 

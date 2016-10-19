@@ -62,7 +62,7 @@ exports.metrics = {
   //SwitchMote buttons
   SMB0_OFF : { name:'B0', regexp:/BTN0\:0/i, value:'OFF'},
   SMB0_ON  : { name:'B0', regexp:/BTN0\:1/i, value:'ON'},
-  SMB1_OFF : { name:'B1', regexp:/(BTN1|SSR|RLY)\:0/i, value:'OFF', pin:1, graph:1, logValue:0, graphOptions:{ yaxis: {ticks:0}, colors:['#4a0']}},
+  SMB1_OFF : { name:'B1', regexp:/(BTN1|SSR|RLY)\:0/i, value:'OFF', pin:1, graph:1, logValue:0, graphOptions:{ yaxis: {ticks:0, min:0, autoscaleMargin:0.5 }, colors:['#4a0']}},
   SMB1_ON  : { name:'B1', regexp:/(BTN1|SSR|RLY)\:1/i, value:'ON', pin:1, graph:1, logValue:1, graphOptions: { /* already defined above for 'B1', no need to repeat */ }},
   SMB2_OFF : { name:'B2', regexp:/BTN2\:0/i, value:'OFF'},
   SMB2_ON  : { name:'B2', regexp:/BTN2\:1/i, value:'ON'},
