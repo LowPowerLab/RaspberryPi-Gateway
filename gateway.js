@@ -75,13 +75,21 @@ try {
   {
     fs.readdirSync(__dirname + '/' + userMetricsDir).forEach(function(file) {
       if (file.match(/\.js$/) !== null) {
-        var name = file.replace('.js', '');
-        console.info('LOADING USER METRICS MODULE [' + name + ']');
+        console.info('LOADING USER METRICS MODULE [' + file + ']');
         try {
           var tmp = require(__dirname + '/' + userMetricsDir + '/' + file);
-          metricsDef = merge(true, metricsDef, tmp);
+          metricsDef.metrics = merge(true, metricsDef.metrics, tmp.metrics);
+          metricsDef.motes = merge(true, metricsDef.motes, tmp.motes);
+          metricsDef.events = merge(true, metricsDef.events, tmp.events);
+          delete tmp.metrics;
+          delete tmp.motes;
+          delete tmp.events;
+          metricsDef = merge(true, metricsDef, tmp); //merge anything else (properties, variables, objects, functions)
+          //console.info('USER METRICS MERGE RESULT V: ' + JSON.stringify(metricsDef.metrics.V)); //verify that a custom metric was loaded
+          //console.info('USER METRICS MERGE RESULT VAR: ' + JSON.stringify(metricsDef.ONEDAYHOURS)); //verify that a custom variable was loaded
+          //console.info('USER METRICS MERGE RESULT FUNC: ' + metricsDef.secondsInOneDay.toString()); //verify that a custom function was loaded
         } catch (ex) {
-          console.error('FAIL LOADING USER METRICS MODULE ['+ name + ']: ' + ex.message);
+          console.error('FAIL LOADING USER METRICS MODULE ['+ file + ']: ' + ex.message);
         }
       }
     });
