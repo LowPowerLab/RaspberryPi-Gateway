@@ -57,7 +57,13 @@ exports.getData = function(filename, start, end, dpcount) {
       value = buff.readInt32BE(5);
       data.push({t:timetmp*1000, v:value/10000});
     }
-    return {data:data, queryTime:(new Date() - ts), totalIntervalDatapoints: (posEnd-posStart)/9+1 };
+    return {
+      data:data,
+      queryTime:(new Date() - ts),
+      totalIntervalDatapoints: (posEnd-posStart)/9+1,
+      totalDatapoints:filesize/9,
+      logSize:filesize
+    };
   }
   
   //too many data points, use binarySearch to aggregate
@@ -77,7 +83,13 @@ exports.getData = function(filename, start, end, dpcount) {
   }
   fs.closeSync(fd);
 
-  return {data:data, queryTime:(new Date() - ts), totalIntervalDatapoints: (posEnd-posStart)/9+1 };
+  return {
+    data:data,
+    queryTime:(new Date() - ts),
+    totalIntervalDatapoints: (posEnd-posStart)/9+1,
+    totalDatapoints:filesize/9,
+    logSize:filesize
+  };
 }
 
 // filename:  binary file to append new data point to
