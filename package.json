@@ -9,18 +9,18 @@
   "bugs": {
     "url": "https://github.com/LowPowerLab/RaspberryPi-Gateway/issues"
   },
-  "license": "SEE LICENSE IN LICENSE FILE",
+  "license": "SEE LICENSE FILE",
   "contributors": "Felix Rusu (https://github.com/LowPowerLab)",
   "dependencies": {
     "serialport": "~2.0",
-    "socket.io": "~1.3",
+    "socket.io": "~1.5",
     "nedb": "~1.8",
     "json5": "~0.5.0",
     "nconf": "~0.8.2",
     "nodemailer": "~1.10",
     "console-stamp": "~0.2.4",
     "colors": "~1.1.2",
-    "request": "~2.75",
+    "request": "~2.78",
     "merge": "~1.2.0"
   },
   "scripts": {

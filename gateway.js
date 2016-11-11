@@ -46,16 +46,14 @@ var dbunmatched = new Datastore({ filename: path.join(__dirname, dbDir, settings
 serial = new serialport.SerialPort(settings.serial.port.value, { baudrate : settings.serial.baud.value, parser: serialport.parsers.readline("\n") }, false);
 
 serial.on('error', function serialErrorHandler(error) {
-    //Send serial error messages to console.
-    //Better error handling needs to be here in the future.
-    console.error(error.message);
+  //Send serial error messages to console. Better error handling needs to be here in the future.
+  console.error(error.message);
 });
 
 serial.on('close', function serialCloseHandler(error) {
-    //Give user a sane error message and exit. Future possibilities could include
-    //sending message to front end via socket.io & setup timer to retry opening serial.
-    console.error(error.message);
-    process.exit(1);
+  //Give user a sane error message and exit. Future possibilities could include sending message to front end via socket.io & setup timer to retry opening serial.
+  console.error(error.message);
+  process.exit(1);
 });
 
 serial.on("data", function(data) { processSerialData(data); });
@@ -102,22 +100,22 @@ catch (ex) {
 db.persistence.setAutocompactionInterval(settings.database.compactDBInterval.value); //compact the database every 24hrs
 
 var transporter = nodemailer.createTransport({
-    service: settings.credentials.emailservice.value, //"gmail" is preconfigured by nodemailer, but you can setup any other email client supported by nodemailer
-    auth: {
-        user: settings.credentials.email.value,
-        pass: settings.credentials.emailpass.value,
-    }
+  service: settings.credentials.emailservice.value, //"gmail" is preconfigured by nodemailer, but you can setup any other email client supported by nodemailer
+  auth: {
+    user: settings.credentials.email.value,
+    pass: settings.credentials.emailpass.value,
+  }
 });
 
 //global.LOG = function(data) { process.stdout.write(data || ''); }
 //global.LOGln = function(data) { process.stdout.write((data || '') + '\n'); }
 global.sendEmail = function(SUBJECT, BODY) {
   var mailOptions = {
-      from: 'Moteino Gateway <gateway@moteino.com>',
-      to: settings.credentials.emailAlertsTo.value, // list of receivers, comma separated
-      subject: SUBJECT,
-      text: BODY
-      //html: '<b>Hello world ?</b>' // html body
+    from: 'Moteino Gateway <gateway@moteino.com>',
+    to: settings.credentials.emailAlertsTo.value, // list of receivers, comma separated
+    subject: SUBJECT,
+    text: BODY
+    //html: '<b>Hello world ?</b>' // html body
   };
   transporter.sendMail(mailOptions, function(error, info) {
     if(error) console.error('SENDEMAIL ERROR: ' + error);
@@ -181,15 +179,23 @@ global.handleNodeEvents = function(node) {
     // }
 }
 
-//authorize handshake - make sure the request is coming from nginx, not from the outside world
+//authorize handshake - make sure the request is proxied from localhost, not from the outside world
 //if you comment out this section, you will be able to hit this socket directly at the port it's running at, from anywhere!
 //this was tested on Socket.IO v1.2.1 and will not work on older versions
 io.use(function(socket, next) {
-  var handshakeData = socket.request;
-  //console.log('\nAUTHORIZING CONNECTION FROM ' + handshakeData.connection.remoteAddress + ':' + handshakeData.connection.remotePort);
-  if (handshakeData.connection.remoteAddress == "localhost" || handshakeData.connection.remoteAddress == "127.0.0.1")
+  var handshakeData = socket.request.connection;
+  console.info('AUTHORIZING CONNECTION FROM ' + handshakeData.remoteAddress + ':' + handshakeData.remotePort);
+  if (handshakeData.remoteAddress == "localhost" || handshakeData.remoteAddress == "127.0.0.1" || handshakeData.remoteAddress == "::1" || handshakeData.remoteAddress == "::ffff:127.0.0.1")
+  {
     next();
-  next(new Error('REJECTED IDENTITY, not coming from localhost'));
+    return;
+  }
+  else
+  {
+    var msg = 'REJECTED IDENTITY [' + handshakeData.remoteAddress + '], not coming from localhost';
+    console.error(msg);
+    next(new Error(msg));
+  }
 });
 
 io.sockets.on('connection', function (socket) {
@@ -323,7 +329,7 @@ io.sockets.on('connection', function (socket) {
       if (entries.length == 1)
       {
         var dbNode = entries[0];
-        dbNode.metrics[metricKey] = undefined;
+        dbNode.metrics[metricKey] = undefined; //TODO: use delete
         db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) { console.log('DELETENODEMETRIC DB-Replaced:' + numReplaced); });
         if (settings.general.keepMetricLogsOnDelete.value != 'true')
           dbLog.removeMetricLog(path.join(__dirname, dbDir, dbLog.getLogName(dbNode._id, metricKey)));
