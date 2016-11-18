@@ -1,11 +1,12 @@
 Moteino IoT Gateway App setup for RaspberryPi
 ---------------------------------
 
-Setup your vanilla raspbian with the Gateway app like this:
+This was tested on RaspberryPi2 (armv6) and RaspberryPi3 (armv7).
+Setup your raw vanilla raspbian image (ex raspbian jessie lite) with the Gateway app like this:
 
 - `cd /home/pi`
-- `sudo wget https://github.com/LowPowerLab/RaspberryPi-Gateway/blob/master/.setup/gatewaysetup.sh`
-- `sudo bash shutdownchecksetup.sh && sudo rm shutdownchecksetup.sh`
+- `sudo wget https://raw.githubusercontent.com/LowPowerLab/RaspberryPi-Gateway/master/.setup/gatewaysetup.sh`
+- `sudo bash gatewaysetup.sh && sudo rm gatewaysetup.sh`
 
 Files in this directory:
 
