@@ -536,7 +536,7 @@ global.processSerialData = function (data) {
                 var logfile = path.join(__dirname, dbDir, dbLog.getLogName(id, matchingMetric.name));
                 try {
                   console.log('post: ' + logfile + '[' + ts + ','+graphValue + ']');
-                  dbLog.postData(logfile, ts, graphValue);
+                  dbLog.postData(logfile, ts, graphValue, matchingMetric.duplicateInterval || null);
                 } catch (err) { console.error('   POST ERROR: ' + err.message); /*console.log('   POST ERROR STACK TRACE: ' + err.stack); */ } //because this is a callback concurrent calls to the same log, milliseconds apart, can cause a file handle concurrency exception
               }
               else console.log('   METRIC NOT NUMERIC, logging skipped... (extracted value:' + graphValue + ')');

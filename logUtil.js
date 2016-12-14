@@ -95,7 +95,8 @@ exports.getData = function(filename, start, end, dpcount) {
 // filename:  binary file to append new data point to
 // timestamp: data point timestamp (seconds since unix epoch)
 // value:     data point value (signed integer)
-exports.postData = function post(filename, timestamp, value) {
+// duplicateInterval: if provided a duplicate value is only posted after this many seconds
+exports.postData = function post(filename, timestamp, value, duplicateInterval) {
   if (!metrics.isNumeric(value)) value = 999; //catch all value
   var logsize = exports.fileSize(filename);
   if (logsize % 9 > 0) throw 'File ' + filename +' is not multiple of 9bytes, post aborted';
@@ -123,7 +124,7 @@ exports.postData = function post(filename, timestamp, value) {
 
     if (timestamp > lastTime)
     {
-      if (value != lastValue || (timestamp-lastTime>3600)) //only write new value if different than last value or 1 hour has passed (should be a setting?)
+      if (value != lastValue || (duplicateInterval==null || timestamp-lastTime>duplicateInterval)) //only write new value if different than last value or duplicateInterval seconds has passed (should be a setting?)
       {
         //timestamp is in the future, append
         fd = fs.openSync(filename, 'a');

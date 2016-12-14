@@ -55,7 +55,7 @@ exports.metrics = {
   unknown : { name:'Status', regexp:/(?:STS\:)?(UNK|UNKNOWN)/i, value:'UNKNOWN!', pin:1, graph:1, logValue:0.5 },
 
   //MotionMote and Mailbox notifier
-  motion : { name:'M', regexp:/MOTION/i, value:'MOTION', pin:1, graph:1, logValue:1, graphValSuffix:' detected!', graphOptions:{ legendLbl:'Motion', lines: { show:false, fill:false }, points: { show: true, radius: 5, lineWidth:1 }, grid: { backgroundColor: {colors:['#000', '#03c', '#08c']}}, yaxis: { ticks: 0 }}},
+  motion : { name:'M', regexp:/\bMOTION\b/i, value:'MOTION', pin:1, graph:1, logValue:1, graphValSuffix:' detected!', graphOptions:{ legendLbl:'Motion', lines: { show:false, fill:false }, points: { show: true, radius: 5, lineWidth:1 }, grid: { backgroundColor: {colors:['#000', '#03c', '#08c']}}, yaxis: { ticks: 0 }}},
   lastMotion : { name:'LO', regexp:/(?:LO|LM)\:((?:\d+h)?\d{1,2}m|\d{1,2}s)/i, value:'', pin:1 },
   debug : { name:'DEBUG', regexp:/\[(?:DEBUG)\:([^\]]+)\]/i, value:''},
 
@@ -68,28 +68,28 @@ exports.metrics = {
   SMB2_ON  : { name:'B2', regexp:/BTN2\:1/i, value:'ON'},
 
   //Door Bell Mote
-  ring : { name:'RING', regexp:/RING/i, value:'RING', pin:1, graph:1, logValue:1, graphValSuffix:'!', graphOptions:{ legendLbl:'Doorbell rings', lines: { show:false, fill:false }, points: { show: true, radius: 5,  lineWidth:1 }, grid: { backgroundColor: {colors:['#000', '#a40']}}, yaxis: { ticks: 0 }}},
-  BELL_DISABLED : { name:'Status', regexp:/BELL\:0/i, value:'OFF'},
-  BELL_ENABLED  : { name:'Status', regexp:/BELL\:1/i, value:'ON'},
-  START         : { name:'START', regexp:/START/i, value:'Started'},
+  ring : { name:'RING', regexp:/\bRING\b/i, value:'RING', pin:1, graph:1, logValue:1, graphValSuffix:'!', graphOptions:{ legendLbl:'Doorbell rings', lines: { show:false, fill:false }, points: { show: true, radius: 5,  lineWidth:1 }, grid: { backgroundColor: {colors:['#000', '#a40']}}, yaxis: { ticks: 0 }}},
+  BELL_DISABLED : { name:'Status', regexp:/\bBELL\:0\b/i, value:'OFF'},
+  BELL_ENABLED  : { name:'Status', regexp:/\bBELL\:1\b/i, value:'ON'},
+  START         : { name:'START', regexp:/\bSTART\b/i, value:'Started'},
 
   //WeatherShield metrics
   //uncomment FtoC if you want a F:1234 to be valuated as a Centigrade isntead of F (the first match is picked up and will evaluate, any following defs are ignored)
-  //FtoC : { name:'C', regexp:/F\:(-?\d+\.\d+)/i, value:'', valuation:function(value) {return (value - 32) * 5/9;}, unit:'°', pin:1, graph:1, graphValSuffix:'C', graphOptions:{ legendLbl:'Temperature', lines: { lineWidth:1 }}}
-  F : { name:'F', regexp:/F\:(-?\d+\.\d+)/i, value:'', unit:'°', pin:1, graph:1, graphValSuffix:'F', graphOptions:{ legendLbl:'Temperature', lines: { lineWidth:1 } }},
+  //FtoC : { name:'C', regexp:/F\:(-?\d+\.\d+)/i, value:'', duplicateInterval:3600, valuation:function(value) {return (value - 32) * 5/9;}, unit:'°', pin:1, graph:1, graphValSuffix:'C', graphOptions:{ legendLbl:'Temperature', lines: { lineWidth:1 }}}
+  F : { name:'F', regexp:/\bF\:(-?\d+\.\d+)\b/i, value:'', duplicateInterval:3600, unit:'°', pin:1, graph:1, graphValSuffix:'F', graphOptions:{ legendLbl:'Temperature', lines: { lineWidth:1 } }},
   //uncomment FHtoC if you want a F:1234 to be valuated as a Centigrade isntead of F (the first match is picked up and will evaluate, any following defs are ignored)
-  //FHtoC : { name:'C', regexp:/F\:(-?\d+)/i, value:'', valuation:function(value) {return (value/100 - 32) * 5/9;}, unit:'°', pin:1, graph:1, graphValSuffix:'C', graphOptions:{ legendLbl:'Temperature', lines: { lineWidth:1 }}}
-  FH : { name:'F', regexp:/F\:(-?\d+)/i, value:'', valuation:function(value) {return value/100;}, unit:'°', pin:1, graph:1, graphValSuffix:'F', graphOptions:{ legendLbl:'Temperature', lines: { lineWidth:1 }}},
-  C : { name:'C', regexp:/C\:([-\d\.]+)/i, value:'', unit:'°', pin:1, graph:1, graphValSuffix:'C', graphOptions:{ legendLbl:'Temperature' }},
-  H : { name:'H', regexp:/H\:([\d\.]+)/i, value:'', unit:'%', pin:1, graph:1, graphOptions:{ legendLbl:'Humidity', lines: { lineWidth:1 }}},
-  P : { name:'P', regexp:/P\:([\d\.]+)/i, value:'', unit:'"', pin:1, },
+  //FHtoC : { name:'C', regexp:/\bF\:(-?\d+)\b/i, value:'', duplicateInterval:3600, valuation:function(value) {return (value/100 - 32) * 5/9;}, unit:'°', pin:1, graph:1, graphValSuffix:'C', graphOptions:{ legendLbl:'Temperature', lines: { lineWidth:1 }}}
+  FH : { name:'F', regexp:/\bF\:(-?\d+)\b/i, value:'', duplicateInterval:3600, valuation:function(value) {return value/100;}, unit:'°', pin:1, graph:1, graphValSuffix:'F', graphOptions:{ legendLbl:'Temperature', lines: { lineWidth:1 }}},
+  C : { name:'C', regexp:/\bC\:([-\d\.]+)\b/i, value:'', duplicateInterval:3600, unit:'°', pin:1, graph:1, graphValSuffix:'C', graphOptions:{ legendLbl:'Temperature' }},
+  H : { name:'H', regexp:/\bH\:([\d\.]+)\b/i, value:'', duplicateInterval:3600, unit:'%', pin:1, graph:1, graphOptions:{ legendLbl:'Humidity', lines: { lineWidth:1 }}},
+  P : { name:'P', regexp:/\bP\:([\d\.]+)\b/i, value:'', duplicateInterval:3600, unit:'"', pin:1, },
 
   //SprinklerMote
   SPRKL_ZONE : { name:'ZONE', regexp:/ZONE\:([\d\.]+)/i, value:'', pin:1, graph:1, logValue:'', graphValPrefix:'Zone ', graphValSuffix:' running!',  graphOptions:{ legendLbl:'Zone', colors:['#4a0']}}, //this captures zone messages and extracts the ID of the active zone
   SPRKL_OFF : { name:'ZONE', regexp:/ZONES\:OFF/i, value:'OFF', pin:1, graph:1, logValue:0, graphValPrefix:'', graphValSuffix:''},
 
   //SonarMote
-  sonar : { name:'CM', regexp:/([\d\.]+)cm?/i, value:'', unit:'cm', pin:1, graph:1,  graphOptions: { legendLbl:'Level', lines: { lineWidth:1 }, colors:['#09c']} },
+  sonar : { name:'CM', regexp:/\b([\d\.]+)cm?\b/i, value:'', unit:'cm', pin:1, graph:1,  graphOptions: { legendLbl:'Level', lines: { lineWidth:1 }, colors:['#09c']} },
 
   //WattMote
   VRMS : { name:'VRMS', regexp:/VRMS\:([\d\.]+)(?:V)?/i, value:'', unit:'V', },
@@ -109,7 +109,7 @@ exports.metrics = {
   FSTATE : { name:'FSTATE', regexp:/FSTATE\:(AUTO|AUTOCIRC|ON)/i, value:''},
 
   //special metrics
-  V : { name:'V', regexp:/(?:V?BAT|VOLTS|V)\:([\d\.]+)v?/i, value:'', unit:'v', graph:1, graphOptions:{ legendLbl:'Voltage', lines: { fill:false, lineWidth:1 }, grid: { backgroundColor: {colors:['#000', '#03c', '#08c']}}, yaxis: { min: 0, autoscaleMargin: 0.25 }}},
+  V : { name:'V', regexp:/\b(?:V?BAT|VOLTS|V)\:([\d\.]+)v?\b/i, value:'', duplicateInterval:3600, unit:'v', graph:1, graphOptions:{ legendLbl:'Voltage', lines: { fill:false, lineWidth:1 }, grid: { backgroundColor: {colors:['#000', '#03c', '#08c']}}, yaxis: { min: 0, autoscaleMargin: 0.25 }}},
   //catchAll : { name:'CatchAll', regexp:/(\w+)\:(\w+)/i, value:''},
 };
 
@@ -193,21 +193,22 @@ exports.events = {
   garageSMS : { label:'Garage : SMS', icon:'comment', descr:'Send SMS when garage is OPENING', serverExecute:function(node) { if (node.metrics['Status'] && (node.metrics['Status'].value.indexOf('OPENING')>-1) && (Date.now() - new Date(node.metrics['Status'].updated).getTime() < 2000)) { sendSMS('Garage event', 'Garage was opening on node : [' + node._id + ':' + node.label + '] @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
   garagePoll: { label:'Garage : POLL', icon:'comment', descr:'Poll Garage Status', nextSchedule:function(nodeAtScheduleTime) { return 30000; }, scheduledExecute:function(nodeAtScheduleTime) { db.findOne({ _id : nodeAtScheduleTime._id }, function (err, nodeRightNow) { if (nodeRightNow) { /*just emit a log the status to client(s)*/ io.sockets.emit('LOG', 'GARAGE POLL STATUS: ' + nodeRightNow.metrics['Status'].value ); } }); } },
 
-  switchMoteON_PM : { label:'SwitchMote ON at 5:30PM!', icon:'clock', descr:'Turn this switch ON every evening', nextSchedule:function(node) { return exports.timeoutOffset(17,30); }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:1'}); } },
-  switchMoteOFF_AM : { label:'SwitchMote OFF at 7:30AM!', icon:'clock', descr:'Turn this switch OFF every morning', nextSchedule:function(node) { return exports.timeoutOffset(7,30); }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:0'}); } },
+  switchMoteON_PM : { label:'SwitchMote ON at 6:30PM!', icon:'clock', descr:'Turn this switch ON every evening', nextSchedule:function(node) { return exports.timeoutOffset(18,30); }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:1'}); } },
+  switchMoteOFF_AM : { label:'SwitchMote OFF at 8:00AM!', icon:'clock', descr:'Turn this switch OFF every morning', nextSchedule:function(node) { return exports.timeoutOffset(8,00); }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:0'}); } },
   switchMoteONBUZZ : { label:'SwitchMote ON Buzzer beep!', icon:'clock', descr:'Buzz gateway when switchmote is ON',  serverExecute:function(node) { if (node.metrics['B1'] && node.metrics['B1'].value == 'ON' && (Date.now() - new Date(node.metrics['B1'].updated).getTime() < 2000)) { setTimeout(function() { sendMessageToGateway('BEEP'); }, 5); } }},
-  
+
   //for the sprinkler events, rather than scheduling with offsets, its much easir we run them every day, and check the odd/even/weekend condition in the event itself
-  sprinklersOddDays : { label:'Odd days @ 6:30AM', icon:'clock', descr:'Run this sprinkler program on odd days at 6:30AM', nextSchedule:function(node) { return exports.timeoutOffset(6,30); }, scheduledExecute:function(node) { if ((new Date().getDate()%2)==1) sendMessageToNode({nodeId:node._id, action:'PRG 2:300 3:300 1:300 4:300 5:300' /*runs stations 1-5 (300sec each))*/}); } },
-  sprinklersEvenDays : { label:'Even days @ 6:30AM', icon:'clock', descr:'Run this sprinkler program on even days at 6:30AM', nextSchedule:function(node) { return exports.timeoutOffset(6,30); }, scheduledExecute:function(node) { if ((new Date().getDate()%2)==0) sendMessageToNode({nodeId:node._id, action:'PRG 2:300 3:300 1:300 4:300 5:300' /*runs stations 1-5 (300sec each)*/}); } },
-  sprinklersWeekends : { label:'Weekends @ 6:30AM)', icon:'clock', descr:'Run this sprinkler program on weekend days at 6:30AM', nextSchedule:function(node) { return exports.timeoutOffset(6,30); }, scheduledExecute:function(node) { if ([0,6].indexOf(new Date().getDay())>-1 /*Saturday=6,Sunday=0,*/) sendMessageToNode({nodeId:node._id, action:'PRG 2:180 3:180 1:180 4:180 5:180' /*runs stations 1-5 (180sec each)*/}); } },
+  sprinklersOddDays : { label:'Odd days @ 2:30AM', icon:'clock', descr:'Run this sprinkler program on odd days at 2:30AM', nextSchedule:function(node) { return exports.timeoutOffset(2,30); }, scheduledExecute:function(node) { if ((new Date().getDate()%2)==1) sendMessageToNode({nodeId:node._id, action:'PRG 1:300 2:300 3:300 4:300 5:300' /*runs stations 1-5 (300sec each))*/}); } },
+  sprinklersEvenDays : { label:'Even days @ 2:30AM', icon:'clock', descr:'Run this sprinkler program on even days at 2:30AM', nextSchedule:function(node) { return exports.timeoutOffset(2,30); }, scheduledExecute:function(node) { if ((new Date().getDate()%2)==0) sendMessageToNode({nodeId:node._id, action:'PRG 1:300 2:300 3:300 4:300 5:300' /*runs stations 1-5 (300sec each)*/}); } },
+  sprinklersWeekends : { label:'Weekends @ 2:30AM)', icon:'clock', descr:'Run this sprinkler program on weekend days at 2:30AM', nextSchedule:function(node) { return exports.timeoutOffset(2,30); }, scheduledExecute:function(node) { if ([0,6].indexOf(new Date().getDay())>-1 /*Saturday=6,Sunday=0,*/) sendMessageToNode({nodeId:node._id, action:'PRG 1:180 2:180 3:180 4:180 5:180' /*runs stations 1-5 (180sec each)*/}); } },
 
   //thermostat poll event
   thermostatPoll : { label:'Thermostat status poll', icon:'fa-heartbeat', descr:'Poll thermostat status (HTTP GET)',
     nextSchedule:function(node) { return 30000; },
     scheduledExecute:function(node) {
       exports.tstatPoll(node._id);
-    }},
+    }
+  },
   //END thermostat poll event
 
   thermostat_H68_AM : { label:'Thermostat heat 68° @ 8AM weekdays', icon:'clock', descr:'Request heat point of 68° weekdays at 8am',
@@ -291,13 +292,13 @@ exports.motes = {
   SwitchMote: {
     label   : 'Light Switch',
     icon : 'icon_switchmote.png',
-    controls : { B0 : { states: [{ label:'B0 (off)', action:'BTN0:1', css:'background-color:#FF9B9B;', icon:'power', condition:''+function(node) { return node.metrics['B0'].value == 'OFF'; }},  //http://api.jquerymobile.com/icons/
-                                { label:'B0 (on)',  action:'BTN0:0', css:'background-color:#9BFFBE;color:#000000', icon:'power', condition:''+function(node) { return node.metrics['B0'].value == 'ON'; }}],
+    controls : { B0 : { states: [{ label:'B0 (off)', action:'BTN0:1', css:'background-color:#FF9B9B;', icon:'power', condition:''+function(node) { return node.metrics['B0'] ? node.metrics['B0'].value == 'OFF' : false; }},  //http://api.jquerymobile.com/icons/
+                                { label:'B0 (on)',  action:'BTN0:0', css:'background-color:#9BFFBE;color:#000000', icon:'power', condition:''+function(node) { return node.metrics['B0'] ? node.metrics['B0'].value == 'ON' : false; }}],
                        showCondition:''+function(node) { return (node.metrics && $.inArray('B0', Object.keys(node.metrics))>-1);}},
-                B1 : { states: [{ label:'Off', action:'BTN1:1', css:'background-color:#FF9B9B;', icon:'power', condition:''+function(node) { return node.metrics['B1'].value == 'OFF'; }},
-                                { label:'On',  action:'BTN1:0', css:'background-color:#9BFFBE;color:#000000', icon:'power', condition:''+function(node) { return node.metrics['B1'].value == 'ON'; }}]},
-                B2 : { states: [{ label:'B2 (off)', action:'BTN2:1', css:'background-color:#FF9B9B;', icon:'power', condition:''+function(node) { return node.metrics['B2'].value == 'OFF'; }},
-                                { label:'B2 (on)',  action:'BTN2:0', css:'background-color:#9BFFBE;color:#000000', icon:'power', condition:''+function(node) { return node.metrics['B2'].value == 'ON'; }}],
+                B1 : { states: [{ label:'Off', action:'BTN1:1', css:'background-color:#FF9B9B;', icon:'power', condition:''+function(node) { return node.metrics['B1'] ? node.metrics['B1'].value == 'OFF' : false; }},
+                                { label:'On',  action:'BTN1:0', css:'background-color:#9BFFBE;color:#000000', icon:'power', condition:''+function(node) { return node.metrics['B1'] ? node.metrics['B1'].value == 'ON' : false; }}]},
+                B2 : { states: [{ label:'B2 (off)', action:'BTN2:1', css:'background-color:#FF9B9B;', icon:'power', condition:''+function(node) { return node.metrics['B2'] ? node.metrics['B2'].value == 'OFF' : false; }},
+                                { label:'B2 (on)',  action:'BTN2:0', css:'background-color:#9BFFBE;color:#000000', icon:'power', condition:''+function(node) { return node.metrics['B2'] ? node.metrics['B2'].value == 'ON' : false; }}],
                        showCondition:''+function(node) { return (node.metrics && $.inArray('B2', Object.keys(node.metrics))>-1);}},
                },
   },

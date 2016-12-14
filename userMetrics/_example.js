@@ -4,8 +4,9 @@ exports.metrics = {
   V:
   {
     name: 'V',
-    regexp: /(?:V?BAT|VOLTS|V)\:([\d\.]+)v?/i,
+    regexp: /\b(?:V?BAT|VOLTS|V)\:([\d\.]+)v?\b/i,
     value: '',
+    duplicateInterval: 3600,
     unit: 'v',
     graph: 1,
     graphOptions:
@@ -26,8 +27,9 @@ exports.metrics = {
   H:
   {
     name: 'H',
-    regexp: /H\:([\d\.]+)/i,
+    regexp: /\bH\:([\d\.]+)\b/i,
     value: '',
+    duplicateInterval: 3600,
     unit: '%',
     pin: 1,
     graph: 1,
