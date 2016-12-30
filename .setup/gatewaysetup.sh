@@ -118,7 +118,7 @@ sudo ln -s /etc/nginx/sites-available/default
 sudo service nginx restart
 
 echo -e "${CYAN}************* STEP: ATXRaspi shutdown script setup *************${NC}"
-if (whiptail --title "ATXRaspi shutdown script" --yesno "Do you have a MightyHat or ATXRaspi installed on this Pi?\nNote: the script will start running only after a reboot so make sure to your ATXRaspi is wired before next boot otherwise leaving the feedback GPIO7 floating can cause unexpected reboots/shutdown!" 8 78) then
+if (whiptail --title "ATXRaspi shutdown script" --yesno "Do you have a MightyHat or ATXRaspi installed on this Pi?\nNote: the script will start running only after a reboot so make sure to your ATXRaspi is wired before next boot otherwise leaving the feedback GPIO7 floating can cause unexpected reboots/shutdown!" 12 78) then
   sudo wget https://raw.githubusercontent.com/LowPowerLab/ATX-Raspi/master/shutdownchecksetup.sh
   sudo bash shutdownchecksetup.sh && sudo rm shutdownchecksetup.sh
 fi
@@ -131,7 +131,7 @@ sudo raspi-config nonint do_serial 1
 # fi
 
 echo -e "${CYAN}************* STEP: Run raspi-config *************${NC}"
-if (whiptail --title "Run raspi-config ?" --yesno "Would you like to run raspi-config?\nNote: you should run this tool and configure the essential settings of your Pi if you haven't done it yet!" 8 78) then
+if (whiptail --title "Run raspi-config ?" --yesno "Would you like to run raspi-config?\nNote: you should run this tool and configure the essential settings of your Pi if you haven't done it yet!" 12 78) then
   sudo raspi-config
 fi
 
