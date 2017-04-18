@@ -33,6 +33,18 @@ exports.getData = function(filename, start, end, dpcount) {
   filesize = exports.fileSize(filename);
   if (filesize == -1) return {data:data, queryTime:0, msg:'no log data'};
   fd = fs.openSync(filename, 'r');
+  
+  //truncate start/end to log time limits if necessary - this ensures good data resolution when time limits are out of bounds
+  var buff = new Buffer(9);
+  fs.readSync(fd, buff, 0, 9, 0);
+  var firstLogTimestamp = buff.readUInt32BE(1);
+  fs.readSync(fd, buff, 0, 9, filesize-9);
+  var lastLogTimestamp = buff.readUInt32BE(1); //read timestamp (bytes 0-3 in buffer)
+  if (start < firstLogTimestamp) start = firstLogTimestamp;
+  if (end > lastLogTimestamp) end = lastLogTimestamp;
+
+  //console.info('getData() [start,end] = ' + start + ', ' + end);
+  
   interval = (end - start) / dpcount;
 
   // Ensure that interval request is less than 1, adjust number of datapoints to request if interval = 1
@@ -42,7 +54,6 @@ exports.getData = function(filename, start, end, dpcount) {
   }
 
   timetmp = 0;
-  buff = new Buffer(9);
 
   //first check if sequential reads (much faster) make sense
   posStart = exports.binarySearch(fd,start-interval,filesize);

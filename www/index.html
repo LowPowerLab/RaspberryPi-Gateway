@@ -64,6 +64,10 @@
   <script language="javascript" type="text/javascript" src="js/graphHelper.js"></script>
   <script language="javascript" type="text/javascript" src="js/dateFormat.js"></script> <!-- for demo see http://jsfiddle.net/phZr7/1/ -->
   <script language="javascript" type="text/javascript" src="js/bind.1.0.1.min.js"></script>
+  <!-- support for datepicker: -->
+  <link rel="stylesheet" href="https://rawgithub.com/arschmitz/jquery-mobile-datepicker-wrapper/master/jquery.mobile.datepicker.css" />
+  <script src="https://rawgithub.com/jquery/jquery-ui/1.10.4/ui/jquery.ui.datepicker.js"></script>
+  <script src="https://rawgithub.com/arschmitz/jquery-mobile-datepicker-wrapper/v0.1.1/jquery.mobile.datepicker.js"></script>
   <style type="text/css">
   .ui-content { padding-top:0; }
   .btn-text, #loadingsocket { font-size: 32px; }
@@ -212,7 +216,9 @@
     #nodeDetailInputList { padding-left: 30%; padding-right: 25%; }
   }
   
+  .ui-page{ overflow-y:hidden !important; }
   
+  div.popupInfo {max-width:90%;padding:0.7em;}
   </style>
 </head>
 <body>
@@ -220,7 +226,7 @@
     <div id="nav-panel" data-role="popup" data-corners="false" data-overlay-theme="b" data-theme="b" data-shadow="true" data-tolerance="0,0">
       <ul data-role="listview" data-theme="a" data-divider-theme="a" style="margin-top:-16px;" class="nav-search">
         <li data-icon="delete">
-          <a id="nav-panel-close" href="#" data-rel="close">Close (Esc)</a>
+          <a id="nav-panel-close" href="#" data-rel="close">Close Menu (Esc)</a>
         </li>
 
         <li data-icon="eye" data-iconpos="left">
@@ -235,14 +241,20 @@
         <li data-icon="fa-gear">
           <a href="#settingspage">Settings</a>
         </li>
+        <li data-icon="power">
+          <a href="#processExit" title="Restart gateway app">Restart app</a>
+        </li>
       </ul>
+      <div style="font-weight:bold;padding:5px;">
+        <span>Uptime: </span><span id="status-uptime" data-time="147676078" class="nodeAgo"></span>
+      </div>  
     </div><!-- /panel -->
         
     <div data-role="header">
       <a href="http://lowpowerlab.com/gateway" target="new" data-role="none"><img src="images/logo.png" alt="LowPowerLab" title="LowPowerLab.com" style="float:left;display:inline;max-width:30px;padding:4px"/></a>
       <h1>Moteino Gateway Dashboard</h1>
       <div class="ui-btn-right" data-role="controlgroup" data-type="horizontal" data-mini="true">
-        <a class="sideMenuButton" href="#nav-panel" data-icon="bars" data-role="button" data-rel="popup" data-transition="slide" data-position-to="window" >Menu</a>
+        <a class="sideMenuButton" href="#nav-panel" data-icon="bars" data-role="button" data-rel="popup" data-transition="slide" data-position-to="window">Menu</a>
       </div>
     </div>
 
@@ -308,6 +320,7 @@
         <div id="nodeEvents" class="center-div">
           <div id="nodeControls" data-role="controlgroup" data-type="horizontal">
             <a id="addNodeEvent" href="#addEvent" data-role="button" data-icon="plus" style="background-color:#9BFFBE" title="Add new event">Event</a>
+            <a href="#exportCSVDateRange" data-role="button" data-icon="fa-download" style="background-color:#daca25" title="Add new event">Export all data (CSV)</a>
           </div>
         </div>
       </div>
@@ -407,7 +420,7 @@
         <h3>Are you sure you want to restart the app?</h3>
       </div>
       <div class="center-wrapper" style="padding:10px">
-        <span><strong>NOTE:</strong> This command will actually execute a process.exit() which stops the gateway app.<br/>If upstart is running it should automatically detect the app has stopped and restart it.</span>
+        <span><strong>NOTE:</strong> This command will actually execute a process.exit() which stops the gateway app.<br/>If the gateway service (systemctl) is running it should automatically restart it.</span>
       </div>
       <div class="center-wrapper" style="padding:20px">
         <a id="processExit_yes" href="#nodedetails" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-check ui-btn-icon-left ui-mini" data-rel="nodedetails" style="background: red; color: white;">Restart!</a>
@@ -442,9 +455,6 @@
     <div class="wrap">
       <textarea name="log" id="log" rows="10" style="font-size:10px;"></textarea>
     </div>
-    <div style="font-weight:bold;padding:0 12px;">
-      <span>Server uptime: </span><span id="status-uptime" data-time="147676078" class="nodeAgo">X</span>
-    </div>  
   </div>
 
   <div data-role="page" id="settingspage">
@@ -453,7 +463,6 @@
       <h1>Settings</h1>
       <div class="ui-btn-right" data-role="controlgroup" data-type="horizontal" data-mini="true">
         <a href="#logpage" data-role="button" data-icon="fa-terminal" data-iconpos="notext" title="terminal/log">Log</a>
-        <a href="#processExit" data-role="button" data-icon="power" data-iconpos="notext" data-transition="fade" title="Restart gateway app">Restart app</a>
       </div>
     </div>
     <div data-role="main" class="ui-content">
@@ -465,6 +474,29 @@
     </div>
   </div>
 
+  <div data-role="page" id="exportCSVDateRange" data-dialog="true">
+    <div data-role="main" class="ui-content">
+      <div class="center-wrapper" style="padding:20px">
+        <h3>Select date range for the CSV export</h3>
+      </div>
+      <div class="center-wrapper" style="font-size:12px;padding:10px;"><strong>Note:</strong> exporting very large data sets can lock your browser.
+      If <strong>Max Points Per Metric</strong> is less than points in the given interval, the data is aggregated.
+      The total combined points in CSV will likely be larger than <strong>Max Points Per Metric</strong> value.</div>
+
+      <label for="exportCSVDateRange_start" class="labelbold">Start date:</label>
+      <input id="exportCSVDateRange_start" type="text" data-role="date" placeholder="start date...">
+      <label for="exportCSVDateRange_end" class="labelbold">End date:</label>
+      <input id="exportCSVDateRange_end" type="text" data-role="date" placeholder="end date...">
+      <label for="exportCSVDateRange_points" class="labelbold">Max points/metric:</label>
+      <input id="exportCSVDateRange_points" type="number" value="10000">
+      
+      <div class="center-wrapper" style="padding:20px">
+        <a id="exportCSVDateRange_export" href="#homepage" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-check ui-btn-icon-left ui-mini" data-rel="homepage" style="background: red; color: white;">Export</a>
+        <a href="#" class="ui-btn ui-btn-inline ui-shadow ui-corner-all ui-mini ui-icon-back ui-btn-icon-left" data-rel="back">Cancel</a>
+      </div>
+    </div>
+  </div>
+  
   <script type="text/javascript">
   if (!window.jQuery || typeof $.mobile == 'undefined')
     document.body.innerHTML = unescape('Error: jQuery/mobile could not be loaded from the CDNs. Check the internet connection.');
@@ -575,20 +607,34 @@
           var setting = sectionSettings[settingName];
           if (setting.exposed === false) continue;
           if (setting.value == undefined) continue;
-          var settingLI = $('<li class="ui-field-contain"><label for="'+sectionName+'-'+settingName+'">'+settingName+':</label><input '+(setting.password?'type="password"':'type="text"')+' name="'+sectionName+'-'+settingName+'" id="'+sectionName+'-'+settingName+'" value="'+setting.value+'" data-clear-btn="true"'+(setting.editable===false?' disabled="disabled"':'')+'></li>');
+
+          var settingLI; //ORIGINAL WITHOUT DESCR TOOLTIPS - var settingLI = $('<li class="ui-field-contain"><label for="'+sectionName+'-'+settingName+'">'+settingName+':</label><input '+(setting.password?'type="password"':'type="text"')+' name="'+sectionName+'-'+settingName+'" id="'+sectionName+'-'+settingName+'" value="'+setting.value+'" data-clear-btn="true"'+(setting.editable===false?' disabled="disabled"':'')+'></li>');
+          if (setting.description)
+          {
+            settingLI = $('<li class="ui-field-contain"><label for="'+sectionName+'-'+settingName+'">'
+              +'<a href="#popupInfo-'+sectionName+'-'+settingName+'" data-rel="popup" data-transition="pop">'+settingName+'</a>'
+              +'<div id="popupInfo-'+sectionName+'-'+settingName+'" data-role="popup" data-overlay-theme="b" class="popupInfo"><b>'
+              +settingName + '</b>: '+setting.description
+              +'</div>'
+            +':</label><input '+(setting.password?'type="password"':'type="text"')+' name="'+sectionName+'-'+settingName+'" id="'+sectionName+'-'+settingName+'" value="'+setting.value+'" data-clear-btn="true"'+(setting.editable===false?' disabled="disabled"':'')+'></li>');
+          }
+          else
+            settingLI = $('<li class="ui-field-contain"><label for="'+sectionName+'-'+settingName+'">'+settingName+':</label><input '+(setting.password?'type="password"':'type="text"')+' name="'+sectionName+'-'+settingName+'" id="'+sectionName+'-'+settingName+'" value="'+setting.value+'" data-clear-btn="true"'+(setting.editable===false?' disabled="disabled"':'')+'></li>');
+
           settingsDefBindMap[sectionName+'.'+settingName+'.value'] = '#'+sectionName+'-'+settingName;
           $('#settingsList').append(settingLI);
         }
       }
-      
-      $('#settingsList').listview().listview('refresh');
+
+      $('#settingsList').listview().listview('refresh').trigger("create");
       boundSettings = Bind(settingsDef, settingsDefBindMap);
-      $("#settingsSave").click(function () { 
+    });
+
+    $("#settingsSave").click(function () { 
         socket.emit('UPDATESETTINGSDEF', boundSettings);
         $.mobile.navigate('#homepage', { transition : 'fade'});
       });
-    });
-    
+
     socket.on('NODELISTREORDER', function(orderCSV) {
       sortNodeListByOrderCSV(orderCSV);
     });
@@ -694,10 +740,10 @@
     socket.on('EXPORTDATAREADY', function(rawData) {
       //package and stream the data to the browser
       graphData = [];
-      var csv = 'data:text/csv;charset=utf-8,unix_timestamp(ms),'+rawData.options.legendLbl+'\n';
+      var csv = 'data:text/csv;charset=utf-8,unix_timestamp(ms),excel_timestamp,'+rawData.options.legendLbl+'\n';
 
       rawData.graphData.data.forEach(function(logItem, index){
-         dataString = logItem.t + ',' + logItem.v;
+         dataString = logItem.t + ',' + (logItem.t/(1000*60*60*24)+25569) + ',' + logItem.v;
          csv += index < rawData.graphData.data.length ? dataString+ '\n' : dataString;
       });
      
@@ -706,6 +752,45 @@
       link.setAttribute('id', 'exportLink');
       link.setAttribute('href', encodedUri);
       link.setAttribute('download', selectedNodeId+'_'+rawData.options.legendLbl+'.csv');
+      document.body.appendChild(link); // Required for FF
+      link.click(); //make it stream to the browser
+      $('#exportLink').remove();
+    });
+
+    socket.on('EXPORTNODELOGSCSVREADY', function(rawData) {
+      var sets = rawData;
+      var csv = 'data:text/csv;charset=utf-8,unix_timestamp(ms),excel_timestamp'; //header start
+
+      var mergedData = {};
+      var setCount=0;
+
+      rawData.sets.forEach(function(set, setIndex) {
+        set.data.forEach(function(point, index){
+          var nullPaddedArray = []; //left padding
+          var i=0;
+          while(i++ < setIndex) nullPaddedArray.push(null);
+          (mergedData[point.t] = mergedData[point.t]||nullPaddedArray).push(point.v);
+        });
+        Object.keys(mergedData).forEach(function(key) {
+          if (mergedData[key].length-1<setIndex) mergedData[key].push(null); //right padding
+        });
+        csv+= ','+set.label;
+      });
+      csv+='\n'; //header end
+
+      Object.keys(mergedData).forEach(function(key) {
+        csv += key;
+        csv += ',' + (key/(1000*60*60*24)+25569);
+        for(var i=0; i<mergedData[key].length; i++)
+          csv += ','+(mergedData[key][i]||'');
+        csv+='\n';
+      });
+
+      var encodedUri = encodeURI(csv);
+      var link = document.createElement('a');
+      link.setAttribute('id', 'exportLink');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', selectedNodeId+'_'+nodes[selectedNodeId].descr+'.csv');
       document.body.appendChild(link); // Required for FF
       link.click(); //make it stream to the browser
       $('#exportLink').remove();
@@ -813,7 +898,8 @@
       return theString;
     }
 
-    function metricsValues(metrics, ignorePin=false) {
+    function metricsValues(metrics, ignorePin) {
+      if(ignorePin === undefined) ignorePin = false; //default param
       var label = '';
       var metric;
       for(var key in metrics)
@@ -837,8 +923,7 @@
       return 'icon_default.png';
     };
 
-    function resolveRSSIImage(rssi)
-    {
+    function resolveRSSIImage(rssi) {
       if (rssi == undefined) return '';
       var img;
       if (Math.abs(rssi) > 95) img = 'icon_rssi_7.png';
@@ -872,8 +957,7 @@
       }
     }
 
-    function refreshNodeListUI()
-    {
+    function refreshNodeListUI() {
       var hiddenCount = $('.hiddenNode, .hiddenNodeShow').length;
       $('#uldivider span').html('Count: ' + ($('#nodeList li:not(#uldivider)').length) + (hiddenCount > 0 ? ', ' +hiddenCount +' hidden' : ''));
       if (hiddenCount > 0)
@@ -909,8 +993,7 @@
     };
 
     /// calculated a style for an "ago" label based on a given timestamp in the past
-    function ago(time, agoPrefix)
-    {
+    function ago(time, agoPrefix) {
       agoPrefix = (typeof agoPrefix !== 'undefined') ?  agoPrefix : true;
       var now = new Date().getTime() - serverTimeOffset;
       var update = new Date(time).getTime();
@@ -935,8 +1018,7 @@
     }
 
     /// updates the "ago" labels text and color according the to elapsed time since the last update timestamp associated with those labels
-    function updateAgos()
-    {
+    function updateAgos() {
       $("span.nodeAgo").each(function(){
         var timestamp = parseInt($(this).attr('data-time'));
         var agoResult = ago(timestamp, false);
@@ -1220,6 +1302,13 @@
         $("#addEventType").selectmenu('refresh');
         $("#addEventType").val('');
       });
+    });
+    
+    $('#exportCSVDateRange_export').click("tap", function(event) {
+      var start = $("#exportCSVDateRange_start").datepicker("getDate").getTime();
+      var end   = $("#exportCSVDateRange_end").datepicker("getDate").getTime();
+      var points   = $('#exportCSVDateRange_points').val();
+      socket.emit('EXPORTNODELOGSCSV', selectedNodeId, start, end, points); //[unix epoch, end of time], how many points to return
     });
 
     $("#node_update").click("tap", function(event) {

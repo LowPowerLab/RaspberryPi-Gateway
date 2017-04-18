@@ -124,10 +124,10 @@ exports.metrics = {
 exports.events = {
   motionAlert : { label:'Motion : Alert', icon:'audio', descr:'Alert sound when MOTION is detected', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { io.sockets.emit('PLAYSOUND', 'sounds/alert.wav'); }; } },
   mailboxAlert : { label:'Mailbox Open Alert!', icon:'audio', descr:'Message sound when mailbox is opened', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { io.sockets.emit('PLAYSOUND', 'sounds/incomingmessage.wav'); }; } },
-  motionEmail : { label:'Motion : Email', icon:'mail', descr:'Send email when MOTION is detected', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendEmail('MOTION DETECTED', 'MOTION WAS DETECTED ON NODE: [' + node._id + ':' + node.label + '] @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
-  motionSMS : { label:'Motion : SMS', icon:'comment', descr:'Send SMS when MOTION is detected', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendSMS('MOTION DETECTED', 'MOTION WAS DETECTED ON NODE: [' + node._id + ':' + node.label + '] @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
+  motionEmail : { label:'Motion : Email', icon:'mail', descr:'Send email when MOTION is detected', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendEmail('MOTION DETECTED', 'MOTION WAS DETECTED ON NODE: [' + node._id + ':' + node.label + '] @ ' + new Date().toLocaleTimeString()); }; } },
+  motionSMS : { label:'Motion : SMS', icon:'comment', descr:'Send SMS when MOTION is detected', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendSMS('MOTION DETECTED', 'MOTION WAS DETECTED ON NODE: [' + node._id + ':' + node.label + '] @ ' + new Date().toLocaleTimeString()); }; } },
   
-  motionSMSLimiter : { label:'Motion : SMS Limited', icon:'comment', descr:'Send SMS when MOTION is detected, once per hour', 
+  motionSMSLimiter : { label:'Motion : SMS Limited 1/hr', icon:'comment', descr:'Send SMS when MOTION is detected, once per hour', 
     serverExecute:function(node) { 
       if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - node.metrics['M'].updated < 2000)) /*check if M metric exists and value is MOTION, received less than 2s ago*/
       {
@@ -147,7 +147,7 @@ exports.events = {
         if (approveSMS)
         {
           node.metrics['M'].lastSMS = Date.now();
-          sendSMS('MOTION DETECTED', 'MOTION WAS DETECTED ON NODE: [' + node._id + ':' + node.label + '] @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM')));
+          sendSMS('MOTION!', 'MOTION DETECTED ON NODE [' + node._id + ':' + node.label + '] @ ' + new Date().toLocaleTimeString());
           db.update({ _id: node._id }, { $set : node}, {}, function (err, numReplaced) { console.log('   ['+node._id+'] DB-Updates:' + numReplaced);}); /*save lastSMS timestamp to DB*/
         }
         else console.log('   ['+node._id+'] MOTION SMS skipped.');
@@ -175,7 +175,7 @@ exports.events = {
         if (approveSMS)
         {
           node.metrics['F'].lastSMS = Date.now();
-          sendSMS('Temperature > 75° !', 'Temperature alert (>75°F!): [' + node._id + ':' + node.label + '] @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM')));
+          sendSMS('Temperature > 75° !', 'Temperature alert (>75°F!): [' + node._id + ':' + node.label + '] @ ' + new Date().toLocaleTimeString());
           db.update({ _id: node._id }, { $set : node}, {}, function (err, numReplaced) { console.log('   ['+node._id+'] DB-Updates:' + numReplaced);}); /*save lastSMS timestamp to DB*/
         }
         else console.log('   ['+node._id+'] THAlert SMS skipped.');
@@ -183,21 +183,21 @@ exports.events = {
     }
   },
   
-  mailboxSMS : { label:'Mailbox open : SMS', icon:'comment', descr:'Send SMS when mailbox is opened', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendSMS('MAILBOX OPENED', 'Mailbox opened [' + node._id + ':' + node.label + '] @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
+  mailboxSMS : { label:'Mailbox open : SMS', icon:'comment', descr:'Send SMS when mailbox is opened', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendSMS('MAILBOX OPENED', 'Mailbox opened [' + node._id + ':' + node.label + '] @ ' + new Date().toLocaleTimeString()); }; } },
   motionLightON23 : { label:'Motion: SM23 ON!', icon:'action', descr:'Turn SwitchMote:23 ON when MOTION is detected', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendMessageToNode({nodeId:23, action:'MOT:1'}); }; } },
 
   doorbellSound : { label:'Doorbell : Sound', icon:'audio', descr:'Play sound when doorbell rings', serverExecute:function(node) { if (node.metrics['RING'] && node.metrics['RING'].value == 'RING' && (Date.now() - new Date(node.metrics['RING'].updated).getTime() < 2000)) { io.sockets.emit('PLAYSOUND', 'sounds/doorbell.wav'); }; } },
-  doorbellSMS : { label:'Doorbell : SMS', icon:'comment', descr:'Send SMS when Doorbell button is pressed', serverExecute:function(node) { if (node.metrics['RING'] && node.metrics['RING'].value == 'RING' && (Date.now() - new Date(node.metrics['RING'].updated).getTime() < 2000)) { sendSMS('DOORBELL', 'DOORBELL WAS RINGED: [' + node._id + '] ' + node.label + ' @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
-  sumpSMS : { label:'SumpPump : SMS (below 20cm)', icon:'comment', descr:'Send SMS if water < 20cm below surface', serverExecute:function(node) { if (node.metrics['CM'] && node.metrics['CM'].value < 20 && (Date.now() - new Date(node.metrics['CM'].updated).getTime() < 2000)) { sendSMS('SUMP PUMP ALERT', 'Water is only 20cm below surface and rising - [' + node._id + '] ' + node.label + ' @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
+  doorbellSMS : { label:'Doorbell : SMS', icon:'comment', descr:'Send SMS when Doorbell button is pressed', serverExecute:function(node) { if (node.metrics['RING'] && node.metrics['RING'].value == 'RING' && (Date.now() - new Date(node.metrics['RING'].updated).getTime() < 2000)) { sendSMS('DOORBELL', 'DOORBELL WAS RINGED: [' + node._id + '] ' + node.label + ' @ ' + new Date().toLocaleTimeString()); }; } },
+  sumpSMS : { label:'SumpPump : SMS (below 20cm)', icon:'comment', descr:'Send SMS if water < 20cm below surface', serverExecute:function(node) { if (node.metrics['CM'] && node.metrics['CM'].value < 20 && (Date.now() - new Date(node.metrics['CM'].updated).getTime() < 2000)) { sendSMS('SUMP PUMP ALERT', 'Water is only 20cm below surface and rising - [' + node._id + '] ' + node.label + ' @ ' + new Date().toLocaleTimeString()); }; } },
 
-  garageSMS : { label:'Garage : SMS', icon:'comment', descr:'Send SMS when garage is OPENING', serverExecute:function(node) { if (node.metrics['Status'] && (node.metrics['Status'].value.indexOf('OPENING')>-1) && (Date.now() - new Date(node.metrics['Status'].updated).getTime() < 2000)) { sendSMS('Garage event', 'Garage was opening on node : [' + node._id + ':' + node.label + '] @ ' + (new Date().toLocaleTimeString() + (new Date().getHours() > 12 ? 'PM':'AM'))); }; } },
+  garageSMS : { label:'Garage : SMS', icon:'comment', descr:'Send SMS when garage is OPENING', serverExecute:function(node) { if (node.metrics['Status'] && (node.metrics['Status'].value.indexOf('OPENING')>-1) && (Date.now() - new Date(node.metrics['Status'].updated).getTime() < 2000)) { sendSMS('Garage event', 'Garage was opening on node : [' + node._id + ':' + node.label + '] @ ' + new Date().toLocaleTimeString()); }; } },
   garagePoll: { label:'Garage : POLL', icon:'comment', descr:'Poll Garage Status', nextSchedule:function(nodeAtScheduleTime) { return 30000; }, scheduledExecute:function(nodeAtScheduleTime) { db.findOne({ _id : nodeAtScheduleTime._id }, function (err, nodeRightNow) { if (nodeRightNow) { /*just emit a log the status to client(s)*/ io.sockets.emit('LOG', 'GARAGE POLL STATUS: ' + nodeRightNow.metrics['Status'].value ); } }); } },
 
   switchMoteON_PM : { label:'SwitchMote ON at 6:30PM!', icon:'clock', descr:'Turn this switch ON every evening', nextSchedule:function(node) { return exports.timeoutOffset(18,30); }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:1'}); } },
   switchMoteOFF_AM : { label:'SwitchMote OFF at 8:00AM!', icon:'clock', descr:'Turn this switch OFF every morning', nextSchedule:function(node) { return exports.timeoutOffset(8,00); }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:0'}); } },
   switchMoteONBUZZ : { label:'SwitchMote ON Buzzer beep!', icon:'clock', descr:'Buzz gateway when switchmote is ON',  serverExecute:function(node) { if (node.metrics['B1'] && node.metrics['B1'].value == 'ON' && (Date.now() - new Date(node.metrics['B1'].updated).getTime() < 2000)) { setTimeout(function() { sendMessageToGateway('BEEP'); }, 5); } }},
 
-  //for the sprinkler events, rather than scheduling with offsets, its much easir we run them every day, and check the odd/even/weekend condition in the event itself
+  //for the sprinkler events, rather than scheduling with offsets, its much easier to run them every day, and check the odd/even/weekend condition in the event itself
   sprinklersOddDays : { label:'Odd days @ 2:30AM', icon:'clock', descr:'Run this sprinkler program on odd days at 2:30AM', nextSchedule:function(node) { return exports.timeoutOffset(2,30); }, scheduledExecute:function(node) { if ((new Date().getDate()%2)==1) sendMessageToNode({nodeId:node._id, action:'PRG 1:300 2:300 3:300 4:300 5:300' /*runs stations 1-5 (300sec each))*/}); } },
   sprinklersEvenDays : { label:'Even days @ 2:30AM', icon:'clock', descr:'Run this sprinkler program on even days at 2:30AM', nextSchedule:function(node) { return exports.timeoutOffset(2,30); }, scheduledExecute:function(node) { if ((new Date().getDate()%2)==0) sendMessageToNode({nodeId:node._id, action:'PRG 1:300 2:300 3:300 4:300 5:300' /*runs stations 1-5 (300sec each)*/}); } },
   sprinklersWeekends : { label:'Weekends @ 2:30AM)', icon:'clock', descr:'Run this sprinkler program on weekend days at 2:30AM', nextSchedule:function(node) { return exports.timeoutOffset(2,30); }, scheduledExecute:function(node) { if ([0,6].indexOf(new Date().getDay())>-1 /*Saturday=6,Sunday=0,*/) sendMessageToNode({nodeId:node._id, action:'PRG 1:180 2:180 3:180 4:180 5:180' /*runs stations 1-5 (180sec each)*/}); } },
@@ -566,17 +566,17 @@ exports.determineGraphValue = function(matchingMetric, matchingToken) {
   if (exports.isNumeric(result))
     return Number(result);
   else return result;
-};
+}
 
 //calculates the milliseconds timeout remaining until a given time of the day (if it's 8AM now and time given was 3AM, it will calculate to the next day 3AM)
 //offset can be used to add more time to the calculated timeout, for instance to delay by one day: pass offset=86400000
-exports.timeoutOffset = function(hour, minute, second, millisecond, offset) {
-  var result = new Date().setHours(hour,minute,second || 0, millisecond || 0);
+exports.timeoutOffset = function(hour, minute, second, offset) {
+  var result = new Date().setHours(hour,minute,second || 0, 0);
   result = result < new Date().getTime() ? (result + exports.ONEDAY) : result;
   result -= new Date().getTime();
   if (exports.isNumeric(offset)) result += offset;
   return result;
-};
+}
 
 // ******************************************************************************************************************************************
 //                                            RADIO THERMOSTAT SPECIFIC HELPER FUNCTIONS

@@ -96,6 +96,11 @@ sudo npm install --unsafe-perm --build-from-source
 sudo npm cache clean    #clear any caches/incomplete installs
 sudo mkdir $APPSRVDIR/logs -p
 
+#create db and empty placeholders so chown pi will override root permissions
+sudo mkdir $APPSRVDIR/data/db -p
+touch $APPSRVDIR/data/db/gateway.db
+touch $APPSRVDIR/data/db/gateway_nonmatches.db
+
 #create self signed certificate
 #WARNING: must do this *AFTER* the gateway app was git-cloned
 echo -e "${CYAN}************* STEP: Create self signed HTTPS certificate (5 year) *************${NC}"
@@ -158,7 +163,8 @@ sudo systemctl enable gateway.service
 sudo systemctl start gateway.service
 
 echo -e "${RED}Make sure: ${YLW}to edit your gateway settings from the UI or from settings.json5 (and restart to apply changes)${NC}"
-echo -e "${RED}By default ${YLW}the gateway app uses the GPIO serial port. If you use MoteinoUSB or another serial port you must edit the serial port setting or else the app will not receive messages from your Moteino nodes.${NC}"
+echo -e "${RED}By default ${YLW}the gateway app uses the GPIO serial port. Run ${GRN}raspi-config${NC} and ensure the GPIO serial is enabled and GPIO console is disabled.${NC}"
+echo -e "${YLW}If you use MoteinoUSB or another serial port you must edit the serial port setting or the app will not receive messages from your Moteino nodes.${NC}"
 echo -e "${RED}App restarts ${YLW}can be requested from the Gateway UI (power symbol button on settings page, or from the terminal via ${RED}sudo systemctl restart gateway.service${NC}"
 echo -e "${RED}Don't forget: ${YLW}install proftpd (choose standalone mode) if you plan to FTP transfer files to your Pi (very useful!) with ${GRN}sudo apt-get install proftpd${NC}"
 echo -e "${RED}Don't forget: ${YLW}install minicom - useful for serial port debugging with ${GRN}sudo apt-get install minicom${NC}"

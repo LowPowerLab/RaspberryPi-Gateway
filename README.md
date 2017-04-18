@@ -3,7 +3,7 @@ RaspberryPi Gateway Web Interface for the Moteino IoT Framework
 By Felix Rusu (lowpowerlab.com/contact)
 <br/>
 
-###Features:
+### Features:
 - SSL Encrypted with self signed certificate
 - `auth_basic` authenticated
 - realtime websocket driven using node.js and socket.io
@@ -13,15 +13,15 @@ By Felix Rusu (lowpowerlab.com/contact)
 - [nodemailer](https://github.com/andris9/Nodemailer) for sending email (and SMS relayed via email)
 - [Font-awesome](http://htmlpreview.github.io/?https://github.com/dotcastle/jquery-mobile-font-awesome/blob/master/index.html) icons for jQuery-Mobile
 
-###License
+### License
 This source code is released under GPL 3.0 with the following ammendment:<br/>
 You are free to use, copy, distribute and transmit this Software for non-commercial purposes.
 For more details see [LICENSE](https://github.com/LowPowerLab/RaspberryPi-Gateway/blob/master/LICENSE)
 
-###Details & Setup Guide
+### Details & Setup Guide
 The full details of how to install this stack along with supporting webserver are published [here](http://lowpowerlab.com/gateway). There you will also find a pre-compiled Pi image that has this stack installed and ready to go. In addition there are hardware guidelines and requirements.
 
-###Quick reference:
+### Quick reference:
 - Copy the contents of this directory in `/home/pi/gateway`
 - run `npm install` in the `/home/pi/gateway` directory to install all node dependencies
 - Adjust any email/password/SMS settings in `settings.json5`
@@ -32,8 +32,8 @@ The full details of how to install this stack along with supporting webserver ar
 - if you are using a wi-fi dongle, edit your wifi password in `/etc/wpa_supplicant/wpa_supplicant.conf`
 - Ensure your `gateway.js` script runs at boot (see the [Pi Stack Setup guide for how to set that up with upstart](http://lowpowerlab.com/gateway/#pisetup) and the [Gateway app setup](http://lowpowerlab.com/gateway/#sourcecode)). You can always use the pre-compiled Pi image that has all these things ready to go (except the settings which you should revisit anyway); this image also has upstart already configured to run the `gateway.js` app at startup. Otherwise if you want to manually start the `gateway.js` app or see the output it generates to the console start it with `node gateway.js &`. If you want to manually start it and ensure it persists after you logout use `nohup node gateway.js &`
 
-###Video Overview & Demo
+### Video Overview & Demo
 https://www.youtube.com/watch?v=F15dEqZ4pMM
 
-###3rd party custom gateway setup overview
+### 3rd party custom gateway setup overview
 https://www.youtube.com/watch?v=DP83RJeTpUY

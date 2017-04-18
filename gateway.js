@@ -125,7 +125,7 @@ global.sendEmail = function(SUBJECT, BODY) {
 
 global.sendSMS = function(SUBJECT, BODY) {
   var mailOptions = {
-      from: 'Moteino Gateway <gateway@moteino.com>',
+      from: 'Gateway <gateway@moteino.com>',
       to: settings.credentials.smsAlertsTo.value, //your mobile carrier should have an email address that will generate a SMS to your phone
       subject: SUBJECT,
       text: BODY
@@ -297,7 +297,7 @@ io.sockets.on('connection', function (socket) {
         if (entries.length == 1)
         {
           var dbNode = entries[0];
-          Object.keys(dbNode.metrics).forEach(function(mKey,index) {
+          Object.keys(dbNode.metrics).forEach(function(mKey,index) { //syncronous/blocking call
             if (dbNode.metrics[mKey].graph == 1)
               dbLog.removeMetricLog(path.join(__dirname, dbDir, dbLog.getLogName(dbNode._id, mKey)));
           });
@@ -405,7 +405,29 @@ io.sockets.on('connection', function (socket) {
     else
       socket.emit('GRAPHDATAREADY', { graphData:graphData, options : graphOptions });
   });
-
+  
+  socket.on('EXPORTNODELOGSCSV', function (nodeId, start, end, howManyPoints) {
+    var sts = Math.floor(start / 1000); //get timestamp in whole seconds
+    var ets = Math.floor(end / 1000); //get timestamp in whole seconds
+    var sets = [];
+    
+    db.find({ _id : nodeId }, function (err, entries) {
+      if (entries.length == 1)
+      {
+        var dbNode = entries[0];
+        Object.keys(dbNode.metrics).forEach(function(mKey,index) { //syncronous/blocking call
+          if (dbNode.metrics[mKey].graph == 1) {
+            var logfile = path.join(__dirname, dbDir, dbLog.getLogName(dbNode._id, mKey));
+            var theData = dbLog.getData(logfile, sts, ets, howManyPoints /*settings.general.graphMaxPoints.value*/);
+            theData.label = dbNode.metrics[mKey].label || mKey;
+            sets.push(theData); //100k points when exporting, more points is really pointless
+          }
+        });
+        socket.emit('EXPORTNODELOGSCSVREADY', { sets:sets });
+      }
+    });
+  });
+  
   socket.on('UPDATESETTINGSDEF', function (newSettings) {
     var settings = nconf.get('settings');
 

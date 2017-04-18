@@ -4,43 +4,53 @@
       editable: true,
       exposed: true,
       emailservice: {
-        value: "gmail"                             //default is gmail, see nodemailer reference for other clients - https://github.com/andris9/Nodemailer
+        value: "gmail",
+        description: "default is gmail, see nodemailer reference for other clients - https://github.com/andris9/Nodemailer"
       },
       email: {
-        value: "________@gmail.com"                //put your gmail address here
+        value: "________@gmail.com",
+        description: "put your gmail address here - this will also be used to send SMS (SMS via email)"
       },
       emailpass: {
-        value: "________",                         //put your gmail password or app access code here
-        password: true
+        value: "________",
+        password: true,
+        description: "put your gmail password or app access code here"
       },
       emailAlertsTo: {
-        value: "________@gmail.com"                //put your alert/notification email here (can be the same as above)
+        value: "________@gmail.com",
+        description: "put your alert/notification email here (can be the same as above)"
       },
       smsAlertsTo: {
-        value: "________@txt.att.net"              //if you want SMS notifications, fill this in with your phone number (it's your cell#, domain differs for each carrier, ex: 5551234567@vtext.com for verizon)
+        value: "________@txt.att.net",
+        description: "if you want SMS notifications, fill this in with your phone number (it's your cell#, domain differs for each carrier, ex: 5551234567@vtext.com for verizon, or 5551234567@txt.att.net for at&t)"
       }
     },
     serial: {
       editable: true,
       exposed: true,
       port: {
-        value: "/dev/ttyAMA0"         //replace this with whatever serial port you have on your Pi/gateway (ttyAMA0 is the default GPIO serial port)
-      },                              //if you use a MoteinoUSB then your Pi will emulate a serial port like /dev/ttyUSB0
+        value: "/dev/ttyAMA0",
+        description: "replace this with whatever serial port you have on your Pi/gateway (ttyAMA0 is the default GPIO serial port). If you use a MoteinoUSB then your Pi will emulate a serial port like /dev/ttyUSB0"
+      },
       baud: {
-        value: 19200
+        value: 19200,
+        description: "needs to match the Serial baud speed in the sketch running on the Moteino or MightyHat that is attached to this Pi"
       }
     },
     database: {
       editable: false,
       exposed: false,
       name: {
-        value: "gateway.db"
+        value: "gateway.db",
+        description: "where your node information is stored, should not really be changed"
       },
       nonMatchesName: {
-        value: "gateway_nonmatches.db"
+        value: "gateway_nonmatches.db",
+        description: "where non match node information is dumped, should not really be changed"
       },
       compactDBInterval: {
-        value: 86400000
+        value: 86400000,
+        description: "the gateway.db database is compacted every this many milliseconds, default = once every day"
       }
     },
     general: {
@@ -52,16 +62,24 @@
       },
       socketPort: {
         value: 8080,
-        editable: false
+        editable: false,
+        description: "the port at which the gateway.js socket app is listening"
       },
       genNodeIfNoMatch: {
-        value: "false"
+        value: "false",
+        description: "generate a new node even if the data received does not match any metric definition, default = false"
       },
-	  keepMetricLogsOnDelete: {
-        value: "false"
+      keepMetricLogsOnDelete: {
+        value: "false",
+        description: "keep the metric binary logs when metric is deleted, default = false"
       },
       graphMaxPoints: {
-        value: 800
+        value: 800,
+        description: "display up to this many points in the UI, should not be more than your monitor resolution"
+      },
+      smsRepeatLimit: {
+        value: 180000,
+        description: "an SMS will only be repeated after this many milliseconds. Helps to limit repeats for things like repeated motion or alerts"
       }
     },
     radiothermostat: {

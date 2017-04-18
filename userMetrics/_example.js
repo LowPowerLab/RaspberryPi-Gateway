@@ -58,6 +58,10 @@ exports.metrics = {
   }
 };
 
+exports.events = {
+  sprinklersOddDays : { label:'Odd days @ 6:31AM', icon:'clock', descr:'Run this sprinkler program on odd days at 6:30AM', nextSchedule:function(node) { return exports.timeoutOffset(6,30); }, scheduledExecute:function(node) { if ((new Date().getDate()%2)==1) sendMessageToNode({nodeId:node._id, action:'PRG 2:300 3:300 1:300 4:300 5:300' /*runs stations 1-5 (300sec each))*/}); } },
+};
+
 /*example of defining a property to use anywhere in the app/events or in other custom functions*/
 exports.ONEDAYHOURS = 24;
 
