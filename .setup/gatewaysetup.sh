@@ -53,7 +53,7 @@ if [[ "$NODEARCH" == "armv6l" ]] ; then
   sudo rm node-v4.6.2-linux-armv6l.tar.gz
   sudo rm -rf $NODEDIR
   mkdir -p $NODEDIR
-  sudo mv node-v4.6.2-linux-armv6l $NODEDIR
+  sudo mv node-v4.6.2-linux-armv6l/* $NODEDIR
   sudo rm -rf ~/tempnode;
   cd ~/
   # sudo unlink /usr/bin/node;
