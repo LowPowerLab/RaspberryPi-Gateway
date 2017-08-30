@@ -925,6 +925,12 @@
         return motesDef[node.type].icon || 'icon_default.png';
       return 'icon_default.png';
     };
+    
+    function getNodeLowBatVoltage(node) {
+      if (motesDef != undefined && node.type != undefined && motesDef[node.type] != undefined)
+        return motesDef[node.type].lowBatVoltage || 3.55;
+      return 3.55;
+    };
 
     function resolveRSSIImage(rssi) {
       if (rssi == undefined) return '';
@@ -945,7 +951,7 @@
       {
         nodes[node._id] = node;
         var nodeValue = metricsValues(node.metrics);
-        var lowBat = node.metrics.V != null && node.metrics.V.value < 3.55;
+        var lowBat = node.metrics.V != null && node.metrics.V.value < getNodeLowBatVoltage(node);
         var newLI = $('<li id="' +  node._id + '"><a node-id="' + node._id + '" href="#nodedetails" class="nodedetails"><img class="productimg" src="images/'+getNodeIcon(node)+'"><h2>' + (nodeResolveString(node.label, node.metrics) || node._id) + ' ' + resolveRSSIImage(node.rssi) + ' ' + (lowBat ? '<img src="images/lowbattery.png" class="lowbattimg"/> ' : '') + ago(node.updated, 0).tag + (node.hidden ? ' <img class="listIcon20px" src="images/icon_hidden.png" />' : '') + '</h2><p>' + (nodeResolveString(node.descr, node.metrics) || '&nbsp;') + '</p>' + (nodeValue ? '<span class="ui-li-count ui-li-count16">' + nodeValue + '</span>' : '') + '</a></li>');
         var existingNode = $('#nodeList li#' + node._id);
         if (node.hidden)
