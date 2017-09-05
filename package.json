@@ -1,6 +1,6 @@
 {
   "name": "RaspberryPi-Gateway",
-  "version": "8.8.0",
+  "version": "8.10.0",
   "description": "Moteino IoT Gateway",
   "main": "gateway.js",
   "repository": "https://github.com/LowPowerLab/RaspberryPi-Gateway.git",
@@ -9,7 +9,7 @@
   "bugs": {
     "url": "https://github.com/LowPowerLab/RaspberryPi-Gateway/issues"
   },
-  "license": "SEE LICENSE FILE",
+  "license": "GPL-3.0",
   "contributors": "Felix Rusu (https://github.com/LowPowerLab)",
   "dependencies": {
     "serialport": "~2.0",
@@ -21,7 +21,8 @@
     "console-stamp": "~0.2.4",
     "colors": "~1.1.2",
     "request": "~2.78",
-    "merge": "~1.2.0"
+    "merge": "~1.2.0",
+    "suncalc": "~1.8"
   },
   "scripts": {
     "preinstall": "",

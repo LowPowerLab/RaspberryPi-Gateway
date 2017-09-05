@@ -31,6 +31,7 @@ var nconf = require('nconf');                                   //https://github
 var JSON5 = require('json5');                                   //https://github.com/aseemk/json5
 var path = require('path');
 var dbDir = 'data/db';
+var packageJson = require('./package.json')
 var metricsFile = 'metrics.js';
 var userMetricsDir = 'userMetrics';
 nconf.argv().file({ file: path.resolve(__dirname, 'settings.json5'), format: JSON5 });
@@ -107,14 +108,13 @@ var transporter = nodemailer.createTransport({
   }
 });
 
-//global.LOG = function(data) { process.stdout.write(data || ''); }
-//global.LOGln = function(data) { process.stdout.write((data || '') + '\n'); }
-global.sendEmail = function(SUBJECT, BODY) {
+global.sendEmail = function(SUBJECT, BODY, ATTACHMENTS) {
   var mailOptions = {
     from: 'Moteino Gateway <gateway@moteino.com>',
     to: settings.credentials.emailAlertsTo.value, // list of receivers, comma separated
     subject: SUBJECT,
-    text: BODY
+    text: BODY,
+    attachments: ATTACHMENTS
     //html: '<b>Hello world ?</b>' // html body
   };
   transporter.sendMail(mailOptions, function(error, info) {
@@ -158,8 +158,8 @@ global.handleNodeEvents = function(node) {
   {
     for (var key in node.events)
     {
-      var enabled = node.events[key];
-      if (enabled)
+    try {
+      if (node.events[key] && node.events[key].enabled)
       {
         var evt = metricsDef.events[key];
         if (evt.serverExecute!=undefined)
@@ -168,15 +168,9 @@ global.handleNodeEvents = function(node) {
           }
           catch(ex) {console.warn('Event ' + key + ' execution failed: ' + ex.message);}
       }
+    } catch(ex) {console.warn('-------> EXCEPTION: nodeId:' + node._id + ' key:' + key + ' JSON: ' + JSON.stringify(node)); throw ex;}
     }
   }
-  // if (metricsDef.motes[node.type] && metricsDef.motes[node.type].events)
-    // for (var eKey in metricsDef.motes[node.type].events)
-    // {
-      // var nodeEvent = metricsDef.motes[node.type].events[eKey];
-      // if (nodeEvent.serverExecute != undefined)
-        // nodeEvent.serverExecute(node);
-    // }
 }
 
 //authorize handshake - make sure the request is proxied from localhost, not from the outside world
@@ -207,7 +201,7 @@ io.sockets.on('connection', function (socket) {
   socket.emit('EVENTSDEF', metricsDef.events);
   socket.emit('SETTINGSDEF', settings);
   socket.emit('SERVERTIME', Date.now());
-  socket.emit('SERVERSTARTTIME', Date.now() - process.uptime()*1000);
+  socket.emit('SERVERINFO', { uptime:(Date.now() - process.uptime()*1000), version: packageJson.version });
 
   //pull all nodes from the database and send them to client
   db.find({ _id : { $exists: true } }, function (err, entries) {
@@ -233,10 +227,10 @@ io.sockets.on('connection', function (socket) {
         dbNode.type = node.type||undefined;
         dbNode.label = node.label||undefined;
         dbNode.descr = node.descr||undefined;
+        dbNode.settings = node.settings||undefined;
         dbNode.hidden = (node.hidden == 1 ? 1 : undefined);
         db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) { /*console.log('UPDATENODESETTINGS records replaced:' + numReplaced);*/ });
         io.sockets.emit('UPDATENODE', dbNode); //post it back to all clients to confirm UI changes
-        //console.log("UPDATE NODE SETTINGS found docs:" + entries.length);
       }
     });
   });
@@ -256,7 +250,6 @@ io.sockets.on('connection', function (socket) {
   });
 
   socket.on('EDITNODEEVENT', function (nodeId, eventKey, enabled, remove) {
-    //console.log('**** EDITNODEEVENT  **** key:' + eventKey + ' enabled:' + enabled + ' remove:' + remove);
     db.find({ _id : nodeId }, function (err, entries) {
       if (entries.length == 1)
       {
@@ -267,22 +260,39 @@ io.sockets.on('connection', function (socket) {
           if (eventKey == key)
           {
             if (!dbNode.events) dbNode.events = {};
-            dbNode.events[eventKey] = (remove ? undefined : (enabled ? 1 : 0));
-            db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) { /*console.log('UPDATEMETRICSETTINGS records replaced:' + numReplaced);*/ });
+            if (!remove)
+              dbNode.events[eventKey] = { enabled: (enabled ? 1 : 0) };
+            else
+              dbNode.events[eventKey] = undefined;
 
-            if (metricsDef.events[eventKey] && metricsDef.events[eventKey].scheduledExecute)
+            scheduled = false;
+            if (!remove && metricsDef.events[eventKey] && metricsDef.events[eventKey].scheduledExecute)
+            {
               if (enabled && !remove)
+              {
                 schedule(dbNode, eventKey);
+                scheduled = true;
+              }
               else //either disabled or removed
+              {
                 for(var s in scheduledEvents)
+                {
                   if (scheduledEvents[s].nodeId == nodeId && scheduledEvents[s].eventKey == eventKey)
                   {
                     console.log('**** REMOVING SCHEDULED EVENT - nodeId:' + nodeId + ' event:' + eventKey);
                     clearTimeout(scheduledEvents[s].timer);
                     scheduledEvents.splice(scheduledEvents.indexOf(scheduledEvents[s]), 1)
+                    dbNode.events[eventKey].executeDateTime=undefined;
                   }
+                }
+              }
+            }
 
-            io.sockets.emit('UPDATENODE', dbNode); //post it back to all clients to confirm UI changes
+            if (!scheduled)
+            {
+              db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) { /*console.log('UPDATEMETRICSETTINGS records replaced:' + numReplaced);*/ });
+              io.sockets.emit('UPDATENODE', dbNode); //post it back to all clients to confirm UI changes
+            }
             return;
           }
       }
@@ -291,7 +301,6 @@ io.sockets.on('connection', function (socket) {
 
   socket.on('DELETENODE', function (nodeId) {
     //delete all node-metric log files
-    console.log("DELETENODE settings.general.keepMetricLogsOnDelete.value: " + settings.general.keepMetricLogsOnDelete.value);
     if (settings.general.keepMetricLogsOnDelete.value != 'true')
       db.find({ _id : nodeId }, function (err, entries) {
         if (entries.length == 1)
@@ -485,7 +494,7 @@ function sortNodes(entries) {
 
 global.msgHistory = new Array();
 global.processSerialData = function (data) {
-  var regexMaster = /\[(\d+)\]([^\[\]\n]+)(?:\[(?:RSSI|SS)\:-?(\d+)\])?.*/gi; //modifiers: g:global i:caseinsensitive
+  var regexMaster = /\[(\d+)\]([^\n]+)/gi; //modifiers: g:global i:caseinsensitive
   var match = regexMaster.exec(data);
   console.log('>: ' + data)
 
@@ -493,42 +502,27 @@ global.processSerialData = function (data) {
   {
     var msgTokens = match[2];
     var id = parseInt(match[1]); //get ID of node
-    var rssi = match[3] != undefined ? parseInt(match[3]) : undefined; //get rssi (signal strength)
 
     db.find({ _id : id }, function (err, entries) {
-      var existingNode = new Object();
+      var existingNode = {};
       var hasMatchedMetrics = false;
-      if (entries.length == 1)
-      { //update
-        existingNode = entries[0];
-      }
+      if (entries.length == 1) existingNode = entries[0]; //update
 
       //check for duplicate messages - this can happen when the remote node sends an ACK-ed message but does not get the ACK so it resends same message repeatedly until it receives an ACK
       if (existingNode.updated != undefined && (Date.now() - existingNode.updated < 500) && msgHistory[id] == msgTokens)
-      { console.log("   DUPLICATE, skipping..."); return; }
+      { 
+        console.log("   DUPLICATE, skipping...");
+        return;
+      }
 
       msgHistory[id] = msgTokens;
-
-      //console.log('FOUND ENTRY TO UPDATE: ' + JSON.stringify(existingNode));
       existingNode._id = id;
-      existingNode.rssi = rssi; //update signal strength we last heard from this node, regardless of any matches
       existingNode.updated = Date.now(); //update timestamp we last heard from this node, regardless of any matches
-      if (existingNode.metrics == undefined)
-        existingNode.metrics = new Object();
-      if (existingNode.events == undefined)
-        existingNode.events = new Object();
+      if (existingNode.metrics == undefined) existingNode.metrics = {};
 
       var regexpTokens = /[\w\:\.\$\!\\\'\"\?\[\]\-\(\)@%^&#+\/<>*~=,|]+/ig; //match (almost) any non space human readable character
       while (match = regexpTokens.exec(msgTokens)) //extract each token/value pair from the message and process it
       {
-        // //V/VBAT/VOLTS is special, applies to whole node so save it as a node level metric instead of in the node metric collection
-        // if (metricsDef.metrics.V.regexp.test(match[0]))
-        // {
-          // var tokenMatch = metricsDef.metrics.V.regexp.exec(match[0]);
-          // existingNode.V = tokenMatch[1] || tokenMatch[0]; //extract the voltage part
-          // continue;
-        // }
-
         var matchingMetric;
         //try to match a metric definition
         for(var metric in metricsDef.metrics)
@@ -539,7 +533,7 @@ global.processSerialData = function (data) {
             //console.log('TOKEN MATCHED: ' + metricsDef.metrics[metric].regexp);
             var tokenMatch = metricsDef.metrics[metric].regexp.exec(match[0]);
             matchingMetric = metricsDef.metrics[metric];
-            if (existingNode.metrics[matchingMetric.name] == null) existingNode.metrics[matchingMetric.name] = new Object();
+            if (existingNode.metrics[matchingMetric.name] == null) existingNode.metrics[matchingMetric.name] = {};
             existingNode.metrics[matchingMetric.name].label = existingNode.metrics[matchingMetric.name].label || matchingMetric.name;
             existingNode.metrics[matchingMetric.name].descr = existingNode.metrics[matchingMetric.name].descr || matchingMetric.descr || undefined;
             existingNode.metrics[matchingMetric.name].value = metricsDef.determineValue(matchingMetric, tokenMatch);
@@ -565,15 +559,15 @@ global.processSerialData = function (data) {
             }
 
             //console.log('TOKEN MATCHED OBJ:' + JSON.stringify(existingNode));
-            hasMatchedMetrics = true;
+            if (matchingMetric.name != 'RSSI') hasMatchedMetrics = true; //excluding RSSI because noise can produce a packet with a valid RSSI reading
             break; //--> this stops matching as soon as 1 metric definition regex is matched on the data. You could keep trying to match more definitions and that would create multiple metrics from the same data token, but generally this is not desired behavior.
           }
         }
+        //if (!matchingMetric) console.log('TOKEN NONMATCHED: ' + match[0]);
       }
 
       //prepare entry to save to DB, undefined values will not be saved, hence saving space
-      var entry = {_id:id, updated:existingNode.updated, type:existingNode.type||undefined, label:existingNode.label||undefined, descr:existingNode.descr||undefined, hidden:existingNode.hidden||undefined, rssi:existingNode.rssi, metrics:Object.keys(existingNode.metrics).length > 0 ? existingNode.metrics : {}, events: Object.keys(existingNode.events).length > 0 ? existingNode.events : undefined };
-      //console.log('UPDATING ENTRY: ' + JSON.stringify(entry));
+      var entry = {_id:id, updated:existingNode.updated, type:existingNode.type||undefined, label:existingNode.label||undefined, descr:existingNode.descr||undefined, hidden:existingNode.hidden||undefined, rssi:existingNode.rssi, metrics:Object.keys(existingNode.metrics).length > 0 ? existingNode.metrics : {}, events: existingNode.events, settings: existingNode.settings };
 
       //save to DB
       db.findOne({_id:id}, function (err, doc) {
@@ -584,10 +578,7 @@ global.processSerialData = function (data) {
             db.insert(entry);
             console.log('   ['+id+'] DB-Insert new _id:' + id);
           }
-          else
-          {
-            return;
-          }
+          else return;
         }
         else
           db.update({ _id: id }, { $set : entry}, {}, function (err, numReplaced) { console.log('   ['+id+'] DB-Updates:' + numReplaced);});
@@ -638,12 +629,22 @@ function schedule(node, eventKey) {
 
   //remember the timer ID so we can clear it later
   scheduledEvents.push({nodeId:node._id, eventKey:eventKey, timer:theTimer}); //save nodeId, eventKey and timer (needs to be removed if the event is disabled/removed from the UI)
+  node.events[eventKey].executeDateTime = new Date(Date.now() + nextRunTimeout); //actual datetime when this is scheduled to execute
+
+  //save to DB
+  db.findOne({_id:node._id}, function (err, dbNode) {
+    dbNode.events = node.events;
+    db.update({_id:dbNode._id}, { $set : dbNode }, {}, function (err, numReplaced) { console.log('   ['+dbNode._id+'] DB-Updates:' + numReplaced);});
+    //publish updated node to clients
+    io.sockets.emit('UPDATENODE', dbNode);
+  });
 }
 
 //run a scheduled event and reschedule it
 function runAndReschedule(functionToExecute, node, eventKey) {
   console.log('**** RUNNING SCHEDULED EVENT - nodeId:' + node._id + ' event:' + eventKey + '...');
-  try {
+  try
+  {
     functionToExecute(node, eventKey);
   }
   catch (ex)
@@ -662,9 +663,8 @@ db.find({ events : { $exists: true } }, function (err, entries) {
   for (var k in entries)
     for (var i in entries[k].events)
     {
-      if (entries[k].events[i]==1) //enabled events only
+      if (entries[k].events[i].enabled) //enabled events only
       {
-        //console.log('Event for ' + JSON.stringify(entries[k].events) + ' : ' + metricsDef.events[i]);
         if (metricsDef.events[i] && metricsDef.events[i].nextSchedule && metricsDef.events[i].scheduledExecute)
         {
           schedule(entries[k], i);
@@ -672,5 +672,4 @@ db.find({ events : { $exists: true } }, function (err, entries) {
         }
       }
     }
-  //console.log('*** Events Register db count: ' + count);
 });

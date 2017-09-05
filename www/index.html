@@ -7,7 +7,7 @@
 // according to the available controls and events defined via the metrics definitions
 // contained in the server side files (metrics.js)
 // ********************************************************************************************
-// Copyright Felix Rusu, Low Power Lab LLC (2015), http://lowpowerlab.com/contact
+// Copyright Felix Rusu, Low Power Lab LLC (2017), http://lowpowerlab.com/contact
 // http://lowpowerlab.com/gateway
 // ********************************************************************************************
 //                                    LICENSE
@@ -96,7 +96,6 @@
   .center-wrapper * { margin: 0 auto; }
   #nodeControls { padding: 0 0.5em 0 0.5em; }
   .listIcon20px { max-width:20px; }
-  .ui-slider { width: 10em !important; }
 
   textarea.ui-input-text {
     height:auto;
@@ -220,18 +219,25 @@
   
   div.popupInfo {max-width:90%;padding:0.7em;background-color: #fff;}
   
-  .lowbattimg { animation: blinker 1.5s linear infinite; max-width:20px;position:absolute;left:78px;top:25px; }
+  .lowbattimg { animation: blinker 1.5s linear infinite; max-width:50px;position:absolute;left:15px;top:15px; }
   @keyframes blinker { 50% { opacity: 0; } }
+
+  .eventList li a h2, .eventList li a p { padding-left:10px }
+  .eventList li a h2 { font-size:.9em }
+  .eventList li a span.ui-btn-icon-notext { position:relative;float:left;padding:12px 10px;}
+  .eventList li p { margin:0 }
+  .eventList li a span.ui-btn-icon-notext { height:2.5em }
+  .enabled { background-color: #2d0 }
+  .disabled { background-color: #d00 }
+  .eventEnableDisable { padding-top:0;padding-bottom:0;padding-left:0 }
+  
+  input[readonly] { background-color:#ececec; }
   </style>
 </head>
 <body>
   <div data-role="page" id="homepage">
     <div id="nav-panel" data-role="popup" data-corners="false" data-overlay-theme="b" data-theme="b" data-shadow="true" data-tolerance="0,0">
       <ul data-role="listview" data-theme="a" data-divider-theme="a" style="margin-top:-16px;" class="nav-search">
-        <li data-icon="delete">
-          <a id="nav-panel-close" href="#" data-rel="close">Close Menu (Esc)</a>
-        </li>
-
         <li data-icon="eye" data-iconpos="left">
           <a id="btnHiddenNodesToggle" href="#">Show Hidden</a>
         </li>
@@ -244,13 +250,19 @@
         <li data-icon="fa-gear">
           <a href="#settingspage">Settings</a>
         </li>
+        <li data-icon="fa-flash">
+          <a href="#eventspage">All Events</a>
+        </li>
         <li data-icon="power">
           <a href="#processExit" title="Restart gateway app">Restart app</a>
         </li>
       </ul>
       <div style="font-weight:bold;padding:5px;">
-        <span>Uptime: </span><span id="status-uptime" data-time="147676078" class="nodeAgo"></span>
-      </div>  
+        <span>Uptime: </span><span id="server-uptime" class="nodeAgo"></span>
+      </div>
+      <div style="padding-left:5px;">
+        <span>Version: </span><span id="server-version"></span>
+      </div>
     </div><!-- /panel -->
         
     <div data-role="header">
@@ -283,7 +295,7 @@
     </div>
 
     <div data-role="footer">
-      <h1><span style="font-size:11px">© <a href="http://lowpowerlab.com">LowPowerLab.com</a> 2015. All rights reserved. <a href="http://lowpowerlab.com/gateway">About</a></span></h1>
+      <h1><span style="font-size:11px">© <a href="http://lowpowerlab.com">LowPowerLab.com</a> 2017. All rights reserved. <a href="http://lowpowerlab.com/gateway">About</a></span></h1>
     </div>
   </div>
 
@@ -309,6 +321,8 @@
           <input type="text" name="nodeLabel" id="nodeLabel" placeholder="node label..." />
           <label for="nodeDescr" class="labelbold">Description:</label>
           <input type="text" name="nodeDescr" id="nodeDescr" placeholder="description/location..." />
+          <label for="nodeID" class="labelbold">Node ID:</label>
+          <input type="text" name="nodeID" id="nodeID" readonly="readonly"/>
         </div>
       </div>
       <ul id="metricList" data-role="listview" data-inset="true" data-theme="a" data-dividertheme="b"></ul>
@@ -317,7 +331,7 @@
         <div id="nodeControls" class="center-div"></div>
       </div>
 
-      <ul id="eventList" data-role="listview" data-inset="true" data-theme="a" data-dividertheme="b"></ul>
+      <ul id="eventList" class="eventList" data-role="listview" data-inset="true" data-theme="a" data-dividertheme="b"></ul>
 
       <div class="center-wrapper" style="margin-top:10px">
         <div id="nodeEvents" class="center-div">
@@ -327,9 +341,8 @@
           </div>
         </div>
       </div>
-
-      <span class="nodeDetailLabel">Node ID:</span><span class="nodeID">x</span><br/>
-      <span id="rssiinfo"><span class="nodeDetailLabel">RSSI:</span><span class="nodeRSSI">x</span></span><br/>
+      
+      <ul id="nodeSettingsList" data-role="listview" data-inset="true" data-theme="a" data-dividertheme="b"></ul>
     </div>
   </div>
 
@@ -476,6 +489,16 @@
       <a id="settingsSave" class="ui-btn ui-corner-all ui-shadow ui-btn-icon-left ui-icon-check" style="background-color:#9BFFBE;color:#000000;margin:.5em;">Save</a>
     </div>
   </div>
+  
+  <div data-role="page" id="eventspage">
+    <div data-role="header">
+      <a href="#homepage" class="ui-btn ui-corner-all ui-shadow ui-icon-home ui-btn-icon-left">Home</a>
+      <h1>All Events</h1>
+    </div>
+    <div data-role="main" class="ui-content">
+      <ul id="allEventsList" class="eventList" data-role="listview" data-inset="true" data-theme="a" data-dividertheme="b"></ul>
+    </div>
+  </div>  
 
   <div data-role="page" id="exportCSVDateRange" data-dialog="true">
     <div data-role="main" class="ui-content">
@@ -547,6 +570,7 @@
       if ($.mobile.activePage.attr('id') != 'homepage')
         $.mobile.navigate('#homepage', { transition : 'slide'});
       $('#nodeList').hide();
+      $('#allEventsList').empty();
     });
 
     socket.on('UPDATENODE', function(entry) {
@@ -611,21 +635,42 @@
           if (setting.exposed === false) continue;
           if (setting.value == undefined) continue;
 
-          var settingLI; //ORIGINAL WITHOUT DESCR TOOLTIPS - var settingLI = $('<li class="ui-field-contain"><label for="'+sectionName+'-'+settingName+'">'+settingName+':</label><input '+(setting.password?'type="password"':'type="text"')+' name="'+sectionName+'-'+settingName+'" id="'+sectionName+'-'+settingName+'" value="'+setting.value+'" data-clear-btn="true"'+(setting.editable===false?' disabled="disabled"':'')+'></li>');
+          var settingLI;
+          var type = 'type="'+(setting.type || 'text')+'"';
+          if (setting.type == 'range') type+= ' min="'+setting.min+'" max="'+setting.max+'" step="0.01"';
+          if (setting.type == 'checkbox') type+= (setting.value == 'true' ? ' checked' : ' unchecked') + ' ';
           if (setting.description)
           {
-            settingLI = $('<li class="ui-field-contain"><label for="'+sectionName+'-'+settingName+'">'
+            settingLI = $('<li class="ui-field-contain">'
+              +'<label>'
               +'<a href="#popupInfo-'+sectionName+'-'+settingName+'" data-rel="popup" data-transition="pop">'+settingName+'</a>'
-              +'<div id="popupInfo-'+sectionName+'-'+settingName+'" data-role="popup" data-overlay-theme="b" class="popupInfo"><b>'
-              +settingName + '</b>: '+setting.description
+              +'<div id="popupInfo-'+sectionName+'-'+settingName+'" data-role="popup" data-overlay-theme="b" class="popupInfo">'
+              +'<b>'+settingName+'</b>: '+setting.description
               +'</div>'
-            +':</label><input '+(setting.password?'type="password"':'type="text"')+' name="'+sectionName+'-'+settingName+'" id="'+sectionName+'-'+settingName+'" value="'+setting.value+'" data-clear-btn="true"'+(setting.editable===false?' disabled="disabled"':'')+'></li>');
+              +':</label>'
+              + (setting.type=='checkbox' ? '<label for="'+sectionName+'-'+settingName+'">'+setting.value+'</label>' : '')
+              +'<input '+type+' name="'+sectionName+'-'+settingName+'" id="'+sectionName+'-'+settingName+'" value="'+setting.value+'"'+(setting.editable===false?' data-clear-btn="false" readonly="readonly"':' data-clear-btn="true"')+'></li>');
           }
           else
-            settingLI = $('<li class="ui-field-contain"><label for="'+sectionName+'-'+settingName+'">'+settingName+':</label><input '+(setting.password?'type="password"':'type="text"')+' name="'+sectionName+'-'+settingName+'" id="'+sectionName+'-'+settingName+'" value="'+setting.value+'" data-clear-btn="true"'+(setting.editable===false?' disabled="disabled"':'')+'></li>');
+          {
+            settingLI = $('<li class="ui-field-contain">'
+              +'<label>'+settingName+':</label>'
+              + (setting.type=='checkbox' ? '<label for="'+sectionName+'-'+settingName+'">'+setting.value+'</label>' : '')
+              +'<input '+type+' name="'+sectionName+'-'+settingName+'" id="'+sectionName+'-'+settingName+'" value="'+setting.value+'"'+(setting.editable===false?' data-clear-btn="false" readonly="readonly"':' data-clear-btn="false"')+'></li>');
+          }
 
           settingsDefBindMap[sectionName+'.'+settingName+'.value'] = '#'+sectionName+'-'+settingName;
           $('#settingsList').append(settingLI);
+          
+          //for range INPUTs, we need to rehidrate the value in the INPUT.value because jqueryUI does not do it (it injects an anchor where it keeps the value in an attribute, doh!)
+          if (setting.type=='range' || setting.type == 'checkbox')
+          {
+            $(document).on("change", '#'+sectionName+'-'+settingName, { section:sectionName, setting: settingName }, function(e) {
+              newVal = (this.type=='checkbox' ? this.checked.toString() : $(this).val());
+              $('label[for*='+e.data.section+'-'+e.data.setting+']').html(newVal);
+              boundSettings[e.data.section][e.data.setting].value = newVal;
+            });
+          }
         }
       }
 
@@ -647,8 +692,9 @@
       LOG('SERVERTIME OFFSET: ' + serverTimeOffset + 'ms');
     });
     
-    socket.on('SERVERSTARTTIME', function(serverMillisSinceProcessStart) {
-      $('#status-uptime').attr('data-time', serverMillisSinceProcessStart + serverTimeOffset);
+    socket.on('SERVERINFO', function(info) {
+      $('#server-uptime').attr('data-time', info.uptime + serverTimeOffset);
+      $('#server-version').html(info.version);
     });
 
     $(document).on("pagecreate", "#eventAdd", function(){ if ($('addEventType').val()) $('#addEvent_OK').show(); else $('#addEvent_OK').hide(); });
@@ -803,31 +849,34 @@
       graphData = [];
       var max = Number.NEGATIVE_INFINITY;
       var min = Number.POSITIVE_INFINITY;
-      var minmax = 0;
+      var margin = 0;
 
+      graphOptions = $.extend(true, graphOptions, rawData.options); //http://stackoverflow.com/questions/171251/how-can-i-merge-properties-of-two-javascript-objects-dynamically
+
+      //override min/max from metrics graphOptions (if any defined); allows custom Y scaling of graphs
+      if (rawData.options.yaxis) {
+        min = rawData.options.yaxis.min != undefined ? rawData.options.yaxis.min : min;
+        max = rawData.options.yaxis.max != undefined ? rawData.options.yaxis.max : max;
+      }
+
+      //make sure to extend min/max if any data point is outside the defined graph range
       for(var key in rawData.graphData.data) {
         graphData.push([rawData.graphData.data[key].t, rawData.graphData.data[key].v]); //build flot series from raw data
         max = Math.max(max, rawData.graphData.data[key].v);
         min = Math.min(min, rawData.graphData.data[key].v);
       }
 
-      //override autoscaleMargin and min/max from metrics graphOptions (if any defined); allows custom Y scaling of graphs
-      if (rawData.options.yaxis) graphOptions.yaxis.autoscaleMargin = rawData.options.yaxis.autoscaleMargin || graphOptions.yaxis.autoscaleMargin;
-      if (rawData.options.yaxis) min = rawData.options.yaxis.min != undefined ? rawData.options.yaxis.min : min;
-      if (rawData.options.yaxis) max = rawData.options.yaxis.max != undefined ? rawData.options.yaxis.max : max;
-
       //defining the upper and lower margin
-      minmax=(max-min) * graphOptions.yaxis.autoscaleMargin;
+      margin=(max-min) * graphOptions.yaxis.autoscaleMargin;
       if (min==max)  // in case of only one value in the dataset (motion detection)
-        minmax=graphOptions.yaxis.autoscaleMargin * min;
-      min -= minmax;
-      max += minmax;
+        margin=graphOptions.yaxis.autoscaleMargin * min;
+      if (graphOptions.yaxis.autoscaleBottom !== false) min -= margin;
+      if (graphOptions.yaxis.autoscaleTop !== false) max += margin;
       graphOptions.xaxis.min = graphView.start;
       graphOptions.xaxis.max = graphView.end;
       graphOptions.yaxis.min = min;
       graphOptions.yaxis.max = max;
-
-      graphOptions = $.extend(true, graphOptions, rawData.options); //http://stackoverflow.com/questions/171251/how-can-i-merge-properties-of-two-javascript-objects-dynamically
+      
       $(graphStat).html(rawData.graphData.msg != undefined ? rawData.graphData.msg : (rawData.graphData.data.length + (rawData.graphData.totalIntervalDatapoints != rawData.graphData.data.length ? ' / '+rawData.graphData.totalIntervalDatapoints : '') +'pts ('+ rawData.graphData.queryTime+'ms) ('+humanFileSize(rawData.graphData.totalIntervalDatapoints*9)+'/'+humanFileSize(rawData.graphData.logSize)+')'));
       //need to defer plotting until after pageshow is finished rendering, otherwise the wrapper will return an incorrect width of "100"
       if (metricGraphWrapper.width()==100)
@@ -896,8 +945,9 @@
         if (/\{.+\}/ig.test(theString) == false) return theString; //if string has no more "{...}" just return it
         metric = metrics[key];
         theString = theString.replace('{'+metric.label+'}', metricsValues({0:metric}, true));
-        theString = theString.replace('{'+metric.label+':updated}', ago(metric.updated).tag);
+        theString = theString.replace('{'+metric.label+':updated}', ago(metric.updated, 0).tag);
       }
+      theString = theString.replace('{', '').replace('}','');
       return theString;
     }
 
@@ -926,8 +976,9 @@
       return 'icon_default.png';
     };
 
-    function resolveRSSIImage(rssi) {
-      if (rssi == undefined) return '';
+    function resolveRSSIImage(node) {
+      if (node.metrics.RSSI == undefined) return '';
+      rssi = node.metrics.RSSI.value;
       var img;
       if (Math.abs(rssi) > 95) img = 'icon_rssi_7.png';
       else if (Math.abs(rssi) > 90) img = 'icon_rssi_6.png';
@@ -936,7 +987,7 @@
       else if (Math.abs(rssi) > 75) img = 'icon_rssi_3.png';
       else if (Math.abs(rssi) > 70) img = 'icon_rssi_2.png';
       else img = 'icon_rssi_1.png';
-      return '<img class="listIcon20px" src="images/'+img+'" title="RSSI:-'+Math.abs(rssi)+'" /> ';
+      return '<img class="listIcon20px" src="images/'+img+'" title="RSSI:-'+Math.abs(rssi)+'dB" /> ';
     }
 
     function updateNode(node) {
@@ -945,8 +996,9 @@
       {
         nodes[node._id] = node;
         var nodeValue = metricsValues(node.metrics);
-        var lowBat = node.metrics.V != null && node.metrics.V.value < 3.55;
-        var newLI = $('<li id="' +  node._id + '"><a node-id="' + node._id + '" href="#nodedetails" class="nodedetails"><img class="productimg" src="images/'+getNodeIcon(node)+'"><h2>' + (nodeResolveString(node.label, node.metrics) || node._id) + ' ' + resolveRSSIImage(node.rssi) + ' ' + (lowBat ? '<img src="images/lowbattery.png" class="lowbattimg"/> ' : '') + ago(node.updated, 0).tag + (node.hidden ? ' <img class="listIcon20px" src="images/icon_hidden.png" />' : '') + '</h2><p>' + (nodeResolveString(node.descr, node.metrics) || '&nbsp;') + '</p>' + (nodeValue ? '<span class="ui-li-count ui-li-count16">' + nodeValue + '</span>' : '') + '</a></li>');
+        var lowVoltageSetting = node.settings && node.settings['lowVoltageValue'] ? node.settings['lowVoltageValue'] : (motesDef[node.type] && motesDef[node.type].settings && motesDef[node.type].settings.lowVoltageValue ? motesDef[node.type].settings.lowVoltageValue : boundSettings.general.lowVoltageValue.value);
+        var lowBat = node.metrics.V != null && node.metrics.V.value < lowVoltageSetting;
+        var newLI = $('<li id="' +  node._id + '"><a node-id="' + node._id + '" href="#nodedetails" class="nodedetails"><img class="productimg" src="images/'+getNodeIcon(node)+'"><h2>' + (nodeResolveString(node.label, node.metrics) || node._id) + ' ' + resolveRSSIImage(node) + ' ' + (lowBat ? '<img src="images/lowbattery.png" class="lowbattimg"/> ' : '') + ago(node.updated, 0).tag + (node.hidden ? ' <img class="listIcon20px" src="images/icon_hidden.png" />' : '') + '</h2><p>' + (nodeResolveString(node.descr, node.metrics) || '&nbsp;') + '</p>' + (nodeValue ? '<span class="ui-li-count ui-li-count16">' + nodeValue + '</span>' : '') + '</a></li>');
         var existingNode = $('#nodeList li#' + node._id);
         if (node.hidden)
           if (showHiddenNodes)
@@ -957,6 +1009,29 @@
           existingNode.replaceWith(newLI);
         else $('#nodeList').append(newLI);
         if (node._id == selectedNodeId) refreshNodeDetails(node);
+
+        //update this node's events on the events page
+        for(var key in node.events)
+        {
+          var evt = eventsDef[key];
+          if (!evt) continue;
+          
+          var enabled = node.events[key].enabled;
+          var execTime = node.events[key].executeDateTime;
+          var dt = new Date(execTime);
+          var execTimeString = execTime ? (' Due in <b>' + ago(dt.getTime(), 0).tag + '</b>') : '';
+          var remainingExecTimeString = (dt.getDate() == new Date().getDate())
+                                        ? execTime ? ' @ <b>' + dt.format('h:MMt') + '</b>' : ''
+                                        : execTime ? ' on <b>' + dt.format('mmm-d @ h:MMt') + '</b>' : '';
+
+          var newLI = $('<li id="'+node._id+'-'+key+'"><a data-icon="delete" node-id="' + node._id + '" event-id="' + key + '" href="#" class="eventEnableDisable"><span class="ui-btn-icon-notext ui-icon-'+ (enabled ? (evt.icon ? evt.icon : 'action') : 'minus') + (enabled ? " enabled" : " disabled") + '"></span><h2>[' + node._id + '] ' + evt.label + '</h2><p>Action: ' + (evt.descr || '&nbsp;') + '</p><p>' + execTimeString + remainingExecTimeString + '</p></a><a node-id="' + node._id + '" event-id="' + key + '" href="#" class="eventDelete" data-transition="pop" data-icon="delete"></a></li>');
+          
+          var allEventsListNode = $('#allEventsList li#' + node._id + '-' + key);
+          if(allEventsListNode.length)
+            allEventsListNode.replaceWith(newLI);
+          else $('#allEventsList').append(newLI);
+        }
+        $('#allEventsList').listview().listview('refresh');
       }
     }
 
@@ -995,13 +1070,12 @@
       return ( size / Math.pow(1024, i) ).toFixed(2) * 1 + ' ' + ['B', 'kB', 'MB', 'GB', 'TB'][i];
     };
 
-    /// calculated a style for an "ago" label based on a given timestamp in the past
+    /// calculates a style for an "ago" label based on a given timestamp in the past
     function ago(time, agoPrefix) {
       agoPrefix = (typeof agoPrefix !== 'undefined') ?  agoPrefix : true;
       var now = new Date().getTime() - serverTimeOffset;
       var update = new Date(time).getTime();
-      var lastupdate = (now-update)/1000;
-      var s = (now-update)/1000;
+      var s = Math.abs(now-update)/1000;
       var m = s/60;
       var h = s/3600;
       var d = s/86400;
@@ -1098,13 +1172,13 @@
       $('#nodeDetailTitle').html(nodeResolveString(node.label, node.metrics) || 'Node details');
       $('#nodeMoteType').val(node.type || '');
       $("#nodeMoteType").selectmenu('refresh',true);
-      $('#nodeDescr').val(node.descr || '');
+      $('#nodeDescr').val(node.descr || '['+node._id+']');
+      $('#nodeID').val(node._id);
       $('#nodeDetailImage').attr('src', 'images/'+getNodeIcon(node));
 
       if (node.hidden) $("#btnHideNodeToggle").addClass('hidden').css('background-color','#D00');
       else $("#btnHideNodeToggle").removeClass('hidden').css('background-color','');;
 
-      $('.nodeID').html(node._id);
       if (node.rssi) { $('#rssiinfo').show(); $('.nodeRSSI').html(node.rssi); }
       else $('#rssiinfo').hide();
       $('.nodeUpdated').html(ago(node.updated, false).tag);
@@ -1130,9 +1204,17 @@
       for(var key in node.events)
       {
         var evt = eventsDef[key];
-        var enabled = node.events[key];
         if (!evt) continue;
-        var newLI = $('<li><a data-icon="delete" event-id="' + key + '" href="#" class="eventEnableDisable" style="padding-top:0;padding-bottom:0;padding-left:0"><span class="ui-btn-icon-notext ui-icon-'+ (enabled ? (evt.icon ? evt.icon : 'action') : 'minus') + '" style="position:relative;float:left;padding:15px 10px;background-color:' + (enabled ? '#2d0' : '#d00') + '"></span><h2 style="padding-left:10px">' + evt.label + '</h2><p style="padding-left:10px">' + (evt.descr || '&nbsp;') + '</p>' + '</a><a event-id="' + key + '" href="#" class="eventDelete" data-transition="pop" data-icon="delete"></a></li>');
+        var enabled = node.events[key].enabled;
+        var execTime = node.events[key].executeDateTime;
+        var dt = new Date(execTime);
+        var execTimeString = execTime ? (' Due in <b>' + ago(dt.getTime(), 0).tag + '</b>') : '';
+        var remainingExecTimeString = (dt.getDate() == new Date().getDate())
+                                      ? execTime ? ' @ <b>' + dt.format('h:MMt') + '</b>' : ''
+                                      : execTime ? ' on <b>' + dt.format('mmm-d @ h:MMt') + '</b>' : '';
+
+        var newLI = $('<li><a data-icon="delete" node-id="' + node._id + '" event-id="' + key + '" href="#" class="eventEnableDisable"><span class="ui-btn-icon-notext ui-icon-'+ (enabled ? (evt.icon ? evt.icon : 'action') : 'minus') + (enabled ? " enabled" : " disabled") + '"></span><h2>' + evt.label + '</h2><p>Action: ' + (evt.descr || '&nbsp;') + '</p><p>' + execTimeString + remainingExecTimeString + '</p></a><a node-id="' + node._id + '" event-id="' + key + '" href="#" class="eventDelete" data-transition="pop" data-icon="delete"></a></li>');
+        
         var existingNode = $('#eventList li#evt_' + key);
         if(existingNode.length)
           existingNode.replaceWith(newLI);
@@ -1144,7 +1226,6 @@
       $('#nodeControls').hide();
       if (motesDef[node.type] && motesDef[node.type].controls)
       {
-        var showControls=false;
         $('#nodeControls').empty();
         for (var cKey in motesDef[node.type].controls)
         {
@@ -1176,7 +1257,6 @@
               socket.emit("CONTROLCLICK", {nodeId:event.data.nodeId, action:event.data.action, nodeType:event.data.nodeType, controlKey:event.data.cKey, stateKey:event.data.sKey});
             });
             $('#nodeControls').append(newBtn); ////$('#nodeControls').controlgroup("container").append(newBtn);
-            showControls = true;
             break;
           }
 
@@ -1184,12 +1264,75 @@
             $('#nodeControls').append('<br/>');
         }
 
-        if (showControls)
+        if ($('#nodeControls a').size())
         {
-          //$('#nodeControls').controlgroup().controlgroup("refresh");
-          //$('#nodeControls').controlgroup('refresh');
           $('#nodeControls').show();
-          //$("#nodeControls").trigger('create');
+          //$('#nodeControls').controlgroup().controlgroup("refresh").trigger('create');
+        }
+      }
+
+      //handle node settings
+      $('#nodeSettingsList').empty().hide();
+      if (motesDef[node.type] && motesDef[node.type].settings) //if node has defined settings it would like to override
+      {
+        var sectionLI = $('<li data-role="list-divider">Settings</li>');
+        $('#nodeSettingsList').append(sectionLI);
+          
+        for(var sectionName in boundSettings)
+        {
+          var sectionSettings = boundSettings[sectionName];
+
+          for(var settingName in sectionSettings)
+          {
+            var setting = sectionSettings[settingName];
+            if (setting.exposed === false || !setting.editable===false || setting.value == undefined || setting.password) continue;
+
+            for (var nodeTypeSetting in motesDef[node.type].settings)
+            {
+              if (nodeTypeSetting == settingName)
+              {
+                var settingLI;
+                var type = 'type="'+(setting.type || 'text')+'"';
+                var nodeSettingValue = node.settings && node.settings[settingName] ? node.settings[settingName] : (motesDef[node.type].settings[nodeTypeSetting] || setting.value || '');
+                if (setting.type == 'range') type+= ' min="'+setting.min+'" max="'+setting.max+'" step="0.01"';
+                if (setting.type == 'checkbox') type+= (nodeSettingValue == 'true' ? ' checked' : ' unchecked');
+                if (setting.description)
+                {
+                  settingLI = $('<li class="ui-field-contain">'
+                    +'<label>'
+                    +'<a href="#popupInfo-'+node._id+'-'+sectionName+'-'+settingName+'" data-rel="popup" data-transition="pop">'+settingName+'</a>'
+                    +'<div id="popupInfo-'+node._id+'-'+sectionName+'-'+settingName+'" data-role="popup" data-overlay-theme="b" class="popupInfo">'
+                    +'<b>'+settingName+'</b>: '+setting.description
+                    +'</div>'
+                    +':</label>'
+                    + (setting.type=='checkbox' ? '<label for="'+node._id+'-'+sectionName+'-'+settingName+'">'+nodeSettingValue+'</label>' : '')
+                    +'<input '+type+' name="'+node._id+'-'+sectionName+'-'+settingName+'" id="'+node._id+'-'+sectionName+'-'+settingName+'" value="'+nodeSettingValue+'"'+(setting.editable===false?' data-clear-btn="false" readonly="readonly"':' data-clear-btn="true" placeholder="'+setting.value+'"')+'></li>');
+                }
+                else
+                {
+                  settingLI = $('<li class="ui-field-contain">'
+                    +'<label>'+settingName+':</label>'
+                    + (setting.type=='checkbox' ? '<label for="'+node._id+'-'+sectionName+'-'+settingName+'">'+nodeSettingValue+'</label>' : '')
+                    +'<input '+type+' name="'+node._id+'-'+sectionName+'-'+settingName+'" id="'+node._id+'-'+sectionName+'-'+settingName+'" value="'+nodeSettingValue+'"'+(setting.editable===false?' data-clear-btn="false" readonly="readonly"':' data-clear-btn="false" placeholder="'+setting.value+'"')+'></li>');
+                }
+                
+                if (setting.type == 'checkbox')
+                {
+                  $(document).on("change", '#'+node._id+'-'+sectionName+'-'+settingName, { id:node._id, section:sectionName, setting: settingName }, function(e) {
+                    newVal = (this.type=='checkbox' ? this.checked.toString() : $(this).val());
+                    $('label[for*='+e.data.id+'-'+e.data.section+'-'+e.data.setting+']').html(newVal);
+                  });
+                }
+                $('#nodeSettingsList').append(settingLI);
+              }
+            }
+          }
+        }
+
+        if ($('#nodeSettingsList li').size())
+        {
+          $('#nodeSettingsList').show();
+          $('#nodeSettingsList').listview().listview('refresh').trigger("create");
         }
       }
     }
@@ -1239,12 +1382,16 @@
 
     $(document).on("click", ".eventEnableDisable", function () {
       var eventKey = $(this).attr('event-id');
-      socket.emit('EDITNODEEVENT', selectedNodeId, eventKey, !nodes[selectedNodeId].events[eventKey]);
+      var nodeId = parseInt($(this).attr('node-id'));
+      socket.emit('EDITNODEEVENT', nodeId, eventKey, !nodes[nodeId].events[eventKey].enabled);
     });
 
     $(document).on("click", ".eventDelete", function () {
       var eventKey = $(this).attr('event-id');
-      socket.emit('EDITNODEEVENT', selectedNodeId, eventKey, null, true);
+      var nodeId = parseInt($(this).attr('node-id'));
+      $('#allEventsList li#' + nodeId + '-' + eventKey).remove();
+      //$('#allEventsList').listview().listview('refresh');
+      socket.emit('EDITNODEEVENT', nodeId, eventKey, null, true);
     });
 
     $('#nodeLabel').keyup(function() {$('#nodeDetailTitle').html( nodeResolveString($('#nodeLabel').val(), nodes[selectedNodeId].metrics) || 'Node details');});
@@ -1289,6 +1436,25 @@
       node.hidden = $("#btnHideNodeToggle").hasClass('hidden'); //only persist when it's hidden
       if (node.label.trim()=='' || node.label == motesDef[node.type])
         node.label = node.type ? motesDef[node.type].label : node.label;
+        
+      $('#nodeSettingsList li input').each(function() {
+        var newVal = (this.type=='checkbox' ? this.checked.toString() : $(this).val());
+        var id = $(this).attr('id');
+        var sectionName = id.split('-')[1];
+        var settingName = id.split('-')[2];
+        
+        if (newVal == '' || newVal == motesDef[node.type].settings[settingName] || newVal == boundSettings[sectionName][settingName].value)
+        {
+          if (nodes[selectedNodeId].settings && nodes[selectedNodeId].settings[settingName])
+            nodes[selectedNodeId].settings[settingName] = undefined; //this makes it inherit from the master settings
+        }
+        else
+        {
+          if (!nodes[selectedNodeId].settings) nodes[selectedNodeId].settings = {};
+          nodes[selectedNodeId].settings[settingName] = newVal;
+        }
+      });
+      if (nodes[selectedNodeId].settings && Object.keys(nodes[selectedNodeId].settings).length == 0) nodes[selectedNodeId].settings = undefined;
       socket.emit('UPDATENODESETTINGS', nodes[selectedNodeId]);
     }
 
@@ -1371,6 +1537,12 @@
         socket.emit("INJECTNODE", {nodeId:id, label:value});
       else
         socket.emit("NODEMESSAGE", {nodeId:id, action:value});
+    });
+
+    //request the gateway app the restart its process on [Ctrl+Shift+Alt+R]
+    $(document).on("keypress keyup", function(e) {
+      if (e.ctrlKey && e.shiftKey && e.altKey && e.which==82)
+      socket.emit('PROCESSEXIT');
     });
 
     //enforce positive numeric input

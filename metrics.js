@@ -42,6 +42,7 @@
 var request = require('request');
 var config = require('nconf');
 var JSON5 = require('json5');
+var suncalc = require('suncalc'); //https://github.com/mourner/suncalc
 config.argv().file({ file: require('path').resolve(__dirname, 'settings.json5'), format: JSON5 });
 var settings = config.get('settings'); //these are local to avoid runtime errors but in events they will reference the global settings declared in gateway.js
 
@@ -109,7 +110,8 @@ exports.metrics = {
   FSTATE : { name:'FSTATE', regexp:/FSTATE\:(AUTO|AUTOCIRC|ON)/i, value:''},
 
   //special metrics
-  V : { name:'V', regexp:/\b(?:V?BAT|VOLTS|V)\:([\d\.]+)v?\b/i, value:'', duplicateInterval:3600, unit:'v', graph:1, graphOptions:{ legendLbl:'Voltage', lines: { fill:false, lineWidth:1 }, grid: { backgroundColor: {colors:['#000', '#03c', '#08c']}}, yaxis: { min: 0, autoscaleMargin: 0.25 }}},
+  V : { name:'V', regexp:/\b(?:V?BAT|VOLTS|V)\:([\d\.]+)v?\b/i, value:'', duplicateInterval:3600, unit:'v', graph:1, graphOptions:{ legendLbl:'Voltage', lines: { fill:true, lineWidth:1 }, grid: { backgroundColor: {colors:['#000', '#03c', '#08c']}}, yaxis: { min: 0, autoscaleMargin: 0.25, autoscaleBottom:false }}},
+  RSSI : { name:'RSSI', regexp:/\[(?:RSSI|SS)\:(-?\d+)[^\s]*\]/i, value:'', duplicateInterval:3600, unit:'db', graph:1, graphOptions:{ legendLbl:'Signal strength', lines: { fill:true, lineWidth:1 }, grid: { backgroundColor: {colors:['#000', '#03c', '#08c']}}, yaxis: { min:-100, max:-20 }}},
   //catchAll : { name:'CatchAll', regexp:/(\w+)\:(\w+)/i, value:''},
 };
 
@@ -124,17 +126,19 @@ exports.metrics = {
 exports.events = {
   motionAlert : { label:'Motion : Alert', icon:'audio', descr:'Alert sound when MOTION is detected', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { io.sockets.emit('PLAYSOUND', 'sounds/alert.wav'); }; } },
   mailboxAlert : { label:'Mailbox Open Alert!', icon:'audio', descr:'Message sound when mailbox is opened', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { io.sockets.emit('PLAYSOUND', 'sounds/incomingmessage.wav'); }; } },
-  motionEmail : { label:'Motion : Email', icon:'mail', descr:'Send email when MOTION is detected', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendEmail('MOTION DETECTED', 'MOTION WAS DETECTED ON NODE: [' + node._id + ':' + node.label + '] @ ' + new Date().toLocaleTimeString()); }; } },
-  motionSMS : { label:'Motion : SMS', icon:'comment', descr:'Send SMS when MOTION is detected', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendSMS('MOTION DETECTED', 'MOTION WAS DETECTED ON NODE: [' + node._id + ':' + node.label + '] @ ' + new Date().toLocaleTimeString()); }; } },
+  motionEmail : { label:'Motion : Email', icon:'mail', descr:'Send email when MOTION is detected', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendEmail('MOTION DETECTED', 'MOTION WAS DETECTED ON NODE: [' + node._id + ':' + node.label.replace(/\{.+\}/ig, '') + '] @ ' + new Date().toLocaleTimeString()); }; } },
+  motionSMS : { label:'Motion : SMS', icon:'comment', descr:'Send SMS when MOTION is detected', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendSMS('MOTION DETECTED', 'MOTION WAS DETECTED ON NODE: [' + node._id + ':' + node.label.replace(/\{.+\}/ig, '') + '] @ ' + new Date().toLocaleTimeString()); }; } },
   
-  motionSMSLimiter : { label:'Motion : SMS Limited 1/hr', icon:'comment', descr:'Send SMS when MOTION is detected, once per hour', 
-    serverExecute:function(node) { 
+  motionSMSLimiter : { label:'Motion : SMS Limited', icon:'comment', descr:'Send SMS when MOTION is detected, once per time limit (setting)', 
+    serverExecute:function(node) {
       if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - node.metrics['M'].updated < 2000)) /*check if M metric exists and value is MOTION, received less than 2s ago*/
       {
         var approveSMS = false;
+        
         if (node.metrics['M'].lastSMS) /*check if lastSMS value is not NULL ... */
         {
-          if (Date.now() - node.metrics['M'].lastSMS > 1800000) /*check if lastSMS timestamp is more than 1hr ago*/
+          var repeatLimit = settings.general.smsRepeatLimit != undefined ? settings.general.smsRepeatLimit.value : 0;
+          if (Date.now() - node.metrics['M'].lastSMS > repeatLimit) /*check if lastSMS timestamp is more than 1hr ago*/
           {
             approveSMS = true;
           }
@@ -147,7 +151,7 @@ exports.events = {
         if (approveSMS)
         {
           node.metrics['M'].lastSMS = Date.now();
-          sendSMS('MOTION!', 'MOTION DETECTED ON NODE [' + node._id + ':' + node.label + '] @ ' + new Date().toLocaleTimeString());
+          sendSMS('MOTION!', 'MOTION DETECTED ON NODE [' + node._id + ':' + node.label.replace(/\{.+\}/ig, '') + '] @ ' + new Date().toLocaleTimeString());
           db.update({ _id: node._id }, { $set : node}, {}, function (err, numReplaced) { console.log('   ['+node._id+'] DB-Updates:' + numReplaced);}); /*save lastSMS timestamp to DB*/
         }
         else console.log('   ['+node._id+'] MOTION SMS skipped.');
@@ -175,26 +179,26 @@ exports.events = {
         if (approveSMS)
         {
           node.metrics['F'].lastSMS = Date.now();
-          sendSMS('Temperature > 75° !', 'Temperature alert (>75°F!): [' + node._id + ':' + node.label + '] @ ' + new Date().toLocaleTimeString());
+          sendSMS('Temperature > 75° !', 'Temperature alert (>75°F!): [' + node._id + ':' + node.label.replace(/\{.+\}/ig, '') + '] @ ' + new Date().toLocaleTimeString());
           db.update({ _id: node._id }, { $set : node}, {}, function (err, numReplaced) { console.log('   ['+node._id+'] DB-Updates:' + numReplaced);}); /*save lastSMS timestamp to DB*/
         }
         else console.log('   ['+node._id+'] THAlert SMS skipped.');
       };
     }
   },
-  
-  mailboxSMS : { label:'Mailbox open : SMS', icon:'comment', descr:'Send SMS when mailbox is opened', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendSMS('MAILBOX OPENED', 'Mailbox opened [' + node._id + ':' + node.label + '] @ ' + new Date().toLocaleTimeString()); }; } },
+
+  mailboxSMS : { label:'Mailbox open : SMS', icon:'comment', descr:'Send SMS when mailbox is opened', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendSMS('MAILBOX OPENED', 'Mailbox opened [' + node._id + ':' + node.label.replace(/\{.+\}/ig, '') + '] @ ' + new Date().toLocaleTimeString()); }; } },
   motionLightON23 : { label:'Motion: SM23 ON!', icon:'action', descr:'Turn SwitchMote:23 ON when MOTION is detected', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendMessageToNode({nodeId:23, action:'MOT:1'}); }; } },
 
   doorbellSound : { label:'Doorbell : Sound', icon:'audio', descr:'Play sound when doorbell rings', serverExecute:function(node) { if (node.metrics['RING'] && node.metrics['RING'].value == 'RING' && (Date.now() - new Date(node.metrics['RING'].updated).getTime() < 2000)) { io.sockets.emit('PLAYSOUND', 'sounds/doorbell.wav'); }; } },
-  doorbellSMS : { label:'Doorbell : SMS', icon:'comment', descr:'Send SMS when Doorbell button is pressed', serverExecute:function(node) { if (node.metrics['RING'] && node.metrics['RING'].value == 'RING' && (Date.now() - new Date(node.metrics['RING'].updated).getTime() < 2000)) { sendSMS('DOORBELL', 'DOORBELL WAS RINGED: [' + node._id + '] ' + node.label + ' @ ' + new Date().toLocaleTimeString()); }; } },
-  sumpSMS : { label:'SumpPump : SMS (below 20cm)', icon:'comment', descr:'Send SMS if water < 20cm below surface', serverExecute:function(node) { if (node.metrics['CM'] && node.metrics['CM'].value < 20 && (Date.now() - new Date(node.metrics['CM'].updated).getTime() < 2000)) { sendSMS('SUMP PUMP ALERT', 'Water is only 20cm below surface and rising - [' + node._id + '] ' + node.label + ' @ ' + new Date().toLocaleTimeString()); }; } },
+  doorbellSMS : { label:'Doorbell : SMS', icon:'comment', descr:'Send SMS when Doorbell button is pressed', serverExecute:function(node) { if (node.metrics['RING'] && node.metrics['RING'].value == 'RING' && (Date.now() - new Date(node.metrics['RING'].updated).getTime() < 2000)) { sendSMS('DOORBELL', 'DOORBELL WAS RINGED: [' + node._id + '] ' + node.label.replace(/\{.+\}/ig, '') + ' @ ' + new Date().toLocaleTimeString()); }; } },
+  sumpSMS : { label:'SumpPump : SMS (below 20cm)', icon:'comment', descr:'Send SMS if water < 20cm below surface', serverExecute:function(node) { if (node.metrics['CM'] && node.metrics['CM'].value < 20 && (Date.now() - new Date(node.metrics['CM'].updated).getTime() < 2000)) { sendSMS('SUMP PUMP ALERT', 'Water is only 20cm below surface and rising - [' + node._id + '] ' + node.label.replace(/\{.+\}/ig, '') + ' @ ' + new Date().toLocaleTimeString()); }; } },
 
-  garageSMS : { label:'Garage : SMS', icon:'comment', descr:'Send SMS when garage is OPENING', serverExecute:function(node) { if (node.metrics['Status'] && (node.metrics['Status'].value.indexOf('OPENING')>-1) && (Date.now() - new Date(node.metrics['Status'].updated).getTime() < 2000)) { sendSMS('Garage event', 'Garage was opening on node : [' + node._id + ':' + node.label + '] @ ' + new Date().toLocaleTimeString()); }; } },
+  garageSMS : { label:'Garage : SMS', icon:'comment', descr:'Send SMS when garage is OPENING', serverExecute:function(node) { if (node.metrics['Status'] && (node.metrics['Status'].value.indexOf('OPENING')>-1) && (Date.now() - new Date(node.metrics['Status'].updated).getTime() < 2000)) { sendSMS('Garage event', 'Garage was opening on node : [' + node._id + ':' + node.label.replace(/\{.+\}/ig, '') + '] @ ' + new Date().toLocaleTimeString()); }; } },
   garagePoll: { label:'Garage : POLL', icon:'comment', descr:'Poll Garage Status', nextSchedule:function(nodeAtScheduleTime) { return 30000; }, scheduledExecute:function(nodeAtScheduleTime) { db.findOne({ _id : nodeAtScheduleTime._id }, function (err, nodeRightNow) { if (nodeRightNow) { /*just emit a log the status to client(s)*/ io.sockets.emit('LOG', 'GARAGE POLL STATUS: ' + nodeRightNow.metrics['Status'].value ); } }); } },
 
-  switchMoteON_PM : { label:'SwitchMote ON at 6:30PM!', icon:'clock', descr:'Turn this switch ON every evening', nextSchedule:function(node) { return exports.timeoutOffset(18,30); }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:1'}); } },
-  switchMoteOFF_AM : { label:'SwitchMote OFF at 8:00AM!', icon:'clock', descr:'Turn this switch OFF every morning', nextSchedule:function(node) { return exports.timeoutOffset(8,00); }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:0'}); } },
+  switchMoteON_PM : { label:'SwitchMote ON at sunset!', icon:'clock', descr:'Turn this switch ON at sunset', nextSchedule:function(node) { return exports.millisToFutureDate(exports.nextSunriseOrSunset(0), exports.ONEDAY*2); }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:1'}); } },
+  switchMoteOFF_AM : { label:'SwitchMote OFF at sunrise!', icon:'clock', descr:'Turn this switch OFF at sunrise', nextSchedule:function(node) { return exports.millisToFutureDate(exports.nextSunriseOrSunset(1), exports.ONEDAY*2); }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:0'}); } },
   switchMoteONBUZZ : { label:'SwitchMote ON Buzzer beep!', icon:'clock', descr:'Buzz gateway when switchmote is ON',  serverExecute:function(node) { if (node.metrics['B1'] && node.metrics['B1'].value == 'ON' && (Date.now() - new Date(node.metrics['B1'].updated).getTime() < 2000)) { setTimeout(function() { sendMessageToGateway('BEEP'); }, 5); } }},
 
   //for the sprinkler events, rather than scheduling with offsets, its much easier to run them every day, and check the odd/even/weekend condition in the event itself
@@ -284,10 +288,12 @@ exports.motes = {
   MotionMote: {
     label  : 'Motion Sensor',
     icon   : 'icon_motion.png',
+    settings: { lowVoltageValue: '' }, //blank will make it inherit from global settings.json lowVoltageValue, a specific value overrides the general setting, user can always choose his own setting in the UI
   },
   Mailbox: {
     label   : 'Mailbox',
     icon : 'icon_mailbox.png',
+    settings: { lowVoltageValue: '' }, //blank will make it inherit from global settings.json lowVoltageValue, a specific value overrides the general setting, user can always choose his own setting in the UI
   },
   SwitchMote: {
     label   : 'Light Switch',
@@ -305,6 +311,7 @@ exports.motes = {
   SonarMote: {
     label  : 'Distance Sensor',
     icon   : 'icon_sonar.png',
+    settings: { lowVoltageValue: '' }, //blank will make it inherit from global settings.json lowVoltageValue, a specific value overrides the general setting, user can always choose his own setting in the UI
   },
   SprinklerMote: {
     label  : 'Sprinkler Controller',
@@ -328,12 +335,13 @@ exports.motes = {
                       { label:'8', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE'].value == '8'; }}]},
       Z9 : { states: [{ label:'9', action:'ON:9', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE'].value != '9'; }},
                       { label:'9', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE'].value == '9'; }}], breakAfter:true},
-      MN : { states: [{ label:'Run z1-5 3min', action:'PRG 1:180 2:180 3:180 4:180 5:180'}]},
+      MN : { states: [{ label:'Run Z1-8 5min', action:'PRG 1:300 2:300 3:300 4:200 5:300 5:300 6:300 7:300 8:300'}]},
     },
   },
   WeatherMote: {
     label  : 'Weather Sensor',
     icon   : 'icon_weather.png',
+    settings: { lowVoltageValue: '' }, //blank will make it inherit from global settings.json lowVoltageValue, a specific value overrides the general setting, user can always choose his own setting in the UI
   },
 
   WaterMeter: {
@@ -527,6 +535,7 @@ exports.motes = {
                         }],
              },
     },
+    settings: { ip:'' } //blank will inherit ip value from global settings.json
   }
 }
 
@@ -578,6 +587,12 @@ exports.timeoutOffset = function(hour, minute, second, offset) {
   return result;
 }
 
+//calculates the milliseconds timeout remaining until a given date in the future
+exports.millisToFutureDate = function(futureDate, failSafe) {
+  var now = new Date();
+  return (now < futureDate) ? (futureDate-now) : (failSafe || 3000);
+}
+
 // ******************************************************************************************************************************************
 //                                            RADIO THERMOSTAT SPECIFIC HELPER FUNCTIONS
 // ******************************************************************************************************************************************
@@ -585,30 +600,62 @@ exports.timeoutOffset = function(hour, minute, second, offset) {
 // ******************************************************************************************************************************************
 //this function sends an HTTP GET request to the thermostat to refresh metrics like current temperature, target temp, mode (heat/cool), hold etc.
 exports.tstatPoll = function(nodeId) {
-  var requestJson = 'http://'+settings.radiothermostat.ip.value+'/tstat';
-  request(requestJson, function (error, response, body) {
-    if (!error && response.statusCode == 200) {
-      var info = JSON.parse(body);
-      var target = info.t_cool || info.t_heat || undefined;
-      var fakeSerialMsg = '['+nodeId+'] '+'F:'+(info.temp*100) + (target ? ' TARGET:'+target : '') + ' HOLD:'+(info.hold==1?'ON':'OFF')+' TSTATE:'+(info.tstate==0?'OFF':(info.tstate==1?'HEATING':'COOLING'))+' FSTATE:'+(info.fstate==0?'AUTO':(info.fstate==1?'ON':'AUTOCIRC'))+' MODE:'+(info.tmode==3?'AUTO':(info.tmode==2?'COOL':(info.tmode==1?'HEAT':'OFF')));
-      processSerialData(fakeSerialMsg);
-      //io.sockets.emit('LOG', fakeSerialMsg);
-    }
-    else io.sockets.emit('LOG', 'THERMOSTAT STATUS GET FAIL for request \''+requestJson+'\':' + error);
+  db.findOne({ _id : nodeId }, function (err, dbNode) {
+    var thermostatIP = dbNode.settings && dbNode.settings.ip ? dbNode.settings.ip : (exports.motes[dbNode.type].settings.ip || settings.radiothermostat.ip.value);
+    var requestJson = 'http://'+thermostatIP+'/tstat';
+    request(requestJson, function (error, response, body) {
+      if (!error && response.statusCode == 200) {
+        var info = JSON.parse(body);
+        var target = info.t_cool || info.t_heat || undefined;
+        var fakeSerialMsg = '['+nodeId+'] '+'F:'+(info.temp*100) + (target ? ' TARGET:'+target : '') + ' HOLD:'+(info.hold==1?'ON':'OFF')+' TSTATE:'+(info.tstate==0?'OFF':(info.tstate==1?'HEATING':'COOLING'))+' FSTATE:'+(info.fstate==0?'AUTO':(info.fstate==1?'ON':'AUTOCIRC'))+' MODE:'+(info.tmode==3?'AUTO':(info.tmode==2?'COOL':(info.tmode==1?'HEAT':'OFF')));
+        processSerialData(fakeSerialMsg);
+        //io.sockets.emit('LOG', fakeSerialMsg);
+      }
+      else io.sockets.emit('LOG', 'THERMOSTAT STATUS GET FAIL for request \''+requestJson+'\':' + error);
+    });
   });
 }
 
 //this function sends an HTTP POST request to the thermostat (usually to change temperature/mode etc).
 exports.tstatRequest = function(thejson, nodeId) {
   //console.log('tstatRequest:' + JSON.stringify(thejson));
-  request.post({ url:'http://'+settings.radiothermostat.ip.value+'/tstat', json: thejson},
-                function(error,response,body){
-                  //console.log('BODY: ' + JSON.stringify(body));
-                  if (error) console.log('ERROR in tstatRequest(): ' + JSON.stringify(thejson) + ' nodeId:' + nodeId + ' - ' + error);
-                  else exports.tstatPoll(nodeId); //now ask for a refresh of status from thermostat (HTTP GET)
-                }
-  );
+  db.findOne({ _id : nodeId }, function (err, dbNode) {
+    var thermostatIP = dbNode.settings && dbNode.settings.ip ? dbNode.settings.ip : (exports.motes[dbNode.type].settings.ip || settings.radiothermostat.ip.value);
+    request.post({ url:'http://'+thermostatIP+'/tstat', json: thejson},
+              function(error,response,body){
+                //console.log('BODY: ' + JSON.stringify(body));
+                if (error) console.log('ERROR in tstatRequest(): ' + JSON.stringify(thejson) + ' nodeId:' + nodeId + ' - ' + error);
+                else exports.tstatPoll(nodeId); //now ask for a refresh of status from thermostat (HTTP GET)
+              }
+    );
+  });
 }
+
 // ******************************************************************************************************************************************
-//                                            END RADIO THERMOSTAT SPECIFIC HELPER FUNCTIONS
+//                                            SUNRISE-SUNSET HELPER FUNCTIONALITY
 // ******************************************************************************************************************************************
+// find your lat/long at: http://www.latlong.net/
+// sunrise-sunset api at: http://api.sunrise-sunset.org/  --> more events available in this API (daylength, twilight, noon)
+// ******************************************************************************************************************************************
+exports.nextSunriseOrSunset = function(getSunrise) { //0=sunset, 1=sunrise
+  var latitude = settings.location != undefined ? settings.location.latitude.value : 51.51;  //fallback to London if setting not defined
+  var longitude = settings.location != undefined ? settings.location.longitude.value : -0.12;
+  now = new Date();
+  var times = suncalc.getTimes(now, latitude, longitude);
+  var whichEvent =  getSunrise ? times.sunrise : times.sunset;
+  
+  if (whichEvent > now)
+  {
+    if (whichEvent - now < 600000)
+    {
+      //if next sunrise/sunset is less than 10 minutes in the future and gateway just started
+      if(process.uptime() < 600) return whichEvent;
+    }
+    else return whichEvent;
+  }
+   
+  //get next day's sunrise/sunset
+  whichEvent.setDate(whichEvent.getDate()+1);
+  return getSunrise ? suncalc.getTimes(whichEvent, latitude, longitude).sunrise
+                    : suncalc.getTimes(whichEvent, latitude, longitude).sunset;
+}
