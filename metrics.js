@@ -158,6 +158,18 @@ exports.events = {
       };
     }
   },
+  
+  motionEmailSnapshot : { label:'Motion : Email+IPCam Snapshot', icon:'camera', descr:'Send email when MOTION is detected, with snapshot from IPCamera',
+    serverExecute:function(node) {
+      if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000))
+      {
+        db.findOne({ _id : node._id }, function (err, dbNode) {
+          var snapshotURL = dbNode.settings && dbNode.settings.ipcam_snapURL ? dbNode.settings.ipcam_snapURL : (exports.motes[dbNode.type].settings.ipcam_snapURL || settings.misc.ipcam_snapURL.value);
+          sendEmail('MOTION DETECTED', 'MOTION DETECTED ON NODE: [' + dbNode._id + ':' + dbNode.label.replace(/\{.+\}/ig, '') + '] @ ' + new Date().toLocaleTimeString(), [{path: snapshotURL, filename: 'snapshot.jpg'}]);
+        });
+      }
+    } 
+  },
 
   temperatureSMSLimiter : { label:'THAlert : SMS Limited', icon:'comment', descr:'Send SMS when F>75°, once per hour', 
     serverExecute:function(node) { 
@@ -192,10 +204,35 @@ exports.events = {
 
   doorbellSound : { label:'Doorbell : Sound', icon:'audio', descr:'Play sound when doorbell rings', serverExecute:function(node) { if (node.metrics['RING'] && node.metrics['RING'].value == 'RING' && (Date.now() - new Date(node.metrics['RING'].updated).getTime() < 2000)) { io.sockets.emit('PLAYSOUND', 'sounds/doorbell.wav'); }; } },
   doorbellSMS : { label:'Doorbell : SMS', icon:'comment', descr:'Send SMS when Doorbell button is pressed', serverExecute:function(node) { if (node.metrics['RING'] && node.metrics['RING'].value == 'RING' && (Date.now() - new Date(node.metrics['RING'].updated).getTime() < 2000)) { sendSMS('DOORBELL', 'DOORBELL WAS RINGED: [' + node._id + '] ' + node.label.replace(/\{.+\}/ig, '') + ' @ ' + new Date().toLocaleTimeString()); }; } },
+  
+  doorbellSnapshot : { label:'Doorbell : Snapshot', icon:'camera', descr:'Send IPCamera snapshot when Doorbell is pressed pressed',
+    serverExecute:function(node) {
+      if (node.metrics['RING'] && node.metrics['RING'].value == 'RING' && (Date.now() - new Date(node.metrics['RING'].updated).getTime() < 2000))
+      {
+        db.findOne({ _id : node._id }, function (err, dbNode) {
+          var snapshotURL = dbNode.settings && dbNode.settings.ipcam_snapURL ? dbNode.settings.ipcam_snapURL : (exports.motes[dbNode.type].settings.ipcam_snapURL || settings.misc.ipcam_snapURL.value);
+          sendEmail('Someone at the door!', 'Someone rang the doorbell! @ ' + new Date().toLocaleTimeString(), [{path: snapshotURL, filename: 'snapshot.jpg'}]);
+        });
+      }
+    }
+  },
+  
   sumpSMS : { label:'SumpPump : SMS (below 20cm)', icon:'comment', descr:'Send SMS if water < 20cm below surface', serverExecute:function(node) { if (node.metrics['CM'] && node.metrics['CM'].value < 20 && (Date.now() - new Date(node.metrics['CM'].updated).getTime() < 2000)) { sendSMS('SUMP PUMP ALERT', 'Water is only 20cm below surface and rising - [' + node._id + '] ' + node.label.replace(/\{.+\}/ig, '') + ' @ ' + new Date().toLocaleTimeString()); }; } },
 
   garageSMS : { label:'Garage : SMS', icon:'comment', descr:'Send SMS when garage is OPENING', serverExecute:function(node) { if (node.metrics['Status'] && (node.metrics['Status'].value.indexOf('OPENING')>-1) && (Date.now() - new Date(node.metrics['Status'].updated).getTime() < 2000)) { sendSMS('Garage event', 'Garage was opening on node : [' + node._id + ':' + node.label.replace(/\{.+\}/ig, '') + '] @ ' + new Date().toLocaleTimeString()); }; } },
   garagePoll: { label:'Garage : POLL', icon:'comment', descr:'Poll Garage Status', nextSchedule:function(nodeAtScheduleTime) { return 30000; }, scheduledExecute:function(nodeAtScheduleTime) { db.findOne({ _id : nodeAtScheduleTime._id }, function (err, nodeRightNow) { if (nodeRightNow) { /*just emit a log the status to client(s)*/ io.sockets.emit('LOG', 'GARAGE POLL STATUS: ' + nodeRightNow.metrics['Status'].value ); } }); } },
+  
+  garageSnapshotEmail : { label:'Garage : Snapshot', icon:'camera', descr:'Send IPCam snapshot when garage is OPENING',
+    serverExecute: function(node) { 
+      if (node.metrics['Status'] && (node.metrics['Status'].value.indexOf('OPENING')>-1) && (Date.now() - new Date(node.metrics['Status'].updated).getTime() < 2000))
+      {
+        db.findOne({ _id : node._id }, function (err, dbNode) {
+          var snapshotURL = dbNode.settings && dbNode.settings.ipcam_snapURL ? dbNode.settings.ipcam_snapURL : (exports.motes[dbNode.type].settings.ipcam_snapURL || settings.misc.ipcam_snapURL.value);
+          sendEmail('GARAGE OPENING', 'GARAGE IS OPENING: [' + dbNode._id + ':' + dbNode.label.replace(/\{.+\}/ig, '') + '] @ ' + new Date().toLocaleTimeString(), [{path: snapshotURL, filename: 'snapshot.jpg'}]);
+        });
+      }
+    }
+  },
 
   switchMoteON_PM : { label:'SwitchMote ON at sunset!', icon:'clock', descr:'Turn this switch ON at sunset', nextSchedule:function(node) { return exports.millisToFutureDate(exports.nextSunriseOrSunset(0), exports.ONEDAY*2); }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:1'}); } },
   switchMoteOFF_AM : { label:'SwitchMote OFF at sunrise!', icon:'clock', descr:'Turn this switch OFF at sunrise', nextSchedule:function(node) { return exports.millisToFutureDate(exports.nextSunriseOrSunset(1), exports.ONEDAY*2); }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'BTN1:0'}); } },
@@ -268,6 +305,7 @@ exports.motes = {
   DoorBellMote: {
     label  : 'DoorBell',
     icon   : 'icon_doorbell.png',
+    settings: { ipcam_snapURL: '' },
     controls : { ring : { states: [{ label:'Ring it!', action:'RING', icon:'audio' }]},
                  status :  { states: [{ label:'Disabled', action:'BELL:1', css:'background-color:#FF9B9B;', icon:'fa-bell-slash', condition:''+function(node) { return node.metrics['Status']!=null && node.metrics['Status'].value == 'OFF'; }},
                                       { label:'Enabled',  action:'BELL:0', css:'background-color:#9BFFBE;color:#000000', icon:'fa-bell', condition:''+function(node) { return node.metrics['Status']==null || node.metrics['Status'].value == 'ON'; }}]},
@@ -277,6 +315,7 @@ exports.motes = {
   GarageMote : {
     label   : 'Garage Opener',
     icon : 'icon_garage.png',
+    settings: { ipcam_snapURL: '' },
     controls : { refresh : { states: [{ label:'Refresh', action:'STS', icon:'refresh' }]},
                  opencls : { states: [{ label:'Open!', action:'OPN', icon:'arrow-u', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['Status'].value == 'CLOSED';}},
                                       { label:'Opening..', action:'', icon:'forbidden', css:'background-color:#FFF000;', condition:''+function(node) { return node.metrics['Status'].value == 'OPENING';}},
@@ -288,12 +327,12 @@ exports.motes = {
   MotionMote: {
     label  : 'Motion Sensor',
     icon   : 'icon_motion.png',
-    settings: { lowVoltageValue: '' }, //blank will make it inherit from global settings.json lowVoltageValue, a specific value overrides the general setting, user can always choose his own setting in the UI
+    settings: { lowVoltageValue: '', ipcam_snapURL: '' }, //blank will make it inherit from global settings.json lowVoltageValue, a specific value overrides the general setting, user can always choose his own setting in the UI
   },
   Mailbox: {
     label   : 'Mailbox',
     icon : 'icon_mailbox.png',
-    settings: { lowVoltageValue: '' }, //blank will make it inherit from global settings.json lowVoltageValue, a specific value overrides the general setting, user can always choose his own setting in the UI
+    settings: { lowVoltageValue: '', ipcam_snapURL: '' }, //blank will make it inherit from global settings.json lowVoltageValue, a specific value overrides the general setting, user can always choose his own setting in the UI
   },
   SwitchMote: {
     label   : 'Light Switch',

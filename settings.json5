@@ -122,6 +122,14 @@
         value: "192.168.1.100",
         description: "If you have a wifi RadioThermostat CT50/CT80 this is the IP address",
       },
-    }
+    },
+	misc: {
+      editable: true,
+      exposed: true,
+      ipcam_snapURL: {
+        value: "http://192.168.1.100/picture/2/current/",
+        description: "Snapshot URL of IPCamera"
+      }
+	}
   }
 }
