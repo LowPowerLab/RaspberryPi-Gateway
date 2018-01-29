@@ -317,10 +317,10 @@ exports.motes = {
     icon : 'icon_garage.png',
     settings: { ipcam_snapURL: '' },
     controls : { refresh : { states: [{ label:'Refresh', action:'STS', icon:'refresh' }]},
-                 opencls : { states: [{ label:'Open!', action:'OPN', icon:'arrow-u', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['Status'].value == 'CLOSED';}},
-                                      { label:'Opening..', action:'', icon:'forbidden', css:'background-color:#FFF000;', condition:''+function(node) { return node.metrics['Status'].value == 'OPENING';}},
-                                      { label:'Close!', action:'CLS', icon:'arrow-d', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['Status'].value == 'OPEN';}},
-                                      { label:'Closing..', action:'', icon:'forbidden', css:'background-color:#FFF000;', condition:''+function(node) { return node.metrics['Status'].value == 'CLOSING';}}]
+                 opencls : { states: [{ label:'Open!', action:'OPN', icon:'arrow-u', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['Status']!=null && node.metrics['Status'].value == 'CLOSED';}},
+                                      { label:'Opening..', action:'', icon:'forbidden', css:'background-color:#FFF000;', condition:''+function(node) { return node.metrics['Status']!=null && node.metrics['Status'].value == 'OPENING';}},
+                                      { label:'Close!', action:'CLS', icon:'arrow-d', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['Status']!=null && node.metrics['Status'].value == 'OPEN';}},
+                                      { label:'Closing..', action:'', icon:'forbidden', css:'background-color:#FFF000;', condition:''+function(node) { return node.metrics['Status']!=null && node.metrics['Status'].value == 'CLOSING';}}]
                            }
               }
   },
@@ -356,24 +356,24 @@ exports.motes = {
     label  : 'Sprinkler Controller',
     icon   : 'icon_sprinklers.png',
     controls : {
-      Z1 : { states: [{ label:'1', action:'ON:1', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE'].value != '1'; }},
-                      { label:'1', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE'].value == '1'; }}]},
-      Z2 : { states: [{ label:'2', action:'ON:2', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE'].value != '2'; }},
-                      { label:'2', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE'].value == '2'; }}]},
-      Z3 : { states: [{ label:'3', action:'ON:3', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE'].value != '3'; }},
-                      { label:'3', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE'].value == '3'; }}]},
-      Z4 : { states: [{ label:'4', action:'ON:4', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE'].value != '4'; }},
-                      { label:'4', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE'].value == '4'; }}]},
-      Z5 : { states: [{ label:'5', action:'ON:5', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE'].value != '5'; }},
-                      { label:'5', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE'].value == '5'; }}]},
-      Z6 : { states: [{ label:'6', action:'ON:6', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE'].value != '6'; }},
-                      { label:'6', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE'].value == '6'; }}]},
-      Z7 : { states: [{ label:'7', action:'ON:7', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE'].value != '7'; }},
-                      { label:'7', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE'].value == '7'; }}]},
-      Z8 : { states: [{ label:'8', action:'ON:8', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE'].value != '8'; }},
-                      { label:'8', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE'].value == '8'; }}]},
-      Z9 : { states: [{ label:'9', action:'ON:9', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE'].value != '9'; }},
-                      { label:'9', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE'].value == '9'; }}], breakAfter:true},
+      Z1 : { states: [{ label:'1', action:'ON:1', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE']!=null && node.metrics['ZONE'].value != '1'; }},
+                      { label:'1', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE']==null || node.metrics['ZONE'].value == '1'; }}]},
+      Z2 : { states: [{ label:'2', action:'ON:2', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE']!=null && node.metrics['ZONE'].value != '2'; }},
+                      { label:'2', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE']==null || node.metrics['ZONE'].value == '2'; }}]},
+      Z3 : { states: [{ label:'3', action:'ON:3', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE']!=null && node.metrics['ZONE'].value != '3'; }},
+                      { label:'3', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE']==null || node.metrics['ZONE'].value == '3'; }}]},
+      Z4 : { states: [{ label:'4', action:'ON:4', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE']!=null && node.metrics['ZONE'].value != '4'; }},
+                      { label:'4', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE']==null || node.metrics['ZONE'].value == '4'; }}]},
+      Z5 : { states: [{ label:'5', action:'ON:5', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE']!=null && node.metrics['ZONE'].value != '5'; }},
+                      { label:'5', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE']==null || node.metrics['ZONE'].value == '5'; }}]},
+      Z6 : { states: [{ label:'6', action:'ON:6', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE']!=null && node.metrics['ZONE'].value != '6'; }},
+                      { label:'6', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE']==null || node.metrics['ZONE'].value == '6'; }}]},
+      Z7 : { states: [{ label:'7', action:'ON:7', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE']!=null && node.metrics['ZONE'].value != '7'; }},
+                      { label:'7', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE']==null || node.metrics['ZONE'].value == '7'; }}]},
+      Z8 : { states: [{ label:'8', action:'ON:8', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE']!=null && node.metrics['ZONE'].value != '8'; }},
+                      { label:'8', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE']==null || node.metrics['ZONE'].value == '8'; }}]},
+      Z9 : { states: [{ label:'9', action:'ON:9', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE']!=null && node.metrics['ZONE'].value != '9'; }},
+                      { label:'9', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE']==null || node.metrics['ZONE'].value == '9'; }}], breakAfter:true},
       MN : { states: [{ label:'Run Z1-8 5min', action:'PRG 1:300 2:300 3:300 4:200 5:300 5:300 6:300 7:300 8:300'}]},
     },
   },
@@ -450,7 +450,7 @@ exports.motes = {
                             var thejson = { 'tmode':2, 't_cool' : ++targetNow };
                             exports.tstatRequest(thejson, node._id);
                           },
-                          condition:''+function(node) { return node.metrics['MODE'] && node.metrics['MODE'].value == 'COOL'; }
+                          condition:''+function(node) { return node.metrics['MODE']!=null && node.metrics['MODE'].value == 'COOL'; }
                         },
                         { label:'Cool', action:'', icon:'fa-ge',
                           serverExecute:function(node){
@@ -461,7 +461,7 @@ exports.motes = {
                             var thejson = { 'tmode':2, 't_cool' : ++targetNow };
                             exports.tstatRequest(thejson, node._id);
                           },
-                          condition:''+function(node) { return node.metrics['MODE'] && node.metrics['MODE'].value != 'COOL'; }
+                          condition:''+function(node) { return node.metrics['MODE']!=null && node.metrics['MODE'].value != 'COOL'; }
                         }]
                },
       //switch to HEAT mode
@@ -474,7 +474,7 @@ exports.motes = {
                             var thejson = { 'tmode':1, 't_heat' : --targetNow };
                             exports.tstatRequest(thejson, node._id);
                           },
-                          condition:''+function(node) { return node.metrics['MODE'] && node.metrics['MODE'].value == 'HEAT'; }
+                          condition:''+function(node) { return node.metrics['MODE']!=null && node.metrics['MODE'].value == 'HEAT'; }
                         },
                         { label:'Heat', action:'', icon:'fa-fire',
                           serverExecute:function(node){
@@ -485,7 +485,7 @@ exports.motes = {
                             var thejson = { 'tmode':1, 't_heat' : --targetNow };
                             exports.tstatRequest(thejson, node._id);
                           },
-                          condition:''+function(node) { return node.metrics['MODE'] && node.metrics['MODE'].value != 'HEAT'; }
+                          condition:''+function(node) { return node.metrics['MODE']!=null && node.metrics['MODE'].value != 'HEAT'; }
                         }]
                },
       //switch to AUTO mode
@@ -496,7 +496,7 @@ exports.motes = {
                             if (modeNow=='AUTO') return;
                             exports.tstatRequest({ 'tmode':3 }, node._id);
                           },
-                          condition:''+function(node) { return node.metrics['MODE'] && node.metrics['MODE'].value == 'AUTO'; }
+                          condition:''+function(node) { return node.metrics['MODE']!=null && node.metrics['MODE'].value == 'AUTO'; }
                         },
                         { label:'Auto', action:'', icon:'fa-balance-scale',
                           serverExecute:function(node){
@@ -505,7 +505,7 @@ exports.motes = {
                             if (modeNow=='AUTO') return;
                             exports.tstatRequest({ 'tmode':3 }, node._id);
                           },
-                          condition:''+function(node) { return node.metrics['MODE'] && node.metrics['MODE'].value != 'AUTO'; }
+                          condition:''+function(node) { return node.metrics['MODE']!=null && node.metrics['MODE'].value != 'AUTO'; }
                         }]
                },
       //switch thermostat OFF
@@ -516,7 +516,7 @@ exports.motes = {
                             if (modeNow=='OFF') return;
                             exports.tstatRequest({ 'tmode':0 }, node._id);
                           },
-                          condition:''+function(node) { return node.metrics['MODE'] && node.metrics['MODE'].value == 'OFF'; }
+                          condition:''+function(node) { return node.metrics['MODE']!=null && node.metrics['MODE'].value == 'OFF'; }
                         },
                         { label:'Off', action:'', icon:'fa-power-off',
                           serverExecute:function(node){
@@ -525,7 +525,7 @@ exports.motes = {
                             if (modeNow=='OFF') return;
                             exports.tstatRequest({ 'tmode':0 }, node._id);
                           },
-                          condition:''+function(node) { return node.metrics['MODE'] && node.metrics['MODE'].value != 'OFF'; }
+                          condition:''+function(node) { return node.metrics['MODE']!=null && node.metrics['MODE'].value != 'OFF'; }
                         }],
                 breakAfter:true,
               },
@@ -538,7 +538,7 @@ exports.motes = {
                             var thejson = (fanNow == 'AUTO' ? { 'fmode':2 } : { 'fmode':0 }); //toggle between ON and AUTO
                             exports.tstatRequest(thejson, node._id);
                           },
-                          condition:''+function(node) { return node.metrics['FSTATE'] && node.metrics['FSTATE'].value == 'AUTO'; }
+                          condition:''+function(node) { return node.metrics['FSTATE']!=null && node.metrics['FSTATE'].value == 'AUTO'; }
                         },
                         { label:'Turn fan AUTO', action:'', icon:'fa-lock', css:'background-color:#9BFFBE',
                           serverExecute:function(node){
@@ -548,7 +548,7 @@ exports.motes = {
                             var thejson = (fanNow == 'AUTO' ? { 'fmode':2 } : { 'fmode':0 }); //toggle between ON and AUTO
                             exports.tstatRequest(thejson, node._id);
                           },
-                          condition:''+function(node) { return node.metrics['FSTATE'] && node.metrics['FSTATE'].value == 'ON'; }
+                          condition:''+function(node) { return node.metrics['FSTATE']!=null && node.metrics['FSTATE'].value == 'ON'; }
                         }],
              },
       //toggle HOLD on/off
@@ -560,7 +560,7 @@ exports.motes = {
                             var thejson = (holdNow == 'OFF' ? { 'hold':1 } : { 'hold':0 });
                             exports.tstatRequest(thejson, node._id);
                           },
-                          condition:''+function(node) { return node.metrics['HOLD'] && node.metrics['HOLD'].value == 'OFF'; }
+                          condition:''+function(node) { return node.metrics['HOLD']!=null && node.metrics['HOLD'].value == 'OFF'; }
                         },
                         { label:'HOLD', action:'', icon:'fa-lock', css:'background-color:#9BFFBE',
                           serverExecute:function(node){
@@ -570,7 +570,7 @@ exports.motes = {
                             var thejson = (holdNow == 'OFF' ? { 'hold':1 } : { 'hold':0 });
                             exports.tstatRequest(thejson, node._id);
                           },
-                          condition:''+function(node) { return node.metrics['HOLD'] && node.metrics['HOLD'].value == 'ON'; }
+                          condition:''+function(node) { return node.metrics['HOLD']!=null && node.metrics['HOLD'].value == 'ON'; }
                         }],
              },
     },

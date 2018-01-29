@@ -1,5 +1,5 @@
 ﻿// **********************************************************************************
-// Websocket server backend for the Moteino IoT Framework
+// Websocket server backend for the Moteino IoT Gateway
 // Hardware and software stack details: http://lowpowerlab.com/gateway
 // This is a work in progress and is released without any warranties expressed or implied.
 // See license.txt for license and limitations of use of this software.
@@ -21,7 +21,7 @@
 //
 // This script is configured to compact the database every 24 hours since time of start.
 // ********************************************************************************************
-// Copyright Felix Rusu, Low Power Lab LLC (2015), http://lowpowerlab.com/contact
+// Copyright Felix Rusu, Low Power Lab LLC (2018), http://lowpowerlab.com/contact
 // ********************************************************************************************
 // IMPORTANT details about NeDB:
 // _id field is special - if not used it is automatically added and used as unique index

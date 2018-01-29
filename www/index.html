@@ -295,7 +295,7 @@
     </div>
 
     <div data-role="footer">
-      <h1><span style="font-size:11px">© <a href="http://lowpowerlab.com">LowPowerLab.com</a> 2017. All rights reserved. <a href="http://lowpowerlab.com/gateway">About</a></span></h1>
+      <h1><span style="font-size:11px">&#169; <a href="http://lowpowerlab.com">LowPowerLab.com</a> 2017. All rights reserved. <a href="http://lowpowerlab.com/gateway">About</a></span></h1>
     </div>
   </div>
 
@@ -1443,9 +1443,9 @@
         var sectionName = id.split('-')[1];
         var settingName = id.split('-')[2];
         
-        if (newVal == '' || newVal == motesDef[node.type].settings[settingName] || newVal == boundSettings[sectionName][settingName].value)
+        if (newVal == '' || (motesDef[node.type]!=null && motesDef[node.type].settings!=null && newVal == motesDef[node.type].settings[settingName]) || newVal == boundSettings[sectionName][settingName].value)
         {
-          if (nodes[selectedNodeId].settings && nodes[selectedNodeId].settings[settingName])
+          if (nodes[selectedNodeId].settings!=null && nodes[selectedNodeId].settings[settingName])
             nodes[selectedNodeId].settings[settingName] = undefined; //this makes it inherit from the master settings
         }
         else
