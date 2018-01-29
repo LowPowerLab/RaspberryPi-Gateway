@@ -450,7 +450,7 @@ exports.motes = {
                             var thejson = { 'tmode':2, 't_cool' : ++targetNow };
                             exports.tstatRequest(thejson, node._id);
                           },
-                          condition:''+function(node) { return node.metrics['MODE'].value == 'COOL'; }
+                          condition:''+function(node) { return node.metrics['MODE'] && node.metrics['MODE'].value == 'COOL'; }
                         },
                         { label:'Cool', action:'', icon:'fa-ge',
                           serverExecute:function(node){
@@ -461,7 +461,7 @@ exports.motes = {
                             var thejson = { 'tmode':2, 't_cool' : ++targetNow };
                             exports.tstatRequest(thejson, node._id);
                           },
-                          condition:''+function(node) { return node.metrics['MODE'].value != 'COOL'; }
+                          condition:''+function(node) { return node.metrics['MODE'] && node.metrics['MODE'].value != 'COOL'; }
                         }]
                },
       //switch to HEAT mode
@@ -474,7 +474,7 @@ exports.motes = {
                             var thejson = { 'tmode':1, 't_heat' : --targetNow };
                             exports.tstatRequest(thejson, node._id);
                           },
-                          condition:''+function(node) { return node.metrics['MODE'].value == 'HEAT'; }
+                          condition:''+function(node) { return node.metrics['MODE'] && node.metrics['MODE'].value == 'HEAT'; }
                         },
                         { label:'Heat', action:'', icon:'fa-fire',
                           serverExecute:function(node){
@@ -485,7 +485,7 @@ exports.motes = {
                             var thejson = { 'tmode':1, 't_heat' : --targetNow };
                             exports.tstatRequest(thejson, node._id);
                           },
-                          condition:''+function(node) { return node.metrics['MODE'].value != 'HEAT'; }
+                          condition:''+function(node) { return node.metrics['MODE'] && node.metrics['MODE'].value != 'HEAT'; }
                         }]
                },
       //switch to AUTO mode
@@ -496,7 +496,7 @@ exports.motes = {
                             if (modeNow=='AUTO') return;
                             exports.tstatRequest({ 'tmode':3 }, node._id);
                           },
-                          condition:''+function(node) { return node.metrics['MODE'].value == 'AUTO'; }
+                          condition:''+function(node) { return node.metrics['MODE'] && node.metrics['MODE'].value == 'AUTO'; }
                         },
                         { label:'Auto', action:'', icon:'fa-balance-scale',
                           serverExecute:function(node){
@@ -505,7 +505,7 @@ exports.motes = {
                             if (modeNow=='AUTO') return;
                             exports.tstatRequest({ 'tmode':3 }, node._id);
                           },
-                          condition:''+function(node) { return node.metrics['MODE'].value != 'AUTO'; }
+                          condition:''+function(node) { return node.metrics['MODE'] && node.metrics['MODE'].value != 'AUTO'; }
                         }]
                },
       //switch thermostat OFF
@@ -516,7 +516,7 @@ exports.motes = {
                             if (modeNow=='OFF') return;
                             exports.tstatRequest({ 'tmode':0 }, node._id);
                           },
-                          condition:''+function(node) { return node.metrics['MODE'].value == 'OFF'; }
+                          condition:''+function(node) { return node.metrics['MODE'] && node.metrics['MODE'].value == 'OFF'; }
                         },
                         { label:'Off', action:'', icon:'fa-power-off',
                           serverExecute:function(node){
@@ -525,7 +525,7 @@ exports.motes = {
                             if (modeNow=='OFF') return;
                             exports.tstatRequest({ 'tmode':0 }, node._id);
                           },
-                          condition:''+function(node) { return node.metrics['MODE'].value != 'OFF'; }
+                          condition:''+function(node) { return node.metrics['MODE'] && node.metrics['MODE'].value != 'OFF'; }
                         }],
                 breakAfter:true,
               },
@@ -538,7 +538,7 @@ exports.motes = {
                             var thejson = (fanNow == 'AUTO' ? { 'fmode':2 } : { 'fmode':0 }); //toggle between ON and AUTO
                             exports.tstatRequest(thejson, node._id);
                           },
-                          condition:''+function(node) { return node.metrics['FSTATE'].value == 'AUTO'; }
+                          condition:''+function(node) { return node.metrics['FSTATE'] && node.metrics['FSTATE'].value == 'AUTO'; }
                         },
                         { label:'Turn fan AUTO', action:'', icon:'fa-lock', css:'background-color:#9BFFBE',
                           serverExecute:function(node){
@@ -548,7 +548,7 @@ exports.motes = {
                             var thejson = (fanNow == 'AUTO' ? { 'fmode':2 } : { 'fmode':0 }); //toggle between ON and AUTO
                             exports.tstatRequest(thejson, node._id);
                           },
-                          condition:''+function(node) { return node.metrics['FSTATE'].value == 'ON'; }
+                          condition:''+function(node) { return node.metrics['FSTATE'] && node.metrics['FSTATE'].value == 'ON'; }
                         }],
              },
       //toggle HOLD on/off
@@ -560,7 +560,7 @@ exports.motes = {
                             var thejson = (holdNow == 'OFF' ? { 'hold':1 } : { 'hold':0 });
                             exports.tstatRequest(thejson, node._id);
                           },
-                          condition:''+function(node) { return node.metrics['HOLD'].value == 'OFF'; }
+                          condition:''+function(node) { return node.metrics['HOLD'] && node.metrics['HOLD'].value == 'OFF'; }
                         },
                         { label:'HOLD', action:'', icon:'fa-lock', css:'background-color:#9BFFBE',
                           serverExecute:function(node){
@@ -570,7 +570,7 @@ exports.motes = {
                             var thejson = (holdNow == 'OFF' ? { 'hold':1 } : { 'hold':0 });
                             exports.tstatRequest(thejson, node._id);
                           },
-                          condition:''+function(node) { return node.metrics['HOLD'].value == 'ON'; }
+                          condition:''+function(node) { return node.metrics['HOLD'] && node.metrics['HOLD'].value == 'ON'; }
                         }],
              },
     },
@@ -674,7 +674,7 @@ exports.tstatRequest = function(thejson, nodeId) {
 //                                            SUNRISE-SUNSET HELPER FUNCTIONALITY
 // ******************************************************************************************************************************************
 // find your lat/long at: http://www.latlong.net/
-// sunrise-sunset api at: http://api.sunrise-sunset.org/  --> more events available in this API (daylength, twilight, noon)
+// sunrise-sunset api at: http://api.sunrise-sunset.org/  --> more events available in this API (solarNoon, nadir, sunrise, sunset, sunriseEnd, sunsetStart, dawn, dusk, nauticalDawn, nauticalDusk, nightEnd, night, goldenHourEnd, goldenHour)
 // ******************************************************************************************************************************************
 exports.nextSunriseOrSunset = function(getSunrise) { //0=sunset, 1=sunrise
   var latitude = settings.location != undefined ? settings.location.latitude.value : 51.51;  //fallback to London if setting not defined
