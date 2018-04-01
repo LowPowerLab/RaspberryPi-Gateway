@@ -40,7 +40,7 @@ sudo apt-get -y install nginx
 #sudo sed -e '/stretch/ s/^#*/#/' -i /etc/apt/sources.list
 #sudo apt-get update
 
-# echo -e "${CYAN}************* STEP: Install PHP5 *************${NC}"
+# echo -e "${CYAN}************* STEP: Install PHP7 *************${NC}"
 sudo apt-get -y install php-common php-cli php-fpm
 
 #install NodeJS
