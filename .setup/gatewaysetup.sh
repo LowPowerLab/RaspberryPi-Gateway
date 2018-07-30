@@ -11,8 +11,8 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 APPSRVDIR='/home/pi/gateway/'
-NODEDIR='/opt/nodejs'
-NODEARCH=$(uname -m)
+#NODEDIR='/opt/nodejs'
+#NODEARCH=$(uname -m)
 
 echo -e "${GRN}#########################################################################${NC}"
 echo -e "${GRN}#                 Low Power Lab Gateway App Setup                       #${NC}"
@@ -44,45 +44,47 @@ sudo apt-get -y install nginx
 sudo apt-get -y install php-common php-cli php-fpm
 
 #install NodeJS
-echo -e "${CYAN}************* STEP: Install NodeJS *************${NC}"
-if [[ "$NODEARCH" == "armv6l" ]] ; then
-  mkdir ~/tempnode -p
-  cd ~/tempnode
-  wget https://nodejs.org/dist/v4.6.2/node-v4.6.2-linux-armv6l.tar.gz
-  tar -xzf node-v4.6.2-linux-armv6l.tar.gz
-  sudo rm node-v4.6.2-linux-armv6l.tar.gz
-  sudo rm -rf $NODEDIR
-  mkdir -p $NODEDIR
-  sudo mv node-v4.6.2-linux-armv6l/* $NODEDIR
-  sudo rm -rf ~/tempnode;
-  cd ~/
-  # sudo unlink /usr/bin/node;
-  # sudo unlink /usr/sbin/node;
-  # sudo unlink /sbin/node;
-  # sudo unlink /usr/local/bin/node;
-  # sudo unlink /usr/bin/npm;
-  # sudo unlink /usr/sbin/npm;
-  # sudo unlink /sbin/npm;
-  # sudo unlink /usr/local/bin/npm;
-  # sudo ln -s /opt/node/bin/node /usr/bin/node;
-  # sudo ln -s opt/node/bin/node /usr/sbin/node;
-  # sudo ln -s /opt/node/bin/node /sbin/node;
-  # sudo ln -s /opt/node/bin/node /usr/local/bin/node;
-  # sudo ln -s /opt/node/bin/npm /usr/bin/npm;
-  # sudo ln -s /opt/node/bin/npm /usr/sbin/npm;
-  # sudo ln -s /opt/node/bin/npm /sbin/npm;
-  # sudo ln -s /opt/node/bin/npm /usr/local/bin/npm;
-  echo 'Creating symbolic link to node in /usr/bin/'
-  sudo ln -sf $NODEDIR/bin/node /usr/bin/node
-  echo 'Creating symbolic link to nodejs in /usr/bin/'
-  sudo ln -sf $NODEDIR/bin/node /usr/bin/nodejs
-  echo 'Creating symbolic link to npm in /usr/bin/'
-  sudo ln -sf $NODEDIR/bin/npm /usr/bin/npm
-else
-  curl -sL https://deb.nodesource.com/setup_4.x | sudo -E bash -;
-  sudo apt-get -y install nodejs;
-fi
+# echo -e "${CYAN}************* STEP: Install NodeJS *************${NC}"
+# if [[ "$NODEARCH" == "armv6l" ]] ; then
+  # mkdir ~/tempnode -p
+  # cd ~/tempnode
+  # wget https://nodejs.org/dist/v4.6.2/node-v4.6.2-linux-armv6l.tar.gz
+  # tar -xzf node-v4.6.2-linux-armv6l.tar.gz
+  # sudo rm node-v4.6.2-linux-armv6l.tar.gz
+  # sudo rm -rf $NODEDIR
+  # mkdir -p $NODEDIR
+  # sudo mv node-v4.6.2-linux-armv6l/* $NODEDIR
+  # sudo rm -rf ~/tempnode;
+  # cd ~/
+  # # sudo unlink /usr/bin/node;
+  # # sudo unlink /usr/sbin/node;
+  # # sudo unlink /sbin/node;
+  # # sudo unlink /usr/local/bin/node;
+  # # sudo unlink /usr/bin/npm;
+  # # sudo unlink /usr/sbin/npm;
+  # # sudo unlink /sbin/npm;
+  # # sudo unlink /usr/local/bin/npm;
+  # # sudo ln -s /opt/node/bin/node /usr/bin/node;
+  # # sudo ln -s opt/node/bin/node /usr/sbin/node;
+  # # sudo ln -s /opt/node/bin/node /sbin/node;
+  # # sudo ln -s /opt/node/bin/node /usr/local/bin/node;
+  # # sudo ln -s /opt/node/bin/npm /usr/bin/npm;
+  # # sudo ln -s /opt/node/bin/npm /usr/sbin/npm;
+  # # sudo ln -s /opt/node/bin/npm /sbin/npm;
+  # # sudo ln -s /opt/node/bin/npm /usr/local/bin/npm;
+  # echo 'Creating symbolic link to node in /usr/bin/'
+  # sudo ln -sf $NODEDIR/bin/node /usr/bin/node
+  # echo 'Creating symbolic link to nodejs in /usr/bin/'
+  # sudo ln -sf $NODEDIR/bin/node /usr/bin/nodejs
+  # echo 'Creating symbolic link to npm in /usr/bin/'
+  # sudo ln -sf $NODEDIR/bin/npm /usr/bin/npm
+# else
+  # curl -sL https://deb.nodesource.com/setup_4.x | sudo -E bash -;
+  # sudo apt-get -y install nodejs;
+# fi
 
+#install latest NodeJS --- https://www.raspberrypi.org/forums/viewtopic.php?t=141770
+sudo wget -O - https://raw.githubusercontent.com/audstanley/NodeJs-Raspberry-Pi/master/Install-Node.sh | sudo bash
 
 echo -e "${CYAN}************* STEP: Setup Gateway app & dependencies *************${NC}"
 sudo mkdir -p $APPSRVDIR    #main dir where gateway app lives
@@ -93,7 +95,7 @@ git init
 git remote add origin https://github.com/LowPowerLab/RaspberryPi-Gateway.git
 git pull origin master
 sudo npm install --unsafe-perm --build-from-source
-sudo npm cache clean    #clear any caches/incomplete installs
+sudo npm cache verify    #clear any caches/incomplete installs
 sudo mkdir $APPSRVDIR/logs -p
 
 #create db and empty placeholders so chown pi will override root permissions

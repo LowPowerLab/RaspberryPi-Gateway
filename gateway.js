@@ -38,27 +38,31 @@ nconf.argv().file({ file: path.resolve(__dirname, 'settings.json5'), format: JSO
 settings = nconf.get('settings');
 var dbLog = require(path.resolve(__dirname,'logUtil.js'));
 io = require('socket.io').listen(settings.general.socketPort.value);
-var serialport = require("serialport");                         //https://github.com/voodootikigod/node-serialport
+var serialport = require("serialport");                         //https://github.com/node-serialport/node-serialport
 var Datastore = require('nedb');                                //https://github.com/louischatriot/nedb
 var nodemailer = require('nodemailer');                         //https://github.com/andris9/Nodemailer
 var request = require('request');
 db = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.name.value), autoload: true });       //used to keep all node/metric data
 var dbunmatched = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.nonMatchesName.value), autoload: true });
-serial = new serialport.SerialPort(settings.serial.port.value, { baudrate : settings.serial.baud.value, parser: serialport.parsers.readline("\n") }, false);
 
-serial.on('error', function serialErrorHandler(error) {
+//old: port = new serialport.SerialPort(settings.serial.port.value, { baudrate : settings.serial.baud.value, parser: serialport.parsers.readline("\n") }, false);
+var port = new serialport(settings.serial.port.value, {baudRate : settings.serial.baud.value});
+var Readline = serialport.parsers.Readline;
+var parser = new Readline();
+
+port.on('error', function serialErrorHandler(error) {
   //Send serial error messages to console. Better error handling needs to be here in the future.
   console.error(error.message);
 });
 
-serial.on('close', function serialCloseHandler(error) {
+port.on('close', function serialCloseHandler(error) {
   //Give user a sane error message and exit. Future possibilities could include sending message to front end via socket.io & setup timer to retry opening serial.
   console.error(error.message);
   process.exit(1);
 });
 
-serial.on("data", function(data) { processSerialData(data); });
-serial.open();
+parser.on("data", function(data) { processSerialData(data); });
+port.open();
 
 require("console-stamp")(console, settings.general.consoleLogDateFormat.value); //timestamp logs - https://github.com/starak/node-console-stamp
 
@@ -139,18 +143,18 @@ global.sendSMS = function(SUBJECT, BODY) {
 global.sendMessageToNode = function(node) {
   if (metricsDef.isNumeric(node.nodeId) && node.action)
   {
-    serial.write(node.nodeId + ':' + node.action + '\n', function () { serial.drain(); });
+    port.write(node.nodeId + ':' + node.action + '\n', function () { port.drain(); });
     console.log('NODEACTION: ' + JSON.stringify(node));
   }
   else if (node.action)
   {
-    serial.write(node.action + '\n', function () { serial.drain(); });
+    port.write(node.action + '\n', function () { port.drain(); });
     console.log('NODEACTION: ' + JSON.stringify(node));
   }
 }
 
 global.sendMessageToGateway = function(msg) {
-  serial.write(msg + '\n', function () { serial.drain(); });
+  port.write(msg + '\n', function () { port.drain(); });
 }
 
 global.handleNodeEvents = function(node) {
