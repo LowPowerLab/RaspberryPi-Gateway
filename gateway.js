@@ -49,6 +49,7 @@ var dbunmatched = new Datastore({ filename: path.join(__dirname, dbDir, settings
 var port = new serialport(settings.serial.port.value, {baudRate : settings.serial.baud.value});
 var Readline = serialport.parsers.Readline;
 var parser = new Readline();
+port.pipe(parser);
 
 port.on('error', function serialErrorHandler(error) {
   //Send serial error messages to console. Better error handling needs to be here in the future.
