@@ -35,7 +35,7 @@ exports.getData = function(filename, start, end, dpcount) {
   fd = fs.openSync(filename, 'r');
   
   //truncate start/end to log time limits if necessary - this ensures good data resolution when time limits are out of bounds
-  var buff = new Buffer(9);
+  var buff = Buffer.alloc(9);
   fs.readSync(fd, buff, 0, 9, 0);
   var firstLogTimestamp = buff.readUInt32BE(1);
   fs.readSync(fd, buff, 0, 9, filesize-9);
@@ -113,7 +113,7 @@ exports.postData = function post(filename, timestamp, value, duplicateInterval) 
   if (logsize % 9 > 0) throw 'File ' + filename +' is not multiple of 9bytes, post aborted';
 
   var fd;
-  var buff = new Buffer(9);
+  var buff = Buffer.alloc(9);
   var lastTime = 0, lastValue = 0, pos = 0;
   value=Math.round(value*10000); //round to make an exactly even integer
 
@@ -126,7 +126,7 @@ exports.postData = function post(filename, timestamp, value, duplicateInterval) 
   if (logsize>=9) {
     // read the last value appended to the file
     fd = fs.openSync(filename, 'r');
-    var buf8 = new Buffer(8);
+    var buf8 = Buffer.alloc(8);
     
     fs.readSync(fd, buf8, 0, 8, logsize-8);
     lastTime = buf8.readUInt32BE(0); //read timestamp (bytes 0-3 in buffer)
@@ -172,7 +172,7 @@ exports.postData = function post(filename, timestamp, value, duplicateInterval) 
 exports.binarySearch = function(fileDescriptor, timestamp, filesize) {
   start = 0;
   end = filesize-9;
-  var buff = new Buffer(4);
+  var buff = Buffer.alloc(4);
   var time = 0;
 
   fs.readSync(fileDescriptor, buff, 0, 4, end+1);
@@ -201,7 +201,7 @@ exports.binarySearch = function(fileDescriptor, timestamp, filesize) {
 exports.binarySearchExact = function(fileDescriptor, timestamp, filesize) {
   if (filesize==0) return -1;
   start = 0; end = filesize-9;
-  var buff = new Buffer(4);
+  var buff = Buffer.alloc(4);
   var tmp = 0;
   for (i=0; i<30; i++)
   {

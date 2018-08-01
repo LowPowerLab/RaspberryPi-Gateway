@@ -1,5 +1,5 @@
 ﻿// **********************************************************************************
-// Websocket backend for the Moteino IoT Framework
+// Websocket backend for the Moteino IoT Gateway
 // http://lowpowerlab.com/gateway
 // **********************************************************************************
 // This is the metrics definitions file containing the definitions of token matches
@@ -10,7 +10,7 @@
 // This is a work in progress and updates and fixes will be added as they come up
 // and time permits. Contributions are encouraged.
 // ********************************************************************************************
-// Copyright Felix Rusu, Low Power Lab LLC (2015), http://lowpowerlab.com/contact
+// Copyright Felix Rusu, Low Power Lab LLC (2018), http://lowpowerlab.com/contact
 // ********************************************************************************************
 // Great reference on Javascript Arrays: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array
 // Great reference on Javascript Objects: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_Objects
@@ -18,10 +18,24 @@
 // Great sandbox to test your Regular Expressions: http://regexr.com/
 // JqueryMobile generic icons: http://api.jquerymobile.com/icons/
 // FLOT graphs customizations: http://www.jqueryflottutorial.com/jquery-flot-customizing-data-series-format.html
+var request = require('request');
+var config = require('nconf');
+var JSON5 = require('json5');
+var suncalc = require('suncalc'); //https://github.com/mourner/suncalc
+config.argv().file({ file: require('path').resolve(__dirname, 'settings.json5'), format: JSON5 });
+var settings = config.get('settings'); //these are local to avoid runtime errors but in events they will reference the global settings declared in gateway.js
+
 // ******************************************************************************************************************************************
-//                                            SAMPLE EVENTS/ALERTS
+//                                            SAMPLE METRICS DEFINITIONS
 // ******************************************************************************************************************************************
-// These metrics definitions consist of a regular expression that will be attempted to be matched to any incoming tokens from the gateway Moteino serial port
+// The metrics definitions use [regular expressions] to match an incoming metric token
+// The metrics tokens have a pattern that must be followed:
+// - a packet received from a node can contain multiple metrics (ie temperature, humidity, motion etc.)
+// - metrics are separated by space (not by comma, or other characters, ex:  "T:42 H:50")
+// - each metric that has a name/value pair is defined as NAME:VALUE (metric name, colon, metric value)
+// - each metric that simply defines a status can be standalone without a value (ex: "MOTION")
+// ******************************************************************************************************************************************
+// These metrics definitions consist of a regular expression that will be attempted to be matched to any incoming tokens from the gateway (ie. Moteino, MightyHat, etc.) serial port
 // If one matches you should see a new node/metric show up in the UI or be updated if previously matched
 // Other parameters:
 //     - value - this can be hardcoded, or if left blank the value will be the first captured parentheses from the regex expression
@@ -34,18 +48,13 @@
 //                    - it should only be specified one per each metric - the first one (ie one for each set of metrics that have multiple entries with same 'name') - ex: GarageMote 'Status' metric
 //                    - this object is overlapped over the default 'graphOptions' defined in index.html
 //                    - for more details how to customize FLOT graphs see this: http://www.jqueryflottutorial.com/jquery-flot-customizing-data-series-format.html
+// ******************************************************************************************************************************************
 // Important Notes:
-//     - the same node can have any number of metrics
+//     - the same node can have any number of metrics (only limited by the packet max length - ex. 61 chars in the RFM69 library)
 //     - each related metric should have the same name - for instance look at GarageMote - all the regex expressions actually update the same metric specified by name='Status'
 //       so when garage goes through different states it will update a single metric called 'Status'
 //       Another good example is SwitchMote where we have 6 different metric definitions here but only 3 resultant actual metrics (Button1, Button2 and Button3)
-var request = require('request');
-var config = require('nconf');
-var JSON5 = require('json5');
-var suncalc = require('suncalc'); //https://github.com/mourner/suncalc
-config.argv().file({ file: require('path').resolve(__dirname, 'settings.json5'), format: JSON5 });
-var settings = config.get('settings'); //these are local to avoid runtime errors but in events they will reference the global settings declared in gateway.js
-
+// ******************************************************************************************************************************************
 exports.metrics = {
   //GarageMote
   //NOTE the \b word boundary is used to avoid matching "OPENING" (ie OPEN must be followed by word boundary/end of word)
@@ -123,6 +132,7 @@ exports.metrics = {
 //   serverExecute is an action meant to be executed only at the server side (ex sending an email when a condition is met), must be defined as a function
 //   Server side execution for events is recommended since you can have multiple clients and you don't want to trigger SMS messages from each one, instead only one SMS message should be sent when an event happens
 //   default out-of-box jquery mobile icons are listed here: https://api.jquerymobile.com/icons/
+// ******************************************************************************************************************************************
 exports.events = {
   motionAlert : { label:'Motion : Alert', icon:'audio', descr:'Alert sound when MOTION is detected', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { io.sockets.emit('PLAYSOUND', 'sounds/alert.wav'); }; } },
   mailboxAlert : { label:'Mailbox Open Alert!', icon:'audio', descr:'Message sound when mailbox is opened', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { io.sockets.emit('PLAYSOUND', 'sounds/incomingmessage.wav'); }; } },
@@ -301,6 +311,7 @@ exports.events = {
 //           The 'action' property is a string message that will be sent to that node when the control is clicked
 //           The 'serverExecute' property is a server side function that if defined, will be called when the control is clicked (ie it can do anything like triggering an HTTP request like in the case of an IP thermostat)
 //           The 'breakAfter' property, if set to 'true', will insert a page break after the control it's specified for. This is useful for nodes that have many of controls, to break them apart on the page
+// ******************************************************************************************************************************************
 exports.motes = {
   DoorBellMote: {
     label  : 'DoorBell',
@@ -633,9 +644,9 @@ exports.millisToFutureDate = function(futureDate, failSafe) {
 }
 
 // ******************************************************************************************************************************************
-//                                            RADIO THERMOSTAT SPECIFIC HELPER FUNCTIONS
+//                                            RADIO THERMOSTAT SPECIFIC HELPER FUNCTIONS 
 // ******************************************************************************************************************************************
-// *** these are implemented for Radio Thermostat CT50
+// *** these are implemented for Radio Thermostat model CT50
 // ******************************************************************************************************************************************
 //this function sends an HTTP GET request to the thermostat to refresh metrics like current temperature, target temp, mode (heat/cool), hold etc.
 exports.tstatPoll = function(nodeId) {

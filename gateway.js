@@ -63,7 +63,6 @@ port.on('close', function serialCloseHandler(error) {
 });
 
 parser.on("data", function(data) { processSerialData(data); });
-port.open();
 
 require("console-stamp")(console, settings.general.consoleLogDateFormat.value); //timestamp logs - https://github.com/starak/node-console-stamp
 
