@@ -48,7 +48,7 @@
 -->
 <html lang="en">
 <head>
-  <title>Moteino Gateway Dashboard</title>
+  <title>IoT Gateway Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" href="images/favicon.ico" type="image/x-icon">
   <script src="/socket.io/socket.io.js"></script>
@@ -68,6 +68,7 @@
   <link rel="stylesheet" href="https://rawgithub.com/arschmitz/jquery-mobile-datepicker-wrapper/master/jquery.mobile.datepicker.css" />
   <script src="https://rawgithub.com/jquery/jquery-ui/1.10.4/ui/jquery.ui.datepicker.js"></script>
   <script src="https://rawgithub.com/arschmitz/jquery-mobile-datepicker-wrapper/v0.1.1/jquery.mobile.datepicker.js"></script>
+  <script language="javascript" type="text/javascript" src="js/FileSaver.min.js"></script>
   <style type="text/css">
   .ui-content { padding-top:0; }
   .btn-text, #loadingsocket { font-size: 32px; }
@@ -267,7 +268,7 @@
         
     <div data-role="header">
       <a href="http://lowpowerlab.com/gateway" target="new" data-role="none"><img src="images/logo.png" alt="LowPowerLab" title="LowPowerLab.com" style="float:left;display:inline;max-width:30px;padding:4px"/></a>
-      <h1>Moteino Gateway Dashboard</h1>
+      <h1>IoT Gateway Dashboard</h1>
       <div class="ui-btn-right" data-role="controlgroup" data-type="horizontal" data-mini="true">
         <a class="sideMenuButton" href="#nav-panel" data-icon="bars" data-role="button" data-rel="popup" data-transition="slide" data-position-to="window">Menu</a>
       </div>
@@ -789,26 +790,20 @@
     socket.on('EXPORTDATAREADY', function(rawData) {
       //package and stream the data to the browser
       graphData = [];
-      var csv = 'data:text/csv;charset=utf-8,unix_timestamp(ms),excel_timestamp,'+rawData.options.legendLbl+'\n';
+      var csv = 'unix_timestamp(ms),excel_timestamp,'+rawData.options.legendLbl+'\n';
 
       rawData.graphData.data.forEach(function(logItem, index){
          dataString = logItem.t + ',' + (logItem.t/(1000*60*60*24)+25569) + ',' + logItem.v;
          csv += index < rawData.graphData.data.length ? dataString+ '\n' : dataString;
       });
-     
-      var encodedUri = encodeURI(csv);
-      var link = document.createElement('a');
-      link.setAttribute('id', 'exportLink');
-      link.setAttribute('href', encodedUri);
-      link.setAttribute('download', selectedNodeId+'_'+rawData.options.legendLbl+'.csv');
-      document.body.appendChild(link); // Required for FF
-      link.click(); //make it stream to the browser
-      $('#exportLink').remove();
+
+      var blob = new Blob([csv], {type: "text/csv;charset=utf-8"});
+      saveAs(blob, selectedNodeId+'_'+rawData.options.legendLbl+'.csv');
     });
 
     socket.on('EXPORTNODELOGSCSVREADY', function(rawData) {
       var sets = rawData;
-      var csv = 'data:text/csv;charset=utf-8,unix_timestamp(ms),excel_timestamp'; //header start
+      var csv = 'unix_timestamp(ms),excel_timestamp'; //header start
 
       var mergedData = {};
       var setCount=0;
@@ -835,14 +830,8 @@
         csv+='\n';
       });
 
-      var encodedUri = encodeURI(csv);
-      var link = document.createElement('a');
-      link.setAttribute('id', 'exportLink');
-      link.setAttribute('href', encodedUri);
-      link.setAttribute('download', selectedNodeId+'_'+nodes[selectedNodeId].descr+'.csv');
-      document.body.appendChild(link); // Required for FF
-      link.click(); //make it stream to the browser
-      $('#exportLink').remove();
+      var blob = new Blob([csv], {type: "text/csv;charset=utf-8"});
+      saveAs(blob, selectedNodeId+'_'+nodes[selectedNodeId].descr+'.csv');
     });
 
     socket.on('GRAPHDATAREADY', function(rawData){
