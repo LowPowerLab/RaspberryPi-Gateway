@@ -233,6 +233,8 @@
   .eventEnableDisable { padding-top:0;padding-bottom:0;padding-left:0 }
   
   input[readonly] { background-color:#ececec; }
+  
+  #graphStat { position: relative; top: -10px; right: -30px; font-size: 10px; }
   </style>
 </head>
 <body>
@@ -1557,15 +1559,7 @@
 		}).appendTo("body");
 
     //graph query statistics
-    var graphStat = $("<span id='graphStat'></span>").css({
-			position: "relative",
-      top:"5px",
-      right:"-45px",
-      fontSize: "10px",
-      color:'#00ff11',
-      'font-weight':'bold',
-      'text-shadow':'0 1px 0 black',
-		});
+    var graphStat = $("<span id='graphStat'></span>");
 
     $( "#nav-panel" ).on({
       popupbeforeposition: function() {
