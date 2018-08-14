@@ -45,11 +45,11 @@ server{
     fastcgi_split_path_info ^(.+\.php)(.*)$;
  
     # typically the fpm.sock is used, but check to make sure by using:
-    # sudo grep -ri "listen = " /etc/php5/fpm/
+    # sudo grep -ri "listen = " /etc/php7/fpm/
     # should get something like: 
-    #  /etc/php5/fpm/pool.d/www.conf:listen = /var/run/php5-fpm.sock
+    #  /etc/php7/fpm/pool.d/www.conf:listen = /var/run/php7-fpm.sock
     # then you know it's fpm.sock
-    fastcgi_pass unix:/var/run/php5-fpm.sock; #uncomment if PHP runs on fpm.sock
+    fastcgi_pass unix:/run/php/php7.0-fpm.sock; #uncomment if PHP runs on fpm.sock
     #fastcgi_pass 127.0.0.1:9000; #uncomment if PHP is running on port 9000
  
     fastcgi_index index.php;
