@@ -11,3 +11,7 @@ The purpose of this folder is to have a place to put custom user definitions for
 - follow the same definition/syntax pattern as in main metrics.js definition file
 - each metric could be broken into its own separate file or everything could be in a single file just like in metrics.js, it all gets merged into the main `metricsDef` object
 - a basic example is provided as a starting point in _example.js
+
+###Images
+- Custom image (PNG) files must be copied to the ../www/images folder
+
