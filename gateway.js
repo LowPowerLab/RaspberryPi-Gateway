@@ -647,17 +647,19 @@ function schedule(node, eventKey) {
 //run a scheduled event and reschedule it
 function runAndReschedule(functionToExecute, node, eventKey) {
   console.log('**** RUNNING SCHEDULED EVENT - nodeId:' + node._id + ' event:' + eventKey + '...');
-  try
-  {
-    functionToExecute(node, eventKey);
-  }
-  catch (ex)
-  {
-    var msg = 'Event ' + eventKey + ' execution failed: ' + ex.message;
-    console.error(msg);
-    io.sockets.emit('LOG', msg);
-  }
-  schedule(node, eventKey);
+  db.findOne({_id:node._id}, function (err, dbNode) {
+    try
+    {    
+      functionToExecute(dbNode, eventKey);
+    }
+    catch (ex)
+    {
+      var msg = 'Event ' + eventKey + ' execution failed: ' + ex.message;
+      console.error(msg);
+      io.sockets.emit('LOG', msg);
+    }
+    schedule(dbNode, eventKey);    
+  });
 }
 
 //this runs once at startup: register scheduled events that are enabled
