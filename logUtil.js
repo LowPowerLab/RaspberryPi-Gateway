@@ -23,7 +23,6 @@ exports.getLogName = function(nodeId, metricId) {
 
 exports.getData = function(filename, start, end, dpcount) {
   dpcount = dpcount || 1500;
-  //if (dpcount>1500) dpcount = 1500;
   if (dpcount<1) dpcount = 1;
   if (dpcount<1 || start > end) return {};
 
@@ -65,6 +64,7 @@ exports.getData = function(filename, start, end, dpcount) {
     {
       fs.readSync(fd, buff, 0, 9, i);
       timetmp = buff.readUInt32BE(1);
+      if (!(timetmp >= start && timetmp <= end)) continue;
       value = buff.readInt32BE(5);
       data.push({t:timetmp*1000, v:value/10000});
     }
@@ -84,6 +84,7 @@ exports.getData = function(filename, start, end, dpcount) {
     last_time = timetmp;
     fs.readSync(fd, buff, 0, 9, pos);
     timetmp = buff.readUInt32BE(1);
+    if (!(timetmp >= start && timetmp <= end)) continue;
     value = buff.readInt32BE(5);
 
     if ((timetmp!=last_time && timetmp>last_time) || last_time==0) {
