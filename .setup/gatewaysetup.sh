@@ -84,7 +84,7 @@ sudo apt-get -y install php-common php-cli php-fpm
 # fi
 
 #install latest NodeJS --- https://www.raspberrypi.org/forums/viewtopic.php?t=141770
-sudo wget -O - https://raw.githubusercontent.com/timmalich/NodeJs-Raspberry-Pi/master/Install-Node.sh | sudo bash
+sudo wget -O - https://raw.githubusercontent.com/LowPowerLab/RaspberryPi-Gateway/master/.setup/Install-Node.sh | sudo bash
 
 echo -e "${CYAN}************* STEP: Setup Gateway app & dependencies *************${NC}"
 sudo mkdir -p $APPSRVDIR    #main dir where gateway app lives
