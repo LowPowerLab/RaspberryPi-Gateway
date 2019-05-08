@@ -2,9 +2,9 @@
 //Requires the "speedtest-net" npm package (included in latest package.json)
 
 exports.metrics = {
-  PINGISP : { name:'PINGISP', regexp:/PINGISP\:([\d\.]+)/i, value:'', unit:'ms', pin:1, graph:1, graphOptions: { legendLbl:'Ping ms', lines: { lineWidth:1 }, colors:['#09c']} },
-  DOWNSPEED : { name:'DOWNSPEED', regexp:/DOWNSPEED\:([\d\.]+)/i, value:'', unit:'ꜜ', pin:1, graph:1, graphOptions : { legendLbl:'Mb/s', lines: { lineWidth:1 }, colors:['#09c']} },
-  UPSPEED : { name:'UPSPEED', regexp:/UPSPEED\:([\d\.]+)/i, value:'', unit:'ꜛ', pin:1, graph:1, graphOptions: { legendLbl:'Mb/s', lines: { lineWidth:1 }, colors:['#09c']} },
+  PINGISP : { name:'PINGISP', regexp:/PINGISP\:([\d\.]+)/i, value:'', unit:'ms', pin:1, graph:1, graphOptions: { legendLbl:'Ping ms', lines: { lineWidth:1 }, yaxis: { min:1, max:200 }} },
+  DOWNSPEED : { name:'DOWNSPEED', regexp:/DOWNSPEED\:([\d\.]+)/i, value:'', unit:'ꜜ', graphValSuffix:'Mbps', pin:1, graph:1, graphOptions : { legendLbl:'Mb/s', lines: { lineWidth:1 }, colors:['#09c']} },
+  UPSPEED : { name:'UPSPEED', regexp:/UPSPEED\:([\d\.]+)/i, value:'', unit:'ꜛ', graphValSuffix:'Mbps', pin:1, graph:1, graphOptions: { legendLbl:'Mb/s', lines: { lineWidth:1 }, colors:['#0f0']} },
 }
 
 //example of overriding a mote
@@ -26,7 +26,7 @@ exports.events = {
         if (nodeRightNow)
         {
           var speedTest = require('speedtest-net');
-          var test = speedTest({maxTime: 10000}); //10 second test
+          var test = speedTest({maxTime: 5000}); //5 second test
 
           test.on('data', data => {
             var downspeed=data.speeds.download.toFixed(1); //1 decimal is enough
