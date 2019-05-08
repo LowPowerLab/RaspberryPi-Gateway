@@ -1,0 +1,20 @@
+language node_js
+cache
+  directories
+    - node_modules
+node_js
+  - '11.1'
+env
+  - CXX=g++-4.8
+addons
+  apt
+    sources
+      - ubuntu-toolchain-r-test
+    packages
+      - g++-4.8
+before_install
+  - npm -g install npm@latest
+install
+  - npm install --unsafe-perm --build-from-source
+script
+  - npm test
