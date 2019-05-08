@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <!--
 // ********************************************************************************************
-// Websocket front end and web UI for the Moteino IoT Framework
+// Websocket front end and web GUI for the PiGateway IoT Framework
 // This page loads from the gateway and will serve the IoT node data and updates as
 // they are provided by the gateway, and provide a way to interact with the nodes
 // according to the available controls and events defined via the metrics definitions
 // contained in the server side files (metrics.js)
 // ********************************************************************************************
-// Copyright Felix Rusu, Low Power Lab LLC (2017), http://lowpowerlab.com/contact
+// Copyright Felix Rusu, Low Power Lab LLC (2015-2019), http://lowpowerlab.com/contact
 // http://lowpowerlab.com/gateway
 // ********************************************************************************************
 //                                    LICENSE
@@ -50,29 +50,35 @@
 <head>
   <title>IoT Gateway Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="#414141">
+  <link rel="manifest" href="js/manifest.json" crossOrigin="use-credentials">
   <link rel="icon" href="images/favicon.ico" type="image/x-icon">
   <script src="/socket.io/socket.io.js"></script>
-  <link type="text/css" rel="stylesheet" href="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css" />
-  <link type="text/css" rel="stylesheet" href="css/jqm-font-awesome-usvg-upng.min.css" />
-  <script src="https://code.jquery.com/jquery-1.12.1.min.js"></script>
-  <script src="https://code.jquery.com/ui/1.11.4/jquery-ui.min.js"></script>
-  <script src="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
-  <script language="javascript" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.min.js"></script>
-  <script language="javascript" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.time.min.js"></script>
-  <script language="javascript" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.selection.min.js"></script>
-  <script language="javascript" type="text/javascript" src="https://rawgit.com/MichaelZinsmaier/CurvedLines/master/curvedLines.js"></script>
-  <script language="javascript" type="text/javascript" src="js/graphHelper.js"></script>
-  <script language="javascript" type="text/javascript" src="js/dateFormat.js"></script> <!-- for demo see http://jsfiddle.net/phZr7/1/ -->
-  <script language="javascript" type="text/javascript" src="js/bind.1.0.1.min.js"></script>
+  <link type="text/css" rel="stylesheet" href="css/jquery.mobile-1.4.5.min.css" />
+  <link type="text/css" rel="stylesheet" href="css/jqm-font-awesome-usvg-upng.min.css" /><!--FA icons gallery: http://cssnite.jp/x10ai/followup/Font-Awesome-Cheetsheet-4.4.0-v3.pdf -->
+  <script src="js/jquery-1.12.1.min.js"></script>
+  <script src="js/jquery-ui.min.js"></script>
+  <script src="js/jquery.mobile-1.4.5.min.js"></script>
+  <script src="js/jquery.flot-0.8.3.min.js"></script>
+  <script src="js/jquery.flot.time-0.8.3.min.js"></script>
+  <script src="js/jquery.flot.selection-0.8.3.min.js"></script>
+  <script src="js/jquery.flot.navigate.js"></script>
+  <script src="js/flot-curvedLines.js"></script>
+  <script src="js/jquery.flot.axislabels.js"></script>
+  <script src="js/graphHelper.js"></script>
+  <script src="js/dateFormat.js"></script> <!-- for demo see http://jsfiddle.net/phZr7/1/ -->
+  <script src="js/bind.1.0.1.min.js"></script>
   <!-- support for datepicker: -->
-  <link rel="stylesheet" href="https://rawgithub.com/arschmitz/jquery-mobile-datepicker-wrapper/master/jquery.mobile.datepicker.css" />
-  <script src="https://rawgithub.com/jquery/jquery-ui/1.10.4/ui/jquery.ui.datepicker.js"></script>
-  <script src="https://rawgithub.com/arschmitz/jquery-mobile-datepicker-wrapper/v0.1.1/jquery.mobile.datepicker.js"></script>
+  <link rel="stylesheet" href="css/jquery.mobile.datepicker.css" />
+  <script src="js/jquery.ui.datepicker.js"></script>
+  <script src="js/jquery.mobile.datepicker.js"></script>
   <script language="javascript" type="text/javascript" src="js/FileSaver.min.js"></script>
   <style type="text/css">
   .ui-content { padding-top:0; }
   .btn-text, #loadingsocket { font-size: 32px; }
-  #loadingsocket, #loadinggraph {padding:15px;}
+  #loadingsocket, #loadingmetricgraph, #loadingnodemultigraph {padding:15px;}
   .labelbold { font-weight:bold !important; overflow:hidden; text-overflow:ellipsis;white-space:nowrap; }
   .wrap { padding: 12px; }
   .ui-listview>li.hiddenNode { display:none; }
@@ -234,7 +240,31 @@
   
   input[readonly] { background-color:#ececec; }
   
-  #graphStat { position: relative; top: -10px; right: -30px; font-size: 10px; }
+  #graphStat { position: relative; top: -10px; right: -50px; font-size: 10px; }
+  
+  .dot {
+    height: 12px;
+    width: 12px;
+    margin:3px;
+    background-color: #fff;
+    border-radius: 50%;
+    border:1px solid #ccc;
+    display: inline-block;
+  }
+  
+  .dots {
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    opacity: 0.7;
+    padding:30px 0px;
+  }
+
+  .dots:hover {
+    opacity: 1;
+  }
+
   </style>
 </head>
 <body>
@@ -256,12 +286,18 @@
         <li data-icon="fa-flash">
           <a href="#eventspage">All Events</a>
         </li>
+        <li data-icon="fa-database">
+          <a id="compactDB" title="Compact node database">Compact DB</a>
+        </li>
         <li data-icon="power">
           <a href="#processExit" title="Restart gateway app">Restart app</a>
         </li>
       </ul>
       <div style="font-weight:bold;padding:5px;">
         <span>Uptime: </span><span id="server-uptime" class="nodeAgo"></span>
+      </div>
+      <div style="padding:5px;">
+        <span>DBCompacted: </span><span id="db-compacted" class="nodeAgo"></span>
       </div>
       <div style="padding-left:5px;">
         <span>Version: </span><span id="server-version"></span>
@@ -270,7 +306,7 @@
         
     <div data-role="header">
       <a href="http://lowpowerlab.com/gateway" target="new" data-role="none"><img src="images/logo.png" alt="LowPowerLab" title="LowPowerLab.com" style="float:left;display:inline;max-width:30px;padding:4px"/></a>
-      <h1>IoT Gateway Dashboard</h1>
+      <h1 id="dashboardTitle">IoT Gateway</h1>
       <div class="ui-btn-right" data-role="controlgroup" data-type="horizontal" data-mini="true">
         <a class="sideMenuButton" href="#nav-panel" data-icon="bars" data-role="button" data-rel="popup" data-transition="slide" data-position-to="window">Menu</a>
       </div>
@@ -295,10 +331,13 @@
         <input id="filter" data-type="search" placeholder="Search nodes..">
       </form>
       <ul id="nodeList" data-role="listview" data-inset="true" data-filter="true" data-input="#filter" data-theme="a" data-dividertheme="b"></ul>
+      <div id="addEmptyNodeWrapper" data-role="controlgroup" data-type="horizontal" class="center-wrapper">
+        <a id="addEmptyNode" href="#addEmptyNodePage" data-role="button" data-icon="plus" style="background-color:#9BFFBE" title="Create a new empty node">New Node</a>
+      </div>
     </div>
 
     <div data-role="footer">
-      <h1><span style="font-size:11px">&#169; <a href="http://lowpowerlab.com">LowPowerLab.com</a> 2017. All rights reserved. <a href="http://lowpowerlab.com/gateway">About</a></span></h1>
+      <h1><span style="font-size:11px">&#169; <a href="http://lowpowerlab.com">LowPowerLab.com</a> 2018. All rights reserved. <a href="http://lowpowerlab.com/gateway">About</a></span></h1>
     </div>
   </div>
 
@@ -306,16 +345,20 @@
     <div data-role="header">
       <h3><span id="nodeDetailTitle">Node details</span> <span class="nodeUpdated">x</span></h3>
       <a id="node_update" href="#homepage" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-home ui-btn-icon-left ui-mini ui-btn-notext">Home</a>
-
       <div class="ui-btn-right" data-role="controlgroup" data-type="horizontal">
         <a id="btnHideNodeToggle" href="#" data-role="button" data-icon="eye" data-iconpos="notext" title="Show/Hide on dashboard">Hide on dashboard</a>
-        <a href="#deleteNode" data-role="button" data-icon="delete" data-iconpos="notext" data-transition="fade" title="Delete this node">Delete</a>
+        <a href="#deleteNode" data-role="button" data-icon="fa-trash" data-iconpos="notext" data-transition="fade" title="Delete this node">Delete</a>
       </div>
     </div>
     <div data-role="main" class="ui-content">
       <div class="content-panel">
-        <div class="nodeDetailImageWrapper">
-          <img id="nodeDetailImage" class="productimg">
+        <div class="nodeDetailImageWrapper" style="z-index:10;">
+          <a id="changeNodeIcon" href="#changeNodeIconPage" data-theme="none" data-role="none" title="Change the Node's Icon">
+            <div style="position:relative;text-align:center;">
+            <img id="nodeDetailImage" style="max-width:120px">
+            <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+            </div>
+          </a>
         </div>
         <div id="nodeDetailInputList" class="ui-field-contain">
           <label for="nodeMoteType" class="labelbold">Type:</label>
@@ -326,8 +369,39 @@
           <input type="text" name="nodeDescr" id="nodeDescr" placeholder="description/location..." />
           <label for="nodeID" class="labelbold">Node ID:</label>
           <input type="text" name="nodeID" id="nodeID" readonly="readonly"/>
+          <label for="nodeIP" class="labelbold">IP:</label>
+          <input type="text" name="nodeIP" id="nodeIP" readonly="readonly"/>
         </div>
       </div>
+      <div id="nodeMultigraphSection">
+        <div id="nodeMultiGraphWrapper" style="width:100%; height:280px;">
+          <div id="nodeMultiGraph"></div>
+          <div id="node_graphControls" data-role="controlgroup" data-type="horizontal" style="text-align:center;margin:auto">
+            <a class="node_graphControl" href="#" data-role="button" hours="720" data-theme="b" title="last month">M</a>
+            <a class="node_graphControl" href="#" data-role="button" hours="168" data-theme="b" title="last week">W</a>
+            <a class="node_graphControl" href="#" data-role="button" hours="24" data-theme="b" title="last day">D</a>
+            <a class="node_graphControl" href="#" data-role="button" hours="1" data-theme="b" title="last hour">H</a>
+            <a id="node_graphZoomIn" href="#" data-role="button" data-icon="fa-search-plus" data-iconpos="notext" data-theme="b" title="zoom in">ZoomIn</a>
+            <a id="node_graphZoomOut" href="#" data-role="button" data-icon="fa-search-minus" data-iconpos="notext" data-theme="b" title="zoom out">ZoomOut</a>
+            <a id="node_graphPanLeft" href="#" data-role="button" data-icon="fa-backward" data-iconpos="notext" data-theme="b" title="scroll left">Left</a>
+            <a id="node_graphPanRight" href="#" data-role="button" data-icon="fa-forward" data-iconpos="notext" data-theme="b" title="scroll right">Right</a>
+            <a id="node_graphExport" href="#" data-role="button" data-icon="fa-download" data-iconpos="notext" data-theme="b" title="export raw data">Export</a>
+            <a id="node_graphTogglePoints" href="#" data-role="button" data-icon="fa-ellipsis-h" data-iconpos="notext" data-theme="a" title="Show Data Points">ShowPoints</a>
+            <a id="deleteNodeGraph" href="#" data-role="button" data-icon="fa-trash" data-iconpos="notext" data-theme="a" title="delete node multigraph">REMOVE</a>
+          </div>
+        </div>
+        <div ui-role="loadingnodemultigraph" class="ui-content center-div center-wrapper" style="display:table;height:265px;">
+          <div style="display:table-cell;vertical-align:middle;">
+            <span id="loadingnodemultigraph" style="font-weight:bold">Loading graph...</span>
+            <br/>
+            <img src="images/loading.gif" />
+          </div>
+        </div>
+        <div id="addNodeGraphWrapper" data-role="controlgroup" data-type="horizontal" class="center-wrapper">
+          <a id="addNodeGraph" href="#addNodeGraphPage" data-role="button" data-icon="plus" style="background-color:#9BFFBE" title="Create new graph from logged metrics">MultiGraph</a>
+        </div>
+      </div>
+      
       <ul id="metricList" data-role="listview" data-inset="true" data-theme="a" data-dividertheme="b"></ul>
 
       <div class="center-wrapper">
@@ -340,11 +414,11 @@
         <div id="nodeEvents" class="center-div">
           <div id="nodeControls" data-role="controlgroup" data-type="horizontal">
             <a id="addNodeEvent" href="#addEvent" data-role="button" data-icon="plus" style="background-color:#9BFFBE" title="Add new event">Event</a>
-            <a href="#exportCSVDateRange" data-role="button" data-icon="fa-download" style="background-color:#daca25" title="Add new event">Export all data (CSV)</a>
+            <a href="#exportCSVDateRange" data-role="button" data-icon="fa-download" style="background-color:#daca25" title="Export all available metrics (combined, CSV format)">Export all data (CSV)</a>
           </div>
         </div>
       </div>
-      
+
       <ul id="nodeSettingsList" data-role="listview" data-inset="true" data-theme="a" data-dividertheme="b"></ul>
     </div>
   </div>
@@ -362,15 +436,63 @@
       </div>
     </div>
   </div>
+  
+  <div data-role="page" id="addNodeGraphPage" data-dialog="true">
+    <div data-role="main" class="ui-content">
+      <div class="center-wrapper" style="padding:20px">
+        <h3>Pick from available graphed metrics:</h3>
+      </div>
+      <select id="addNodeGraphMetrics" multiple="multiple" data-native-menu="false"></select>
+      <div class="center-wrapper">
+        <a id="addNodeGraph_OK" href="#nodedetails" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-check ui-btn-icon-left ui-mini" data-rel="nodedetails" style="background-color:#9BFFBE;color:#000">Add</a>
+        <a href="#" class="ui-btn ui-btn-inline ui-shadow ui-corner-all ui-mini ui-icon-back ui-btn-icon-left" data-rel="back">Cancel</a>
+      </div>
+    </div>
+  </div>
+  
+  <div data-role="page" id="changeNodeIconPage" data-dialog="true">
+    <div data-role="main" class="ui-content">
+      <div class="center-wrapper" style="padding:20px">
+        <img id="changeNodeIconCurrent" src="" style="max-width:5em;max-height:5em"/>
+        <h3>Pick new icon:</h3>
+      </div>
+      <select id="nodeIconsSelect" data-native-menu="false"></select>
+      <div class="center-wrapper" style="padding:20px">
+        <h4>Or upload new image (120*120px):</h4>
+        <h6>(500K limit, files with same name are overwritten)</h6>
+      </div>
+      <div class="center-wrapper" style="padding-bottom:20px">
+        <input id="nodeIconUpload" name="nodeIconUpload" type="file" accept="image/*">
+      </div>
+      <div class="center-wrapper">
+        <a id="changeNodeIcon_OK" href="#nodedetails" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-check ui-btn-icon-left ui-mini" data-rel="nodedetails" style="background-color:#9BFFBE;color:#000">Update</a>
+        <a href="#" class="ui-btn ui-btn-inline ui-shadow ui-corner-all ui-mini ui-icon-back ui-btn-icon-left" data-rel="back">Cancel</a>
+      </div>
+    </div>
+  </div>
+  
+  <div data-role="page" id="addEmptyNodePage" data-dialog="true">
+    <div data-role="main" class="ui-content">
+      <div class="center-wrapper" style="padding:20px">
+        <h3>Enter new node ID (positive Integer):</h3>
+      </div>
+      <input type="number" name="addEmptyNodeID" id="addEmptyNodeID" style="text-align:center" value="" data-clear-btn="true">
+      <div class="center-wrapper" style="padding:20px">
+        <span id="addEmptyNode_msg" style="padding-bottom:10px;color:red;display:block">error</span>
+        <a id="addEmptyNode_OK" href="#homepage" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-check ui-btn-icon-left ui-mini" data-rel="homepage" style="background-color:#9BFFBE;color:#000;">Add</a>
+        <a href="#" class="ui-btn ui-btn-inline ui-shadow ui-corner-all ui-mini ui-icon-back ui-btn-icon-left" data-rel="back">Cancel</a>
+      </div>
+    </div>
+  </div>
 
   <div data-role="page" id="metricdetails">
     <div data-role="header">
-      <h3><span id="metricDetailTitle">Metric details</span> <span class="metricUpdated">x</span></h3>
-      <a id="metric_return" href="#" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-back ui-btn-icon-left ui-mini" data-rel="back">Node</a>
+      <h3><span id="nodeDetailTitleMetric">Node title</span> (<span id="metricDetailTitle">Metric details</span> <span class="metricUpdated">x</span>)</h3>
+      <a id="metric_update" href="#" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-back ui-btn-icon-left ui-mini" data-rel="back">Node</a>
       <div class="ui-btn-right" data-role="controlgroup" data-type="horizontal">
-        <a id="btnPinMetric" href="#" data-role="button" data-icon="fa-map-marker" data-iconpos="notext" title="Show on dashboard">Pin</a>
+        <a id="btnPinMetric" href="#" data-role="button" data-icon="fa-thumb-tack" data-iconpos="notext" title="Show on dashboard">Pin</a>
         <a id="btnGraphMetric" href="#" data-role="button" data-icon="fa-bar-chart" data-iconpos="notext" title="Data log this metric">Graph</a>
-        <a href="#deleteMetric" data-role="button" data-icon="delete" data-iconpos="notext" data-transition="fade" title="Delete this metric">Delete</a>
+        <a href="#deleteMetric" data-role="button" data-icon="fa-trash" data-iconpos="notext" data-transition="fade" title="Delete this metric">Delete</a>
       </div>
     </div>
     <div data-role="main" class="ui-content">
@@ -383,24 +505,24 @@
       <div id="metricGraphWrapper" style="width:100%; height:280px;">
         <div id="metricGraph"></div>
         <div id="graphControls" data-role="controlgroup" data-type="horizontal" style="text-align:center;margin:auto">
-          <a class="graphControl" href="#" data-role="button" hours="720" data-icon="calendar" data-theme="b" title="last month">M</a>
-          <a class="graphControl" href="#" data-role="button" hours="168" data-icon="calendar" data-theme="b" title="last week">W</a>
-          <a class="graphControl" href="#" data-role="button" hours="24" data-icon="calendar" data-theme="b" title="last day">D</a>
-          <a class="graphControl" href="#" data-role="button" hours="1" data-icon="calendar" data-theme="b" title="last hour">H</a>
-          <a id="graphZoomIn" href="#" data-role="button" data-icon="plus" data-iconpos="notext" data-theme="b" title="zoom in">ZoomIn</a>
-          <a id="graphZoomOut" href="#" data-role="button" data-icon="minus" data-iconpos="notext" data-theme="b" title="zoom out">ZoomOut</a>
+          <a class="graphControl" href="#" data-role="button" hours="720" data-theme="b" title="last month">M</a>
+          <a class="graphControl" href="#" data-role="button" hours="168" data-theme="b" title="last week">W</a>
+          <a class="graphControl" href="#" data-role="button" hours="24" data-theme="b" title="last day">D</a>
+          <a class="graphControl" href="#" data-role="button" hours="1" data-theme="b" title="last hour">H</a>
+          <a id="graphZoomIn" href="#" data-role="button" data-icon="fa-search-plus" data-iconpos="notext" data-theme="b" title="zoom in">ZoomIn</a>
+          <a id="graphZoomOut" href="#" data-role="button" data-icon="fa-search-minus" data-iconpos="notext" data-theme="b" title="zoom out">ZoomOut</a>
           <a id="graphPanLeft" href="#" data-role="button" data-icon="arrow-l" data-iconpos="notext" data-theme="b" title="scroll left">Left</a>
           <a id="graphPanRight" href="#" data-role="button" data-icon="arrow-r" data-iconpos="notext" data-theme="b" title="scroll right">Right</a>
           <a id="graphExport" href="#" data-role="button" data-icon="fa-download" data-iconpos="notext" data-theme="b" title="export raw data">Right</a>
-          <!--<a id="graphReset" href="#" data-role="button" data-icon="refresh" data-iconpos="notext" data-theme="b" title="reset graph">Reset</a>-->
+          <a id="graphTogglePoints" href="#" data-role="button" data-icon="fa-ellipsis-h" data-iconpos="notext" data-theme="a" title="Show Data Points">ShowPoints</a>
+          <a id="graphEditDataToggle" href="#" data-role="button" data-icon="fa-edit" data-iconpos="notext" data-theme="a" title="Edit Mode">EditData</a>
+          <a id="graphDeleteDataToggle" href="#" data-role="button" data-icon="fa-times-circle" data-iconpos="notext" data-theme="a" title="Delete Mode">DeleteData</a>
         </div>
       </div>
-      <div class="center-wrapper">
-        <div ui-role="loadinggraph" class="ui-content center-div" style="padding-top:40px">
-          <span id="loadinggraph" style="font-weight:bold">Loading graph...</span>
-          <br/>
-          <img src="images/loading.gif" />
-        </div>
+      <div ui-role="loadingmetricgraph" class="ui-content center-div center-wrapper" style="padding-top:40px">
+        <span id="loadingmetricgraph" style="font-weight:bold">Loading graph...</span>
+        <br/>
+        <img src="images/loading.gif" />
       </div>
      </div>
   </div>
@@ -427,7 +549,21 @@
         <span><strong>NOTE:</strong> Stored metric data will be kept (if any).<br/>Further data from this node-metric will make it appear again.</span>
       </div>
       <div class="center-wrapper" style="padding:20px">
-        <a id="deleteMetric_yes" href="#nodedetails" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-check ui-btn-icon-left ui-mini" data-rel="nodedetails" style="background: red; color: white;">Delete</a>
+        <a id="deleteMetric_yes" href="#nodedetails" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-check ui-btn-icon-left ui-mini" data-rel="nodedetails" style="background:red;color:white;">Delete</a>
+        <a href="#" class="ui-btn ui-btn-inline ui-shadow ui-corner-all ui-mini ui-icon-back ui-btn-icon-left" data-rel="back">Cancel</a>
+      </div>
+    </div>
+  </div>
+  
+  <div data-role="page" id="editData" data-dialog="true">
+    <div data-role="main" class="ui-content">
+      <div class="center-wrapper" style="padding:20px">
+        <h3>Enter new value for selected point(s):</h3>
+      </div>
+      <div class="center-wrapper"><span style="padding:10px">All selected points will update to this value.</span></div>
+      <input type="number" name="editDataNewValue" id="editDataNewValue" style="text-align:center" value="" data-clear-btn="true">
+      <div class="center-wrapper" style="padding:20px">
+        <a id="editData_OK" href="#metricdetails" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-check ui-btn-icon-left ui-mini" data-rel="metricdetails" style="background-color:#9BFFBE;">Edit</a>
         <a href="#" class="ui-btn ui-btn-inline ui-shadow ui-corner-all ui-mini ui-icon-back ui-btn-icon-left" data-rel="back">Cancel</a>
       </div>
     </div>
@@ -436,13 +572,14 @@
   <div data-role="page" id="processExit" data-dialog="true">
     <div data-role="main" class="ui-content">
       <div class="center-wrapper" style="padding:20px">
-        <h3>Are you sure you want to restart the app?</h3>
+        <h3>Are you sure you want to restart <b>gateway.js</b>?</h3>
       </div>
       <div class="center-wrapper" style="padding:10px">
-        <span><strong>NOTE:</strong> This command will actually execute a process.exit() which stops the gateway app.<br/>If the gateway service (systemctl) is running it should automatically restart it.</span>
+        <span style="display:block;padding:5px"><strong>NOTE:</strong> This command will actually execute a <b>process.exit()</b> which stops the <b>gateway.js</b> backend.<br/>If the gateway service monitor is running (systemctl), it should automatically detect this and attempt tp restart it.<br/><br/>Any code bugs/syntax errors you added will prevent the app to run again and you will need to manually run <b>sudo systemctl restart gateway</b>!</span>
+        <span style="display:block;padding:5px"><strong>Did you know:</strong> This command can also be quickly invoked using <b style="color:red">Ctrl+Shift+Alt+R</b> !</span>
       </div>
       <div class="center-wrapper" style="padding:20px">
-        <a id="processExit_yes" href="#nodedetails" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-check ui-btn-icon-left ui-mini" data-rel="nodedetails" style="background: red; color: white;">Restart!</a>
+        <a id="processExit_yes" href="#nodedetails" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-check ui-btn-icon-left ui-mini" data-rel="nodedetails" style="background:red;color:white;">Restart!</a>
         <a href="#" class="ui-btn ui-btn-inline ui-shadow ui-corner-all ui-mini ui-icon-back ui-btn-icon-left" data-rel="back">Cancel</a>
       </div>
     </div>
@@ -511,14 +648,12 @@
       <div class="center-wrapper" style="font-size:12px;padding:10px;"><strong>Note:</strong> exporting very large data sets can lock your browser.
       If <strong>Max Points Per Metric</strong> is less than points in the given interval, the data is aggregated.
       The total combined points in CSV will likely be larger than <strong>Max Points Per Metric</strong> value.</div>
-
       <label for="exportCSVDateRange_start" class="labelbold">Start date:</label>
       <input id="exportCSVDateRange_start" type="text" data-role="date" placeholder="start date...">
       <label for="exportCSVDateRange_end" class="labelbold">End date:</label>
       <input id="exportCSVDateRange_end" type="text" data-role="date" placeholder="end date...">
       <label for="exportCSVDateRange_points" class="labelbold">Max points/metric:</label>
       <input id="exportCSVDateRange_points" type="number" value="10000">
-      
       <div class="center-wrapper" style="padding:20px">
         <a id="exportCSVDateRange_export" href="#homepage" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-check ui-btn-icon-left ui-mini" data-rel="homepage" style="background: red; color: white;">Export</a>
         <a href="#" class="ui-btn ui-btn-inline ui-shadow ui-corner-all ui-mini ui-icon-back ui-btn-icon-left" data-rel="back">Cancel</a>
@@ -541,18 +676,32 @@
     var settingsDefBindMap;
     var boundSettings;
     var showHiddenNodes=false, showRawSend=false;
-    var socket = io();
+    $('#nodeList, #addEmptyNodeWrapper').hide();
+    var socket = io(); //TODO: fix when io is not defined
     var serverTimeOffset=0;
-    $('#nodeList').hide();
 
     function isNumeric(n) {
       return !isNaN(parseFloat(n)) && isFinite(n); //http://stackoverflow.com/questions/18082/validate-decimal-numbers-in-javascript-isnumeric/1830844#1830844
     }
     
+    //validate ipv4/ipv6/hostname - test here: http://jsfiddle.net/AJEzQ/
+    function isValidClient(str) {
+      return /^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$|^(([a-zA-Z]|[a-zA-Z][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z]|[A-Za-z][A-Za-z0-9\-]*[A-Za-z0-9])$|^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$/.test(str);
+    }
+
+    //a numeric ID, or a valid IPV4/IPV6/host
+    function isValidNodeId(id) {
+      return (isNumeric(id) || isValidClient(id));
+    }
+    
+    function escapeSelector(s){
+      return s.toString().replace(/(:|\.|\[|\])/g, "\\$1" );
+    }
+
     function sortNodeListByOrderCSV(newOrderCSV) {
       var orderArray = newOrderCSV.split(',');
       $('#nodeList').find('li:not(:first)').sort(function (a, b) {
-        return orderArray.indexOf($(a).attr('id')) - orderArray.indexOf($(b).attr('id'));
+        return orderArray.indexOf($(a).attr('id')) > orderArray.indexOf($(b).attr('id'));
       }).appendTo('#nodeList');
     }
 
@@ -572,7 +721,7 @@
       $('#loadingSocket').html('Socket was <span style="color:red">disconnected.</span><br/><br/>Waiting for socket connection..');
       if ($.mobile.activePage.attr('id') != 'homepage')
         $.mobile.navigate('#homepage', { transition : 'slide'});
-      $('#nodeList').hide();
+      $('#nodeList, #addEmptyNodeWrapper').hide();
       $('#allEventsList').empty();
     });
 
@@ -585,7 +734,7 @@
       $("#loader").hide();
       $("#nodeList").empty();
       $('#nodeList').append('<li id="uldivider" data-role="divider"><h2>Nodes</h2><span class="ui-li-count ui-li-count16">Count: 0</span></li>');
-      $('#nodeList').show();
+      $('#nodeList, #addEmptyNodeWrapper').show();
       for (var i = 0; i < entries.length; ++i)
         updateNode(entries[i]);
       refreshNodeListUI();
@@ -597,8 +746,13 @@
       motesDef = motesDefinition;
       $("#nodeMoteType").empty();
       $('#nodeMoteType').append('<option value="">Select type...</option>');
-      for(var mote in motesDef)
-        $('#nodeMoteType').append('<option value="' + mote + '">' + motesDef[mote].label || mote + '</option>');
+      
+      Object.keys(motesDef).sort().forEach(function(key) {
+        $('#nodeMoteType').append('<option value="' + key + '">' + motesDef[key].label || key + '</option>');
+      });
+        
+      //for(var mote in motesDef)
+      //  $('#nodeMoteType').append('<option value="' + mote + '">' + motesDef[mote].label || mote + '</option>');
       $("#nodeMoteType").selectmenu();
     });
 
@@ -679,33 +833,43 @@
 
       $('#settingsList').listview().listview('refresh').trigger("create");
       boundSettings = Bind(settingsDef, settingsDefBindMap);
+
+      if (boundSettings.general.uiTitle.value)
+        $('#dashboardTitle').text(boundSettings.general.uiTitle.value);
+        $('title').text(boundSettings.general.uiTitle.value);
     });
 
     $("#settingsSave").click(function () { 
         socket.emit('UPDATESETTINGSDEF', boundSettings);
         $.mobile.navigate('#homepage', { transition : 'fade'});
-      });
+    });
 
     socket.on('NODELISTREORDER', function(orderCSV) {
       sortNodeListByOrderCSV(orderCSV);
     });
-    
+
     socket.on('SERVERTIME', function(serverMillisSinceEpoch) {
       serverTimeOffset = Date.now() - serverMillisSinceEpoch;
       LOG('SERVERTIME OFFSET: ' + serverTimeOffset + 'ms');
     });
-    
+
     socket.on('SERVERINFO', function(info) {
       $('#server-uptime').attr('data-time', info.uptime + serverTimeOffset);
       $('#server-version').html(info.version);
     });
 
-    $(document).on("pagecreate", "#eventAdd", function(){ if ($('addEventType').val()) $('#addEvent_OK').show(); else $('#addEvent_OK').hide(); });
-
-    socket.on('LOG', function(data) {
-      LOG(data);
+    socket.on('DBCOMPACTED', function(timestamp) {
+      $('#db-compacted').attr('data-time', timestamp + serverTimeOffset);
+    });
+    
+    nodeIcons=[];
+    socket.on('NODEICONS', function(icons) {
+      nodeIcons = icons;
     });
 
+    $(document).on("pagecreate", "#eventAdd", function(){ if ($('addEventType').val()) $('#addEvent_OK').show(); else $('#addEvent_OK').hide(); });
+
+    socket.on('LOG', function(data) { LOG(data); });
     socket.on('PLAYSOUND', function (soundFile) {
       new Audio(soundFile).play();
     });
@@ -716,80 +880,174 @@
     var plot;
     var graphOptions;
     var graphFrozen;
+    var showGraphPoints=false;
+    var toolTipOnItem=false;
+    var editDataStart=0;
+    var editDataEnd=0;
+
+    function renderGraphTooltip(event, pos, item) {
+      if (item && graphOptions.yaxes[item.seriesIndex]) {
+        var date = new Date(item.datapoint[0]);
+
+        for (var mkey in metricsDef)
+        {
+          if (metricsDef[mkey].name == graphOptions.yaxes[item.seriesIndex].metricName)
+          {
+            //The displayed value of a metric on the graph can get it's value from the following places, from lowest to highest priority:
+            // - actual raw value stored in the log
+            // - metricDef.logValue
+            // - metricDef.value
+            // - metricDef.valOverride
+            // - metricDef.value='' and metricDef.logValue='' are special - they capture the first regex match group of the raw metric (or whole match if no groups specified with regex capturing parentheses)
+            // - a specific metricDef.logValue that matches the value in the log takes priority over anything else
+            if (metricsDef[mkey].value === '' || metricsDef[mkey].logValue === '' || metricsDef[mkey].logValue === item.datapoint[1])
+            {
+              item.unit = metricsDef[mkey].unit || item.unit;
+              item.graphValPrefix = metricsDef[mkey].graphValPrefix != undefined ? metricsDef[mkey].graphValPrefix : item.graphValPrefix;
+              item.graphValSuffix = metricsDef[mkey].graphValSuffix != undefined ? metricsDef[mkey].graphValSuffix : item.graphValSuffix;
+              item.valOverride = metricsDef[mkey].valOverride || (metricsDef[mkey].value === '' ? item.datapoint[1] : metricsDef[mkey].value) || (metricsDef[mkey].logValue === '' ? item.datapoint[1] : metricsDef[mkey].logValue) || item.valOverride;
+              if (metricsDef[mkey].logValue === item.datapoint[1]) break;
+            }
+          }
+        }
+
+        toolTipOnItem = true;
+        var val = date.format("mmm-d, ") + '<b>' + date.format('h:MM')+'</b>'+date.format('tt')+'<br/><b>' + (item.graphValPrefix||'') + (item.valOverride || item.datapoint[1]/*.toFixed(2)*/) + '</b>' + (item.unit || '') + (item.graphValSuffix||'');
+        $("#tooltip").html(val)
+          .css({top: item.pageY-40, left: item.pageX+7})
+          .fadeIn(100);
+      }
+      else if (toolTipOnItem) { hideTooltip(); toolTipOnItem=false; }
+    }
+
+    function plotClick(event, pos, item) {
+      if (item)
+      {
+        if ($('#graphDeleteDataToggle').hasClass('active'))
+          socket.emit('DELETEMETRICDATA', selectedNodeId, selectedMetricKey, item.datapoint[0], item.datapoint[0]);
+        if ($('#graphEditDataToggle').hasClass('active'))
+        {
+          $('#editData_OK').hide();
+          $("#editDataNewValue").val(item.datapoint[1]);
+          editDataStart = editDataEnd = item.datapoint[0]; //save datapoint timestamp
+          $.mobile.navigate('#editData');
+        }
+      }
+    }
+
+    function plotSelect(event, ranges)
+    {
+      var pointsInSelection = graphData.find(function(dataPoint) { return (dataPoint[0] >= ranges.xaxis.from && dataPoint[0] <= ranges.xaxis.to)});
+      if ($('#graphDeleteDataToggle').hasClass('active'))
+      {
+        if (pointsInSelection)
+          socket.emit('DELETEMETRICDATA', selectedNodeId, selectedMetricKey, ranges.xaxis.from, ranges.xaxis.to);
+        else {
+          $("#tooltip").html('<span style="color:red"><b>Nothing to delete:</b><br>No data points in selected interval</span>')
+            .css({top: graphBottomPosition(metricGraphWrapper)-60, left: $(window).width()/2-50}).fadeIn(20);
+          clearTimeout(timeoutID);
+          timeoutID = setTimeout(hideTooltip, 2000);
+          event.preventDefault();
+        }
+        return;
+      }
+      else if ($('#graphEditDataToggle').hasClass('active'))
+      {
+        if (pointsInSelection)
+        {
+          $('#editData_OK').hide();
+          $("#editDataNewValue").val('');
+          editDataStart = ranges.xaxis.from; //save datapoint timestamps
+          editDataEnd = ranges.xaxis.to;
+          $.mobile.navigate('#editData');
+        }
+        else {
+          $("#tooltip").html('<span style="color:red"><b>Nothing to edit:</b><br>No data points in selected interval</span>')
+            .css({top: graphBottomPosition(metricGraphWrapper)-60, left: $(window).width()/2-50}).fadeIn(20);
+          clearTimeout(timeoutID);
+          timeoutID = setTimeout(hideTooltip, 2000);
+          event.preventDefault();
+        }
+        return;
+      }
+
+      graphView.start = ranges.xaxis.from;
+      graphView.end = ranges.xaxis.to;
+      refreshGraph(true);
+    }
 
     function renderPlot() {
       metricGraphWrapper.show();
-      $("div[ui-role='loadinggraph']").hide();
+      $("div[ui-role='loadingmetricgraph']").hide();
       metricGraph.width(metricGraphWrapper.width()).height(metricGraphWrapper.height() - $('#graphControls').height()); //this assumes the 'pageshow' page event already happened, otherwise will fail to set the width correctly and should be moved in that event
       plot = $.plot(metricGraph, [{label:graphOptions.legendLbl, data:graphData}], graphOptions);
-
-      //graph value tooltips
-      metricGraph.bind("plothover", function (event, pos, item) {
-        if (item) {
-          var date = new Date(item.datapoint[0]);
-
-          for (var mkey in metricsDef)
-          {
-            if (metricsDef[mkey].name == graphOptions.metricName)
-            {
-              //The displayed value of a metric on the graph can get it's value from the following places, from lowest to highest priority:
-              // - actual raw value stored in the log
-              // - metricDef.logValue
-              // - metricDef.value
-              // - metricDef.valOverride
-              // - metricDef.value='' and metricDef.logValue='' are special - they capture the first regex match group of the raw metric (or whole match if no groups specified with regex capturing parentheses)
-              // - a specific metricDef.logValue that matches the value in the log takes priority over anything else
-              if (metricsDef[mkey].value === '' || metricsDef[mkey].logValue === '' || metricsDef[mkey].logValue === item.datapoint[1])
-              {
-                item.unit = metricsDef[mkey].unit || item.unit;
-                item.graphValPrefix = metricsDef[mkey].graphValPrefix != undefined ? metricsDef[mkey].graphValPrefix : item.graphValPrefix;
-                item.graphValSuffix = metricsDef[mkey].graphValSuffix != undefined ? metricsDef[mkey].graphValSuffix : item.graphValSuffix;
-                item.valOverride = metricsDef[mkey].valOverride || (metricsDef[mkey].value === '' ? item.datapoint[1] : metricsDef[mkey].value) || (metricsDef[mkey].logValue === '' ? item.datapoint[1] : metricsDef[mkey].logValue) || item.valOverride;
-                if (metricsDef[mkey].logValue === item.datapoint[1]) break;
-              }
-            }
-          }
-
-          var val = date.format("mmm-d, ") + '<b>' + date.format('h:MM')+'</b>'+date.format('tt')+'<br/><b>' + (item.graphValPrefix||'') + (item.valOverride || item.datapoint[1]/*.toFixed(2)*/) + '</b>' + (item.unit || '') + (item.graphValSuffix||'');
-          $("#tooltip").html(val)
-            .css({top: item.pageY-40, left: item.pageX+7})
-            .fadeIn(200);
-        } else
-          $("#tooltip").hide();
-      });
-
       $(document).off("pageshow", "#metricdetails", renderAndCloneStat);
     }
 
     function refreshGraph(freezeGraph) {
       graphData = [];
       graphFrozen = freezeGraph || false;
-      graphOptions = {
-        lines: {show: true, steps: true, fill:true },
-        xaxis: { mode: "time", timezone: "browser", min:graphView.start, max:graphView.end},
-        yaxis: { min:null, max:null, autoscaleMargin:0.05},
+      graphOptions = { //whole plot options object
+        lines: {show: true, /*steps: true,*/ fill:true },
+        xaxis: { mode: "time", timezone: "browser", min:graphView.start, max:graphView.end },
+        yaxis: { min:null, max:null, autoscaleMargin:0.05, zoomRange:false, panRange:false }, //no Y zooming/panning
         grid: {hoverable: true, clickable: true, backgroundColor: {colors:['#000', '#666']}},
         selection: { mode: "x" },
-        //series: { colors: [{ opacity: 0.8 }, { brightness: 0.6, opacity: 0.8 } ]},
-        //bars: { show: true, lineWidth: 0, fill: true, fillColor: { colors: [ { opacity: 0.8 }, { opacity: 0.1 } ] } },
-        //points: { show: true, radius: 2 },
-        //{series: { points: { show: true, radius: 2 } }, grid: { hoverable: true }}
+        legend:{show:false},
+        yaxes:[],
+        zoom: { interactive: true },
+        //pan: { interactive: true },
       };
-
       //ask socket for the data
       socket.emit('GETGRAPHDATA', selectedNodeId, selectedMetricKey, graphView.start, graphView.end);
     }
     
-    function exportGraph() {
-      socket.emit('GETGRAPHDATA', selectedNodeId, selectedMetricKey, graphView.start, graphView.end, true);
+    nodeMultiGraphWrapper = $('#nodeMultiGraphWrapper');
+    nodeMultiGraph = $('#nodeMultiGraph');
+    function renderMultiPlot() {
+      nodeMultiGraphWrapper.show();
+      $("div[ui-role='loadingnodemultigraph']").hide();
+      nodeMultiGraph.width(nodeMultiGraphWrapper.width()).height(nodeMultiGraphWrapper.height() - $('#node_graphControls').height()); //this assumes the 'pageshow' page event already happened, otherwise will fail to set the width correctly and should be moved in that event
+      plot = $.plot(nodeMultiGraph, graphData, graphOptions);
+      $(document).off("pageshow", "#nodedetails", renderMultiGraph);
     }
-    
-    function renderAndCloneStat() { 
+
+    function refreshMultiGraph(freezeGraph) {
+      graphData = [];
+      graphFrozen = freezeGraph || false;
+      graphOptions = { //whole plot options object
+        xaxis: { mode: "time", timezone: "browser", min:graphView.start, max:graphView.end},
+        yaxis: { autoscaleMargin:0.05, zoomRange:false, panRange:false }, //no Y zooming/panning
+        yaxes:[],
+        legend: { show:false, /*noColumns: 0, labelBoxBorderColor: "#000000", position: "nw"*/ },
+        grid: {hoverable: true, clickable: true, backgroundColor: {colors:['#000', '#666']}},
+        selection: { mode: "x" },
+        zoom: { interactive: true },
+        //pan: { interactive: true },
+      };
+      //ask socket for the data
+      socket.emit('GETMULTIGRAPHDATA', selectedNodeId, 0, graphView.start, graphView.end);
+    }
+
+    function renderMultiGraph() {
+      renderMultiPlot();
+      $(graphStat).clone().appendTo('#nodeMultiGraph');
+    }
+
+    function renderAndCloneStat() {
       renderPlot();
       $(graphStat).clone().appendTo('#metricGraph');
     }
 
-    socket.on('EXPORTDATAREADY', function(rawData) {
+    function exportGraph() {
+      socket.emit('GETGRAPHDATA', selectedNodeId, selectedMetricKey, graphView.start, graphView.end, true);
+    }
+    
+    function exportMultiGraph(multiGraphId) {
+      socket.emit('GETMULTIGRAPHDATA', selectedNodeId, multiGraphId, graphView.start, graphView.end, true);
+    }
+
+    socket.on('EXPORTGRAPHDATAREADY', function(rawData) {
       //package and stream the data to the browser
       graphData = [];
       var csv = 'unix_timestamp(ms),excel_timestamp,'+rawData.options.legendLbl+'\n';
@@ -802,13 +1060,47 @@
       var blob = new Blob([csv], {type: "text/csv;charset=utf-8"});
       saveAs(blob, selectedNodeId+'_'+rawData.options.legendLbl+'.csv');
     });
+    
+    socket.on('EXPORTMULTIGRAPHDATAREADY', function(rawData) {
+      //package and stream the data to the browser
+      var sets = rawData;
+      var csv = 'unix_timestamp(ms),excel_timestamp'; //header start
+      var mergedData = {};
 
+      rawData.forEach(function(set, setIndex) {
+        set.graphData.data.forEach(function(point, index){
+          var nullPaddedArray = []; //left padding
+          var i=0;
+          while(i++ < setIndex) nullPaddedArray.push(null);
+          (mergedData[point.t] = mergedData[point.t]||nullPaddedArray).push(point.v);
+        });
+        Object.keys(mergedData).forEach(function(key) {
+          if (mergedData[key].length-1<setIndex) mergedData[key].push(null); //right padding
+        });
+        csv+= ','+set.options.legendLbl;
+      });
+      csv+='\n'; //header end
+
+      //sort by timestamp
+      mergedDataTimestamps = Object.keys(mergedData);
+      mergedDataTimestamps.sort((a, b) => a - b);
+      mergedDataTimestamps.forEach(function(key) {
+        csv += key;
+        csv += ',' + (key/(1000*60*60*24)+25569);
+        for(var i=0; i<mergedData[key].length; i++)
+          csv += ','+(mergedData[key][i]||'');
+        csv+='\n';
+      });
+
+      var blob = new Blob([csv], {type: "text/csv;charset=utf-8"});
+      saveAs(blob, selectedNodeId+'_'+nodes[selectedNodeId].descr+'_mg'+'.csv');
+    });
+
+    //export all node's metrics by date range
     socket.on('EXPORTNODELOGSCSVREADY', function(rawData) {
       var sets = rawData;
       var csv = 'unix_timestamp(ms),excel_timestamp'; //header start
-
       var mergedData = {};
-      var setCount=0;
 
       rawData.sets.forEach(function(set, setIndex) {
         set.data.forEach(function(point, index){
@@ -824,7 +1116,10 @@
       });
       csv+='\n'; //header end
 
-      Object.keys(mergedData).forEach(function(key) {
+      //sort by timestamp
+      mergedDataTimestamps = Object.keys(mergedData);
+      mergedDataTimestamps.sort((a, b) => a - b);
+      mergedDataTimestamps.forEach(function(key) {
         csv += key;
         csv += ',' + (key/(1000*60*60*24)+25569);
         for(var i=0; i<mergedData[key].length; i++)
@@ -836,12 +1131,15 @@
       saveAs(blob, selectedNodeId+'_'+nodes[selectedNodeId].descr+'.csv');
     });
 
-    socket.on('GRAPHDATAREADY', function(rawData){
+    socket.on('GRAPHDATAREADY', function(rawData) {
       graphData = [];
       var max = Number.NEGATIVE_INFINITY;
       var min = Number.POSITIVE_INFINITY;
       var margin = 0;
-
+      
+      var points = ($("#graphTogglePoints").hasClass('active')) ? {show: true, radius:1, fill: false} : {};
+      points = $.extend(true, points, graphOptions);
+      graphOptions.points = points;
       graphOptions = $.extend(true, graphOptions, rawData.options); //http://stackoverflow.com/questions/171251/how-can-i-merge-properties-of-two-javascript-objects-dynamically
 
       //override min/max from metrics graphOptions (if any defined); allows custom Y scaling of graphs
@@ -853,14 +1151,12 @@
       //make sure to extend min/max if any data point is outside the defined graph range
       for(var key in rawData.graphData.data) {
         graphData.push([rawData.graphData.data[key].t, rawData.graphData.data[key].v]); //build flot series from raw data
-        max = Math.max(max, rawData.graphData.data[key].v);
-        min = Math.min(min, rawData.graphData.data[key].v);
+        if (graphOptions.yaxis.autoscaleTop !== false) max = Math.max(max, rawData.graphData.data[key].v);
+        if (graphOptions.yaxis.autoscaleBottom !== false) min = Math.min(min, rawData.graphData.data[key].v);
       }
 
-      //defining the upper and lower margin
-      margin=(max-min) * graphOptions.yaxis.autoscaleMargin;
-      if (min==max)  // in case of only one value in the dataset (motion detection)
-        margin=graphOptions.yaxis.autoscaleMargin * min;
+      margin=(max-min) * graphOptions.yaxis.autoscaleMargin; //defining the upper and lower margin
+      if (min==max) margin=graphOptions.yaxis.autoscaleMargin * min; // in case of only one value in the dataset (ex. motion detection)
       if (graphOptions.yaxis.autoscaleBottom !== false) min -= margin;
       if (graphOptions.yaxis.autoscaleTop !== false) max += margin;
       graphOptions.xaxis.min = graphView.start;
@@ -868,6 +1164,10 @@
       graphOptions.yaxis.min = min;
       graphOptions.yaxis.max = max;
       
+      //yaxis
+      metricLabel=nodes[selectedNodeId].metrics[selectedMetricKey].label;
+      graphOptions.yaxes.push({axisLabel:rawData.options.legendLbl+' ('+metricLabel+')',axisLabelFontSizePixels:11, metricName:rawData.options.metricName});
+
       $(graphStat).html(rawData.graphData.msg != undefined ? rawData.graphData.msg : (rawData.graphData.data.length + (rawData.graphData.totalIntervalDatapoints != rawData.graphData.data.length ? ' / '+rawData.graphData.totalIntervalDatapoints : '') +'pts ('+ rawData.graphData.queryTime+'ms) ('+humanFileSize(rawData.graphData.totalIntervalDatapoints*9)+'/'+humanFileSize(rawData.graphData.logSize)+')'));
       //need to defer plotting until after pageshow is finished rendering, otherwise the wrapper will return an incorrect width of "100"
       if (metricGraphWrapper.width()==100)
@@ -877,40 +1177,161 @@
       }
     });
 
+    socket.on('MULTIGRAPHDATAREADY', function(seriesArray){
+      graphData = [];
+      var margin = 0;
+      var axisIndex=1;
+      var totalDataLength=0;
+      var totalIntervalDatapoints=0;
+      var queryTime = 0;
+      var logSize = 0;
+      
+      //make sure to extend min/max if any data point is outside the defined graph range
+      for(var skey in seriesArray) {
+        var seriesRawData = seriesArray[skey].graphData.data;
+        //build flot series from raw data
+        var seriesRaw=[];
+        var yaxisOptions={};
+        var max = Number.NEGATIVE_INFINITY;
+        var min = Number.POSITIVE_INFINITY;
+
+        //override min/max from metrics graphOptions (if any defined); allows custom Y scaling of graphs
+        if (seriesArray[skey].options.yaxis) {
+          yaxisOptions = $.extend(true, yaxisOptions, seriesArray[skey].options.yaxis); //http://stackoverflow.com/questions/171251/how-can-i-merge-properties-of-two-javascript-objects-dynamically
+          min = seriesArray[skey].options.yaxis.min != undefined ? seriesArray[skey].options.yaxis.min : min;
+          max = seriesArray[skey].options.yaxis.max != undefined ? seriesArray[skey].options.yaxis.max : max;
+        }
+
+        for(var dkey in seriesRawData) {
+          seriesRaw.push([seriesRawData[dkey].t,seriesRawData[dkey].v]); //add the data array
+          if (yaxisOptions.autoscaleTop !== false) max = Math.max(max, seriesRawData[dkey].v); //calculate min/max for the yaxis
+          if (yaxisOptions.autoscaleBottom !== false) min = Math.min(min, seriesRawData[dkey].v);
+        }
+
+        margin=(max-min) * (yaxisOptions.autoscaleMargin || graphOptions.yaxis.autoscaleMargin); //defining the upper and lower margin
+        if (min==max) margin=(yaxisOptions.autoscaleMargin || graphOptions.yaxis.autoscaleMargin) * min; // in case of only one value in the dataset (ex. motion detection)
+        if (yaxisOptions.autoscaleBottom !== false) min -= margin;
+        if (yaxisOptions.autoscaleTop !== false) max += margin;
+
+        //add data series
+        var lines = {show: true, /*steps: true,*/ fill:0.15, lineWidth:1}; //same as for metric graph
+        lines = $.extend(true, lines, seriesArray[skey].options.lines);
+
+        var points = ($("#node_graphTogglePoints").hasClass('active')) ? {show: true, radius:1, fill: false} : {};
+        points = $.extend(true, points, seriesArray[skey].options.points);
+        var color = seriesArray[skey].options.colors ? seriesArray[skey].options.colors[0] : null;
+        graphData.push({data:seriesRaw, label:seriesArray[skey].options.legendLbl, yaxis:axisIndex++, lines:lines, points:points, color:color});
+
+        //add new yaxis
+        metricLabel=nodes[selectedNodeId].metrics[seriesArray[skey].options.metricName].label;
+        yaxisOptions = $.extend(true, yaxisOptions, {position:((axisIndex%2)?'right':'left'), min:min, max:max, axisLabel:seriesArray[skey].options.legendLbl+' ('+metricLabel+')', axisLabelUseCanvas:true, axisLabelFontSizePixels:11, metricName:seriesArray[skey].options.metricName});
+        graphOptions.xaxis.min = graphView.start;
+        graphOptions.xaxis.max = graphView.end;
+        graphOptions.yaxes.push(yaxisOptions);
+
+        //compute stats
+        totalDataLength += seriesArray[skey].graphData.data.length;
+        totalIntervalDatapoints += seriesArray[skey].graphData.totalIntervalDatapoints;
+        queryTime += seriesArray[skey].graphData.queryTime;
+        logSize += seriesArray[skey].graphData.logSize;
+      }
+
+      $(graphStat).html(totalDataLength + (totalIntervalDatapoints != totalDataLength ? ' / '+totalIntervalDatapoints : '') +'pts ('+ queryTime+'ms) ('+humanFileSize(totalIntervalDatapoints*9)+'/'+humanFileSize(logSize)+')');
+
+      //need to defer plotting until after pageshow is finished rendering, otherwise the wrapper will return an incorrect width of "100"
+      if (nodeMultiGraphWrapper.width()==100)
+        $(document).on("pageshow", "#nodedetails", renderMultiGraph);
+      else renderMultiGraph();
+    });
+
+    socket.on('EDITMETRICDATA_OK', function(count){
+      refreshGraph(true);
+      $("#tooltip").html('<span style="color:red"><b>EDIT OK</b><br>Edited: '+count+' datapoints</span>')
+          .css({top: graphBottomPosition(metricGraphWrapper)-60, left: $(window).width()/2-50}).fadeIn(20);
+        clearTimeout(timeoutID);
+        timeoutID = setTimeout(hideTooltip, 2000);
+    });
+
+    socket.on('DELETEMETRICDATA_OK', function(count){
+      refreshGraph(true);
+      $("#tooltip").html('<span style="color:red"><b>DELETE OK</b><br>Removed: '+count+' datapoints</span>')
+          .css({top: graphBottomPosition(metricGraphWrapper)-60, left: $(window).width()/2-50}).fadeIn(20);
+        clearTimeout(timeoutID);
+        timeoutID = setTimeout(hideTooltip, 2000);
+    });
+
     $(window).resize(function(){
-      if ($.mobile.activePage.attr('id') == 'metricdetails' && nodes[selectedNodeId].metrics[selectedMetricKey].graph && metricGraph.is(':visible'))
+      if ($.mobile.activePage.attr('id') == 'metricdetails' /*&& nodes[selectedNodeId].metrics[selectedMetricKey].graph*/ && metricGraph.is(':visible'))
       {
         metricGraph.width(metricGraphWrapper.width());
         graphOptions.xaxis.min = graphView.start;
         graphOptions.xaxis.max = graphView.end;
-        $.plot(metricGraph, [{label:graphOptions.legendLbl, data:graphData}], graphOptions);
+        plot = $.plot(metricGraph, [{label:graphOptions.legendLbl, data:graphData}], graphOptions);
         $(graphStat).clone().appendTo('#metricGraph');
+      }
+      if ($.mobile.activePage.attr('id') == 'nodedetails' /*&& nodes[selectedNodeId].metrics[selectedMetricKey].graph*/ && nodeMultiGraph.is(':visible'))
+      {
+        nodeMultiGraph.width(nodeMultiGraphWrapper.width());
+        graphOptions.xaxis.min = graphView.start;
+        graphOptions.xaxis.max = graphView.end;
+        plot = $.plot(nodeMultiGraph, graphData, graphOptions);
+        $(graphStat).clone().appendTo('#nodeMultiGraph');
       }
     });
 
-    $(window).on("navigate", function(event, data) { $("#tooltip").hide(); }); //hide graph tooltip on any navigation
+  	$('#metricGraph, #nodeMultiGraph').on("plotzoom", function (event, plot) {
+      event.preventDefault();
+      hideTooltip();
+      var axes = plot.getAxes();
+      graphView.start = parseInt(axes.xaxis.min);
+      graphView.end = parseInt(axes.xaxis.max);
+      var target = $(event.target);
+      if (target.is("#metricGraph"))
+        refreshGraph(true);
+      else
+        refreshMultiGraph(true);
+    });
 
-    $("#graphZoomIn").click(function () {graphView.zoomin(); refreshGraph(true);});
+    $(document).on("pagecontainerbeforechange", function(event, ui) {
+      //$("#tooltip").hide(); //hide graph tooltip on any navigation
+      $("#graphDeleteDataToggle").removeClass('active').css('background-color',''); //deactivate delete
+    });
+    
+    $('#metricGraph,#nodeMultiGraph').mouseleave(function() { hideTooltip(); });
+
+    $("#graphZoomIn").click(function () { graphView.zoomin(); refreshGraph(true); });
     $("#graphZoomOut").click(function () {graphView.zoomout(); refreshGraph(true);});
     $('#graphPanRight').click(function () {graphView.panright(); refreshGraph(true);});
     $('#graphPanLeft').click(function () {graphView.panleft(); refreshGraph(true);});
     //$('#graphReset').click(function () {graphView.resetDomain(); refreshGraph();});
     $('#graphExport').click(function (e) { e.preventDefault(); exportGraph(); });
     $('.graphControl').click(function () {graphView.setDomain($(this).attr("hours")); refreshGraph();});
-    metricGraph.bind("plotselected", function (event, ranges)
-    {
-        graphView.start = ranges.xaxis.from;
-        graphView.end = ranges.xaxis.to;
-        refreshGraph(true);
-    });
+    
+    metricGraph.on("plothover", renderGraphTooltip); //graph value tooltips
+    metricGraph.on("plotclick", plotClick);
+    metricGraph.on("plotselected", plotSelect);
 
+    $("#node_graphZoomIn").click(function () {graphView.zoomin(); refreshMultiGraph(true);});
+    $("#node_graphZoomOut").click(function () {graphView.zoomout(); refreshMultiGraph(true);});
+    $('#node_graphPanRight').click(function () {graphView.panright(); refreshMultiGraph(true);});
+    $('#node_graphPanLeft').click(function () {graphView.panleft(); refreshMultiGraph(true);});
+    $('.node_graphControl').click(function () {graphView.setDomain($(this).attr("hours")); refreshMultiGraph();});
+    $('#node_graphExport').click(function (e) { e.preventDefault(); exportMultiGraph(0); });
+
+    nodeMultiGraph.on("plothover", renderGraphTooltip); //graph value tooltips
+    nodeMultiGraph.on("plotselected", function (event, ranges)
+    {
+      graphView.start = ranges.xaxis.from;
+      graphView.end = ranges.xaxis.to;
+      refreshMultiGraph(true);
+    });
+    
     function addGraphDataPoint(point) {
       if (graphFrozen) return;
       
       //shift visible timeline
       graphOptions.xaxis.min = graphView.start = point[0] - (graphView.end - graphView.start); //calculate new min
       graphOptions.xaxis.max = graphView.end = point[0];
-      
       graphData.push(point); //add new data point
       
       //remove points that are invisible after shifting the visible timeline
@@ -962,35 +1383,37 @@
     }
 
     function getNodeIcon(node) {
+      if (node.icon) return node.icon;
+      var iconDefault = (node.metrics.RSSI == undefined) ? 'icon_default_LAN.png' : 'icon_default.png';
       if (motesDef != undefined && node.type != undefined && motesDef[node.type] != undefined)
-        return motesDef[node.type].icon || 'icon_default.png';
-      return 'icon_default.png';
+        return motesDef[node.type].icon || iconDefault;
+      return iconDefault;
     };
 
     function resolveRSSIImage(node) {
       if (node.metrics.RSSI == undefined) return '';
       rssi = node.metrics.RSSI.value;
       var img;
-      if (Math.abs(rssi) > 95) img = 'icon_rssi_7.png';
-      else if (Math.abs(rssi) > 90) img = 'icon_rssi_6.png';
-      else if (Math.abs(rssi) > 85) img = 'icon_rssi_5.png';
-      else if (Math.abs(rssi) > 80) img = 'icon_rssi_4.png';
-      else if (Math.abs(rssi) > 75) img = 'icon_rssi_3.png';
-      else if (Math.abs(rssi) > 70) img = 'icon_rssi_2.png';
-      else img = 'icon_rssi_1.png';
+      if (Math.abs(rssi) > 95) img = 'rssi_7.png';
+      else if (Math.abs(rssi) > 90) img = 'rssi_6.png';
+      else if (Math.abs(rssi) > 85) img = 'rssi_5.png';
+      else if (Math.abs(rssi) > 80) img = 'rssi_4.png';
+      else if (Math.abs(rssi) > 75) img = 'rssi_3.png';
+      else if (Math.abs(rssi) > 70) img = 'rssi_2.png';
+      else img = 'rssi_1.png';
       return '<img class="listIcon20px" src="images/'+img+'" title="RSSI:-'+Math.abs(rssi)+'dB" /> ';
     }
 
     function updateNode(node) {
       LOG(JSON.stringify(node));
-      if (isNumeric(node._id))
+      if (isValidNodeId(node._id))
       {
         nodes[node._id] = node;
         var nodeValue = metricsValues(node.metrics);
         var lowVoltageSetting = node.settings && node.settings['lowVoltageValue'] ? node.settings['lowVoltageValue'] : (motesDef[node.type] && motesDef[node.type].settings && motesDef[node.type].settings.lowVoltageValue ? motesDef[node.type].settings.lowVoltageValue : boundSettings.general.lowVoltageValue.value);
         var lowBat = node.metrics.V != null && node.metrics.V.value < lowVoltageSetting;
-        var newLI = $('<li id="' +  node._id + '"><a node-id="' + node._id + '" href="#nodedetails" class="nodedetails"><img class="productimg" src="images/'+getNodeIcon(node)+'"><h2>' + (nodeResolveString(node.label, node.metrics) || node._id) + ' ' + resolveRSSIImage(node) + ' ' + (lowBat ? '<img src="images/lowbattery.png" class="lowbattimg"/> ' : '') + ago(node.updated, 0).tag + (node.hidden ? ' <img class="listIcon20px" src="images/icon_hidden.png" />' : '') + '</h2><p>' + (nodeResolveString(node.descr || "", node.metrics) || '&nbsp;') + '</p>' + (nodeValue ? '<span class="ui-li-count ui-li-count16">' + nodeValue + '</span>' : '') + '</a></li>');
-        var existingNode = $('#nodeList li#' + node._id);
+        var newLI = $('<li id="' +  node._id + '"><a node-id="' + node._id + '" href="#nodedetails" class="nodedetails"><img src="images/'+getNodeIcon(node)+'"><h2>' + (nodeResolveString(node.label||'', node.metrics) || node._id) + ' ' + resolveRSSIImage(node) + ' ' + (lowBat ? '<img src="images/lowbattery.png" class="lowbattimg"/> ' : '') + ago(node.updated, 0).tag + (node.hidden ? ' <img class="listIcon20px" src="images/icon_hidden.png" />' : '') + '</h2><p>' + (nodeResolveString(node.descr || "", node.metrics) || '&nbsp;') + '</p>' + (nodeValue ? '<span class="ui-li-count ui-li-count16">' + nodeValue + '</span>' : '') + '</a></li>');
+        var existingNode = $('#nodeList li#' + escapeSelector(node._id));
         if (node.hidden)
           if (showHiddenNodes)
             newLI.addClass('hiddenNodeShow');
@@ -999,7 +1422,7 @@
         if(existingNode.length)
           existingNode.replaceWith(newLI);
         else $('#nodeList').append(newLI);
-        if (node._id == selectedNodeId) refreshNodeDetails(node);
+        if (node._id == selectedNodeId && $.mobile.activePage.attr('id') == 'nodedetails') refreshNodeDetails(node);
 
         //update this node's events on the events page
         for(var key in node.events)
@@ -1101,7 +1524,7 @@
         $(this).prop('title', agoResult.text);
       });
     }
-
+    
     //refresh "updated X ago" indicators
     var updateAgosTimer = setInterval(updateAgos,3000);
 
@@ -1153,14 +1576,79 @@
         $("#btnRawToggle").addClass('ui-btn-b');
       }
     });
-    
+
     $("#beepBtn").click("tap", function(event) {
       socket.emit('GATEWAYMESSAGE', 'BEEP');
     });
+    
+    function graphBottomPosition(graphWrapper) {
+      canvas=$(graphWrapper).find('canvas.flot-overlay');
+      return canvas.offset().top + canvas.outerHeight(true);
+    }
+    
+    var timeoutID=false;
+    function hideTooltip() {
+      if ($("#tooltip").is(':visible'))
+        $("#tooltip").fadeOut(100);
+    }
+    
+    $("#graphDeleteDataToggle").click("tap", function(event) {
+      if ($("#graphDeleteDataToggle").hasClass('active')) {
+        $("#graphDeleteDataToggle").removeClass('active').css('background-color','');
+        $("#tooltip").html('<span style="color:green"><b>DELETE MODE EXIT</b>');
+        $("#tooltip").css({top: graphBottomPosition(metricGraphWrapper)-45, left: $(window).width()/2-40}).fadeIn(20);
+        clearTimeout(timeoutID);
+        timeoutID = setTimeout(hideTooltip, 2000);
+        graphHidePoints();
+      }
+      else {
+        $("#graphDeleteDataToggle").addClass('active').css('background-color','#D00');
+        $("#tooltip").html('<span style="color:red"><b>DELETE MODE ACTIVE:</b><br>Clicking any data-point will remove it!</span>');
+        $("#tooltip").css({top: graphBottomPosition(metricGraphWrapper)-60, left: $(window).width()/2-50}).fadeIn(20);
+        clearTimeout(timeoutID);
+        timeoutID = setTimeout(hideTooltip, 2000);
+        $("#graphEditDataToggle").removeClass('active').css('background-color','');
+        graphShowPoints();
+      }
+    });
 
+    $("#graphEditDataToggle").click("tap", function(event) {
+      if ($("#graphEditDataToggle").hasClass('active')) {
+        $("#graphEditDataToggle").removeClass('active').css('background-color','');
+        $("#tooltip").html('<span style="color:green"><b>EDIT MODE EXIT</b>');
+        $("#tooltip").css({top: graphBottomPosition(metricGraphWrapper)-45, left: $(window).width()/2-40}).fadeIn(20);
+        clearTimeout(timeoutID);
+        timeoutID = setTimeout(hideTooltip, 2000);
+        graphHidePoints();
+      }
+      else {
+        $("#graphEditDataToggle").addClass('active').css('background-color','#0D0');
+        $("#tooltip").html('<span style="color:red"><b>EDIT MODE ACTIVE:</b><br>Clicking any data-point will prompt to edit it!</span>');
+        $("#tooltip").css({top: graphBottomPosition(metricGraphWrapper)-60, left: $(window).width()/2-50}).fadeIn(20);
+        clearTimeout(timeoutID);
+        timeoutID = setTimeout(hideTooltip, 2000);
+        $("#graphDeleteDataToggle").removeClass('active').css('background-color','');
+        graphShowPoints();
+      }
+    });
+
+    $("#node_graphTogglePoints").click("tap", function(event) {
+      if ($("#node_graphTogglePoints").hasClass('active')) $("#node_graphTogglePoints").removeClass('active').css('background-color','');
+      else $("#node_graphTogglePoints").addClass('active').css('background-color','#0D0');
+      refreshMultiGraph();
+    });
+
+    function graphShowPoints() { $("#graphTogglePoints").addClass('active').css('background-color','#0D0'); refreshGraph(); }
+    function graphHidePoints() { $("#graphTogglePoints").removeClass('active').css('background-color',''); refreshGraph(); }
+    $("#graphTogglePoints").click("tap", function(event) {
+      if ($("#graphTogglePoints").hasClass('active'))
+        graphHidePoints();
+      else graphShowPoints();
+    });
+    
     function refreshNodeDetails(node) {
       $('#nodeLabel').val(node.label || '');
-      $('#nodeDetailTitle').html(nodeResolveString(node.label, node.metrics) || 'Node details');
+      $('#nodeDetailTitle').html(nodeResolveString(node.label||'', node.metrics) || 'Node details');
       $('#nodeMoteType').val(node.type || '');
       $("#nodeMoteType").selectmenu('refresh',true);
       $('#nodeDescr').val(node.descr || '['+node._id+']');
@@ -1173,13 +1661,16 @@
       if (node.rssi) { $('#rssiinfo').show(); $('.nodeRSSI').html(node.rssi); }
       else $('#rssiinfo').hide();
       $('.nodeUpdated').html(ago(node.updated, false).tag);
+      if (node.label) $('#nodeDetailTitleMetric').html(node.label.replace(/\{.+\}/ig, ''));
 
+      //populate metrics list
       $('#metricList').empty();
+      var hasGraphedMetrics = false;
       for(var key in node.metrics)
       {
         var metric = node.metrics[key];
         var metricValue = metricsValues([metric]);
-        var newLI = $('<li id="' + key + '"><a metric-id="' + key + '" href="#metricdetails" class="metricdetails"><img class="ui-li-icon" src="images/' + (metric.pin==1 ? 'pin.png' : 'blank.png') + '" />' +  metric.label + ' ' + (metric.graph==1 ? '<img style="width:16px" src="images/graph.png" /> ' : '') + ago(metric.updated, 0).tag + '<span class="ui-li-count ui-li-count16">' + metricValue +  '</span></a></li>');
+        var newLI = $('<li id="' + key + '"><a metric-id="' + key + '" href="#metricdetails" class="metricdetails"><img class="ui-li-icon" src="images/' + (metric.pin==1 ? 'dock.png' : 'blank.png') + '" />' +  metric.label + ' ' + (metric.graph==1 ? '<img style="width:16px" src="images/graph.png" /> ' : '') + ago(metric.updated, 0).tag + '<span class="ui-li-count ui-li-count16">' + metricValue +  '</span></a></li>');
         $('#metricList').append(newLI);
         if (key == selectedMetricKey)
         {
@@ -1187,10 +1678,38 @@
           $('#metricValue').val(metric.value + (metric.unit || ''));
           if (metric.graph) addGraphDataPoint([(new Date()).getTime()-serverTimeOffset, metric.value]);
         }
+        if (metric.graph) hasGraphedMetrics = true;
       }
       $('#metricList').listview().listview('refresh');
 
-      //display events list
+      //display Create-Graph button
+      if (hasGraphedMetrics==true)
+      {
+        //show node multigraphs
+        if (node.multiGraphs)
+        {
+          if (!nodeMultiGraph.is(':visible'))
+          {
+            nodeMultiGraphWrapper.hide(); //hide graph div while loading data
+            $("div[ui-role='loadingnodemultigraph']").show(); //show Loader..
+            graphData=[];
+            graphView.resetDomain();
+            refreshMultiGraph();
+            $("#addNodeGraphWrapper").hide();
+          }
+        }
+        else
+        {
+          nodeMultiGraphWrapper.hide();
+          $("div[ui-role='loadingnodemultigraph']").hide();
+          $("#addNodeGraphWrapper").show();
+        }
+
+        $('#nodeMultigraphSection').show();
+      }
+      else $('#nodeMultigraphSection').hide();
+
+      //populate events list
       $('#eventList').empty();
       for(var key in node.events)
       {
@@ -1243,7 +1762,7 @@
               newBtn.addClass('ui-icon-' + state.icon);
             }
 
-            newBtn.bind('click', {nodeId:node._id, action:state.action, nodeType:node.type, cKey:cKey, sKey:sKey}, function(event) {
+            newBtn.on('click', {nodeId:node._id, action:state.action, nodeType:node.type, cKey:cKey, sKey:sKey}, function(event) {
               //alert(event.data.action + ' was clicked for node ' + event.data.nodeId);
               socket.emit("CONTROLCLICK", {nodeId:event.data.nodeId, action:event.data.action, nodeType:event.data.nodeType, controlKey:event.data.cKey, stateKey:event.data.sKey});
             });
@@ -1343,23 +1862,23 @@
       $("#btnGraphMetric").show();
       if (metric.graph==1) {
         $("#btnGraphMetric").addClass('graphed').css('background-color','#38C');
-        $("div[ui-role='loadinggraph']").show();
+        $("div[ui-role='loadingmetricgraph']").show();
         graphView.resetDomain();
         refreshGraph();
       }
       else if (metric.graph==0) {
         $("#btnGraphMetric").removeClass('graphed').css('background-color','');
-        $("div[ui-role='loadinggraph']").hide();
+        $("div[ui-role='loadingmetricgraph']").hide();
       }
       else {
         $("#btnGraphMetric").hide();
-        $("div[ui-role='loadinggraph']").hide();
+        $("div[ui-role='loadingmetricgraph']").hide();
       }
     }
 
     $(document).on("click", ".nodedetails", function () {
       var nodeId = $(this).attr('node-id');
-      selectedNodeId = parseInt(nodeId);
+      selectedNodeId = isNumeric(nodeId) ? parseInt(nodeId) : nodeId;
       var node = nodes[selectedNodeId];
       refreshNodeDetails(node);
     });
@@ -1405,7 +1924,7 @@
         $("#btnGraphMetric").addClass('graphed').css('background-color','#38C');;
         if (graphData.length == 0)
         {
-          $("div[ui-role='loadinggraph']").show();
+          $("div[ui-role='loadingmetricgraph']").show();
           graphView.resetDomain();
           refreshGraph();
         }
@@ -1454,14 +1973,56 @@
       $('#addEvent_OK').hide();
       $("#addEventType").empty();
       $('#addEventType').append('<option value="">Select type...</option>');
-      for(var key in eventsDef)
+      eventTypes = Object.keys(eventsDef);
+      eventTypes.sort();
+      for(var key in eventTypes)
+      {
+        key = eventTypes[key];
         if (!nodes[selectedNodeId].events || !nodes[selectedNodeId].events[key])
           $('#addEventType').append('<option value="' + key + '">' + (eventsDef[key].label || key) + '</option>');
+      }
+    });
 
-      $(document).on("pagebeforeshow", "#addEvent", function(event){
-        $("#addEventType").selectmenu('refresh');
-        $("#addEventType").val('');
-      });
+    $('#changeNodeIcon').click("tap", function(event) {
+      $("#nodeIconsSelect").empty();
+      $('#nodeIconsSelect').append('<option value="">Select new icon...</option>');
+      for(var i=0; i<nodeIcons.length; i++)
+        $('#nodeIconsSelect').append('<option value="'+nodeIcons[i]+'" data-image="images/'+nodeIcons[i]+'">'+nodeIcons[i]+'</option>');
+      theIcon = getNodeIcon(nodes[selectedNodeId]);
+      $("#nodeIconsSelect").val(theIcon);
+      //$('#changeNodeIconCurrent').attr('src', 'images/'+theIcon);
+    });
+
+    $('#changeNodeIconPage').on('pagebeforeshow', function(event){
+      $("#nodeIconsSelect").selectmenu('refresh');
+      $('#changeNodeIconCurrent').attr('src', 'images/'+$('#nodeIconsSelect').val());
+    });
+
+    $('#nodeIconsSelect').change(function(){
+      $('#nodeIconUpload').val('');
+    });
+    
+    $('#addNodeGraph').click("tap", function(event) {
+      $("#addNodeGraphMetrics").empty();
+      $('#addNodeGraph_OK').hide();
+      $('#addNodeGraphMetrics').append('<option value="">Select metrics...</option>');
+      
+      for(var key in nodes[selectedNodeId].metrics)
+      {
+        var metric = nodes[selectedNodeId].metrics[key];
+        if (metric.graph)
+          $('#addNodeGraphMetrics').append('<option value="' + key + '">' + (metric.label || key) + '</option>');
+      }
+    });
+    
+    $('#addEmptyNode').click("tap", function(event) {
+      $('#addEmptyNode_OK').hide();
+      $("#addEmptyNode_msg").hide();
+      $("#addEmptyNodeID").val('');
+    });
+    
+    $("#addEmptyNode_OK").click("tap", function(event) {
+      socket.emit("INJECTNODE", {nodeId:$("#addEmptyNodeID").val()});
     });
     
     $('#exportCSVDateRange_export').click("tap", function(event) {
@@ -1471,24 +2032,58 @@
       socket.emit('EXPORTNODELOGSCSV', selectedNodeId, start, end, points); //[unix epoch, end of time], how many points to return
     });
 
-    $("#node_update").click("tap", function(event) {
-      notifyUpdateNode();
-      //updateNode(nodes[selectedNodeId]); //this will happen when node is sent back by server
-      refreshNodeListUI();
-    });
-
     $("#addEvent_OK").click("tap", function(event) {
       socket.emit('EDITNODEEVENT', selectedNodeId, $('#addEventType').val(), true);
     });
 
-    $("#metric_return,#event_return").click("tap", function(event) {
-      var metric = nodes[selectedNodeId].metrics[selectedMetricKey];
-      if (metric != undefined)
+    $("#addNodeGraph_OK").click("tap", function(event) {
+      socket.emit('ADDNODEGRAPH', selectedNodeId, $('#addNodeGraphMetrics').val());
+    });
+
+    $("#deleteNodeGraph").click("tap", function(event) {
+      socket.emit('DELETENODEGRAPH', selectedNodeId);
+    });
+
+    $("#changeNodeIcon_OK").click("tap", function(event) {
+      if ($("#nodeIconUpload").val()) {
+        event.preventDefault();
+        var file_data = $('#nodeIconUpload').prop('files')[0];   
+        var form_data = new FormData();                  
+        form_data.append('file', file_data);
+        $.ajax({
+          type: "POST",
+          url: "upload.php",
+          enctype: 'multipart/form-data',
+          dataType: 'json',
+          cache: false,
+          contentType: false,
+          processData: false,
+          data: form_data,
+          success: function (data, textStatus, jqXHR) {
+            data['status'];
+            if (data['status']=='success')
+            {
+              if (data['filePath'])
+              {
+                $('#nodeDetailImage').attr('src', 'images/'+data['filePath']);
+                nodes[selectedNodeId].icon = data['filePath'];
+                socket.emit('REFRESHICONS');
+                $.mobile.navigate('#nodedetails');
+                
+              }
+              else alert('Expected filePath back, got nothing');
+            }
+            else alert(data['message']||'Upload failed');
+          },
+          error: function (data, textStatus, msg) {
+            alert(msg||'Upload failed');
+          }
+        });
+      }
+      else
       {
-        metric.label = $('#metricLabel').val();
-        metric.pin = $('#btnPinMetric').hasClass('pinned') ? 1 : 0;
-        if (metric.graph!=undefined) metric.graph = $('#btnGraphMetric').hasClass('graphed') ? 1 : 0;
-        socket.emit('UPDATEMETRICSETTINGS', selectedNodeId, selectedMetricKey, metric);
+        $('#nodeDetailImage').attr('src', 'images/'+$("#nodeIconsSelect").val());
+        nodes[selectedNodeId].icon = $("#nodeIconsSelect").val();
       }
     });
 
@@ -1499,13 +2094,21 @@
     });
 
     $("#deleteMetric_yes").click("tap", function(event) {
-      nodes[selectedNodeId].metrics[selectedMetricKey] = undefined;
+      delete(nodes[selectedNodeId].metrics[selectedMetricKey]);
       $('#metricList li#' + selectedMetricKey).remove();
       socket.emit('DELETENODEMETRIC', selectedNodeId, selectedMetricKey);
     });
-    
+
+    $("#editData_OK").click("tap", function(event) {
+      socket.emit('EDITMETRICDATA', selectedNodeId, selectedMetricKey, editDataStart, editDataEnd, $("#editDataNewValue").val());
+    });
+        
     $("#processExit_yes").click("tap", function(event) {
       socket.emit('PROCESSEXIT');
+    });
+
+    $("#compactDB").click("tap", function(event) {
+      socket.emit('COMPACTDB');
     });
 
     $("#clearbtn").click("tap", function(event) {
@@ -1524,10 +2127,7 @@
       //LOG(JSON.stringify({nodeId:$("#rawActionID").val(), action:$("#rawActionText").val()}));
       var id = $("#rawActionID").val();
       var value = $("#rawActionText").val();
-      if (value.toLowerCase() == 'new')
-        socket.emit("INJECTNODE", {nodeId:id, label:value});
-      else
-        socket.emit("NODEMESSAGE", {nodeId:id, action:value});
+      socket.emit("NODEMESSAGE", {nodeId:id, action:value});
     });
 
     //request the gateway app the restart its process on [Ctrl+Shift+Alt+R]
@@ -1547,7 +2147,7 @@
     });
 
     //graph value tooltips container
-    $("<div id='tooltip'></div>").css({
+    $('<div id="tooltip"></div>').css({
 			position: "absolute",
 			display: "none",
       fontSize: "11px",
@@ -1567,9 +2167,97 @@
         $( "#nav-panel" ).css( "height", h );
       }
     });
-    
+
     $("#nav-panel-close").click("tap", function(event) {
       $( "#nav-panel" ).popup( "close" );
+    });
+    
+    $('#addNodeGraphMetrics').change(function() {
+      if ($(this).val().length > 1) $('#addNodeGraph_OK').show();
+      else $('#addNodeGraph_OK').hide();
+    });
+
+    $('#addEmptyNodeID').on('keyup change', function() {
+      if (isNumeric($(this).val()))
+      {
+        value = parseInt($(this).val());
+        if (value<1) $(this).val(-value);
+
+        if(value==1)
+        {
+          $("#addEmptyNode_msg").text('Oops, ID=1 is the Gateway itself').show();
+          $('#addEmptyNode_OK').hide();
+          return;
+        }
+
+        if(nodes[value])
+        {
+          $("#addEmptyNode_msg").text('Oops, a node with ID='+value+' already exists ('+nodes[value].label.replace(/\{.+\}/ig, '') +')').show();
+          $('#addEmptyNode_OK').hide();
+          return;
+        }
+
+        $("#addEmptyNode_msg").hide();
+        $('#addEmptyNode_OK').show();
+      }
+      else $("#addEmptyNode_msg").hide();
+    });
+
+    $('#editDataNewValue').on('keyup change', function() {
+      if (isNumeric($(this).val()))
+      {
+        value = parseInt($(this).val());
+        $('#editData_OK').show();
+      }
+      else $("#editData_OK").hide();
+    });
+
+    $("#homepage").on('pagebeforeshow', function(event, data) {
+      if (data.prevPage.attr('id')=='nodedetails') {
+        notifyUpdateNode();
+        updateNode(nodes[selectedNodeId]);
+        refreshNodeListUI();
+        $("#node_graphTogglePoints").removeClass('active').css('background-color','');
+      }
+    });
+
+    $("#nodedetails").on('pagebeforeshow', function(event, data) {
+      //show/hide IP box - this is for numeric ID nodes, that also have an _ip property (request made via HTTPENDPOINT)
+      if (nodes[selectedNodeId] && nodes[selectedNodeId]._ip)
+      {
+        $('#nodeIP').val(nodes[selectedNodeId]._ip);
+        $("label[for='nodeIP']").show()
+        $('#nodeIP').show().parent('div.ui-input-text').show();
+      }
+      else
+      {
+        $('#nodeIP').val('');
+        $("label[for='nodeIP']").hide()
+        $('#nodeIP').hide().parent('div.ui-input-text').hide();
+      }
+      if (data.prevPage.attr('id')=='metricdetails') {
+        var metric = nodes[selectedNodeId].metrics[selectedMetricKey];
+        if (metric != undefined)
+        {
+          metric.label = $('#metricLabel').val();
+          metric.pin = $('#btnPinMetric').hasClass('pinned') ? 1 : 0;
+          if (metric.graph!=undefined) metric.graph = $('#btnGraphMetric').hasClass('graphed') ? 1 : 0;
+          socket.emit('UPDATEMETRICSETTINGS', selectedNodeId, selectedMetricKey, metric);
+        }
+        $("#graphTogglePoints").removeClass('active').css('background-color','');
+        $("#graphDeleteDataToggle").removeClass('active').css('background-color','');
+        $("#graphEditDataToggle").removeClass('active').css('background-color','');
+      }
+    });
+
+    $('#addNodeGraphPage').on('pagebeforeshow', function(event){
+      $("#addNodeGraphMetrics").selectmenu('refresh');
+      $("#addNodeGraphMetrics").val('');
+    });
+
+    $('#addEvent').on('pagebeforeshow', function(event){
+      $("#addEventType").selectmenu('refresh');
+      $("#addEventType").val('');
     });
   });
   }

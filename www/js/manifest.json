@@ -1,0 +1,13 @@
+{
+  "lang": "en-US",
+  "short_name": "PiGateway",
+  "name": "PiGateway",
+  "description": "Connected device monitor and control software.",
+  "theme_color": "#414141",
+  "background_color": "#414141",
+  "icons": [
+    {"src": "../images/favicon_manifest.png", "sizes": "192x192", "type": "image/png" }
+  ],
+  "start_url": "/",
+  "display": "standalone"
+}

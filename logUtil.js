@@ -18,7 +18,9 @@ var path = require('path');
 var metrics = require(path.resolve(__dirname,'metrics.js'));
 
 exports.getLogName = function(nodeId, metricId) {
-  return ('0000' + nodeId).slice(-4) + '_' + metricId + '.bin'; //left pad log names with zeros
+  if (metrics.isNumeric(nodeId))
+    nodeId = ('0000' + nodeId).slice(-4);
+  return nodeId + '_' + metricId + '.bin'; //left pad log names with zeros
 }
 
 exports.getData = function(filename, start, end, dpcount) {
@@ -53,6 +55,7 @@ exports.getData = function(filename, start, end, dpcount) {
   }
 
   timetmp = 0;
+  deleted=0;
 
   //first check if sequential reads (much faster) make sense
   posStart = exports.binarySearch(fd,start-interval,filesize);
@@ -64,6 +67,7 @@ exports.getData = function(filename, start, end, dpcount) {
     {
       fs.readSync(fd, buff, 0, 9, i);
       timetmp = buff.readUInt32BE(1);
+      if (buff.readUInt8(0) !== 0) { deleted++;continue; } //skip deleted data
       if (!(timetmp >= start && timetmp <= end)) continue;
       value = buff.readInt32BE(5);
       data.push({t:timetmp*1000, v:value/10000});
@@ -84,6 +88,7 @@ exports.getData = function(filename, start, end, dpcount) {
     last_time = timetmp;
     fs.readSync(fd, buff, 0, 9, pos);
     timetmp = buff.readUInt32BE(1);
+    if (buff.readUInt8(0) !== 0) { deleted++;continue; } //skip deleted data
     if (!(timetmp >= start && timetmp <= end)) continue;
     value = buff.readInt32BE(5);
 
@@ -98,8 +103,8 @@ exports.getData = function(filename, start, end, dpcount) {
   return {
     data:data,
     queryTime:(new Date() - ts),
-    totalIntervalDatapoints: (posEnd-posStart)/9+1,
-    totalDatapoints:filesize/9,
+    totalIntervalDatapoints: (posEnd-posStart)/9+1-deleted,
+    totalDatapoints:filesize/9-deleted,
     logSize:filesize
   };
 }
@@ -128,7 +133,7 @@ exports.postData = function post(filename, timestamp, value, duplicateInterval) 
     // read the last value appended to the file
     fd = fs.openSync(filename, 'r');
     var buf8 = Buffer.alloc(8);
-    
+
     fs.readSync(fd, buf8, 0, 8, logsize-8);
     lastTime = buf8.readUInt32BE(0); //read timestamp (bytes 0-3 in buffer)
     lastValue = buf8.readInt32BE(4); //read value (bytes 4-7 in buffer)
@@ -170,6 +175,66 @@ exports.postData = function post(filename, timestamp, value, duplicateInterval) 
   return value;
 }
 
+exports.editData = function(filename, start, end, newValue) {
+  if (!metrics.isNumeric(newValue))
+  {
+    console.error('editData FAIL: newValue \''+newValue+'\' is not numeric');
+    return 0;
+  }
+  else newValue=Math.round(newValue*10000); //round to make an exactly even integer
+
+  var edited=0;
+  fd = fs.openSync(filename, 'r');
+  posStart = exports.binarySearch(fd,start,filesize);
+  posEnd = exports.binarySearch(fd,end,filesize);
+  fs.closeSync(fd);
+
+  if (posStart <= posEnd)
+  {
+    var buff = Buffer.alloc(9);
+    fd = fs.openSync(filename, 'r+');
+    for (var i=posStart; i<=posEnd; i+=9)
+    {
+      fs.readSync(fd, buff, 0, 9, i);
+      if (buff.readUInt8(0) !== 0) { continue; } //skip deleted data
+      //value = buff.readInt32BE(5);
+      buff.writeInt32BE(newValue,5); //change value only
+      //timeStamp = buff.readUInt32BE(1);
+      //console.log('******* editData @ ' + i + ' : ' + timeStamp + ' : ' + value + ' -> ' + newValue);
+      edited++;
+      fs.writeSync(fd, buff, 0, 9, i);
+    }
+    fs.closeSync(fd);
+  }
+  return edited;
+}
+
+exports.deleteData = function(filename, start, end) {
+  var deleted=0;
+  fd = fs.openSync(filename, 'r');
+  posStart = exports.binarySearch(fd,start,filesize);
+  posEnd = exports.binarySearch(fd,end,filesize);
+  fs.closeSync(fd);
+
+  if (posStart <= posEnd)
+  {
+    var buff = Buffer.alloc(9);
+    fd = fs.openSync(filename, 'r+');
+    for (var i=posStart; i<=posEnd; i+=9)
+    {
+      fs.readSync(fd, buff, 0, 9, i);
+      buff.writeInt8(1,0); //flag for deletion
+      //timeStamp = buff.readUInt32BE(1);
+      //value = buff.readUInt32BE(5);
+      //console.log('******* deleteData @ ' + i + ' : ' + timeStamp + ' : ' + value);
+      deleted++;
+      fs.writeSync(fd, buff, 0, 1, i);
+    }
+    fs.closeSync(fd);
+  }
+  return deleted;
+}
+
 exports.binarySearch = function(fileDescriptor, timestamp, filesize) {
   start = 0;
   end = filesize-9;
@@ -193,7 +258,7 @@ exports.binarySearch = function(fileDescriptor, timestamp, filesize) {
     // If the query range is as small as it can be 1 datapoint wide: exit
     if ((end-start)==9) return (mid-9);
 
-    // If the time of the last middle of the range is more than our query time then next itteration is lower half less than our query time then nest ittereation is higher half
+    // If the time of the last middle of the range is more than our query time then next iteration is lower half less than our query time then nest iteration is higher half
     if (timestamp>time) start = mid; else end = mid;
   }
   return mid;

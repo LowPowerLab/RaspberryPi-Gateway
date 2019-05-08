@@ -20,6 +20,13 @@ echo -e "${GRN}#################################################################
 echo -e "${YLW}Note: script can take long on older Pis${NC}"
 echo -e "${YLW}Note: setup requires your input at certain steps${NC}"
 
+if (whiptail --title "  Gateway User License Agreement  " --yesno "This software requires a license for any commercial use.\n\nBy installing this software I certify that either:\n\n- I use this software for personal/non-profit purposes\n- I have obtained a commercial license already" 12 78) then
+  echo -e "${GRN}#                 LICENSE confirmation applied.                #${NC}"
+else
+  echo -e "${RED}#                 License required, exiting.                #${NC}"
+  exit 0
+fi
+
 # #update apt-get, distribution, kernel
 echo -e "${CYAN}************* STEP: Running apt-get update *************${NC}"
 sudo apt-get update -m
@@ -103,6 +110,10 @@ sudo mkdir $APPSRVDIR/data/db -p
 touch $APPSRVDIR/data/db/gateway.db
 touch $APPSRVDIR/data/db/gateway_nonmatches.db
 
+#create uploads dir for user icons
+sudo mkdir $APPSRVDIR/www/images/uploads -p
+sudo chown -R www-data:pi $APPSRVDIR/www/images/uploads
+
 #create self signed certificate
 #WARNING: must do this *AFTER* the gateway app was git-cloned
 echo -e "${CYAN}************* STEP: Create self signed HTTPS certificate (5 year) *************${NC}"
@@ -116,7 +127,7 @@ HTTPUSER=$(whiptail --inputbox "\nEnter the Gateway http_auth username:" 8 78 "p
 HTTPPASS=$(whiptail --inputbox "\nEnter the Gateway http_auth password:" 10 78 "raspberry" --title "Gateway HTTP_AUTH Setup" --nocancel 3>&1 1>&2 2>&3)
 touch $APPSRVDIR/data/secure/.htpasswd
 htpasswd -b $APPSRVDIR/data/secure/.htpasswd $HTTPUSER $HTTPPASS
-echo -e "You can change httpauth password using ${YLW}htpassword $APPSRVDIR/data/secure/.htpasswd user newpassword${NC}"
+echo -e "You can change httpauth password using ${YLW}htpasswd $APPSRVDIR/data/secure/.htpasswd user newpassword${NC}"
 
 echo -e "${CYAN}************* STEP: Copy default site config to sites-available *************${NC}"
 cp -rf $APPSRVDIR/.setup/default /etc/nginx/sites-available/default
