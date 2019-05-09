@@ -218,7 +218,7 @@ global.getNodeIcons = function(dir, files_, steps){
     var name = dir + '/' + files[i];
     if (fs.statSync(name).isDirectory() && steps==0) //recurse 1 level only
       getNodeIcons(name, files_, steps+1);
-    else if (files[i].match(/^icon_\w*\.(bmp|png|jpg|jpeg|ico)$/ig)) //images only
+    else if (files[i].match(/^icon_.+\.(bmp|png|jpg|jpeg|ico)$/ig)) //images only
       files_.push(name.replace(__dirname+'/www/images/',''));
   }
   return files_;
