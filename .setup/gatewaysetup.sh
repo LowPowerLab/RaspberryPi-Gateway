@@ -110,16 +110,16 @@ sudo mkdir $APPSRVDIR/data/db -p
 touch $APPSRVDIR/data/db/gateway.db
 touch $APPSRVDIR/data/db/gateway_nonmatches.db
 
-#create uploads dir for user icons
-sudo mkdir $APPSRVDIR/www/images/uploads -p
-sudo chown -R www-data:pi $APPSRVDIR/www/images/uploads
-
 #create self signed certificate
 #WARNING: must do this *AFTER* the gateway app was git-cloned
 echo -e "${CYAN}************* STEP: Create self signed HTTPS certificate (5 year) *************${NC}"
 sudo mkdir $APPSRVDIR/data/secure -p
 sudo openssl req -new -x509 -nodes -days 1825 -newkey rsa:2048 -out $APPSRVDIR/data/secure/server.crt -keyout $APPSRVDIR/data/secure/server.key -subj "/C=US/ST=MI/L=Detroit/O=LowPowerLab/OU=IoT Department/CN=lowpowerlab.com"
 sudo chown -R pi:pi $APPSRVDIR
+
+#create uploads dir for user icons
+sudo mkdir $APPSRVDIR/www/images/uploads -p
+sudo chown -R www-data:pi $APPSRVDIR/www/images/uploads
 
 #create HTTP AUTH credentials
 echo -e "${CYAN}************* STEP: Create HTTP AUTH credentials *************${NC}"
