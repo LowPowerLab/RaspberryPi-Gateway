@@ -134,16 +134,23 @@ global.sendEmail = function(SUBJECT, BODY, ATTACHMENTS) {
 }
 
 global.sendSMS = function(SUBJECT, BODY) {
-  var mailOptions = {
-      from: 'Gateway <gateway@moteino.com>',
-      to: settings.credentials.smsAlertsTo.value, //your mobile carrier should have an email address that will generate a SMS to your phone
-      subject: SUBJECT,
-      text: BODY
-  };
-  transporter.sendMail(mailOptions, function(error, info) {
-    if(error) console.error('SENDSMS error: ' + error);
-    else console.log('SENDSMS SUCCESS: ' + info.response);
-  });
+  
+  smsToList = settings.credentials.smsAlertsTo.value.split(',');
+  
+  for (var smsTo in smsToList) {
+
+      var mailOptions = {
+        from: 'Gateway <gateway@moteino.com>',
+        to: smsToList[smsTo], //your mobile carrier should have an email address that will generate a SMS to your phone
+        subject: SUBJECT,
+        text: BODY
+      };
+      transporter.sendMail(mailOptions, function(error, info) {
+        if(error) console.error('SENDSMS error: ' + error);
+        else console.log('SENDSMS SUCCESS: ' + info.response);
+      });
+  }
+  
 }
 
 global.sendMessageToNode = function(node) {
