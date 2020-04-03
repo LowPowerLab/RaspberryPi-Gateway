@@ -1,5 +1,11 @@
-RaspberryPi Gateway framework and Web GUI for connected devices & IoT networks
+RaspberryPi Gateway Home Automation & IoT Applications
 ----------------
+[![Build Status](https://travis-ci.org/LowPowerLab/RaspberryPi-Gateway.svg)](https://travis-ci.org/LowPowerLab/RaspberryPi-Gateway)
+[![GitHub release](https://img.shields.io/github/release/LowPowerLab/RaspberryPi-Gateway.svg)](https://github.com/LowPowerLab/RaspberryPi-Gateway)
+[![GitHub issues](https://img.shields.io/github/issues/LowPowerLab/RaspberryPi-Gateway.svg)](https://github.com/LowPowerLab/RaspberryPi-Gateway/issues)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/LowPowerLab/RaspberryPi-Gateway.svg)](https://github.com/LowPowerLab/RaspberryPi-Gateway/pulls)
+[![license](https://img.shields.io/github/license/LowPowerLab/RaspberryPi-Gateway.svg)](https://github.com/LowPowerLab/RaspberryPi-Gateway/blob/master/LICENSE)
+
 Designed and coded by [Felix Rusu](lowpowerlab.com/contact), Low Power Lab LLC
 <br/>
 
