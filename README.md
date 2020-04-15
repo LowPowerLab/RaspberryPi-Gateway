@@ -21,12 +21,12 @@ Designed and coded by [Felix Rusu](lowpowerlab.com/contact), Low Power Lab LLC
 - [Font-awesome](http://htmlpreview.github.io/?https://github.com/dotcastle/jquery-mobile-font-awesome/blob/master/index.html) icons for jQuery-Mobile
 
 ### LICENSE
-This project is released under GPL 3.0 with the following ammendment:<br/>
-You are free to use, copy, distribute and transmit this Software for personal, non-commercial purposes. Commercial or for-profit use [requires a license](https://lowpowerlab.com/contact).
+This project is released under [CC-BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/).<br/>
+The licensing TLDR; is: You are free to use, copy, distribute and transmit this Software for personal, non-commercial purposes, as long as you give attribution and share any modifications under the same license. Commercial or for-profit use [requires a license](https://lowpowerlab.com/contact).
 For more details see the [LICENSE](https://github.com/LowPowerLab/RaspberryPi-Gateway/blob/master/LICENSE)
 
 ### Details & Setup Guide
-Please see the official [Gateway Guide](https://lowpowerlab.com/guide/gateway/) for all details requires to install this software.
+Please see the [PiGateway Guide](https://lowpowerlab.com/guide/gateway/) for all details requires to install this software.
 
 ### Video Overview & Demo
 https://www.youtube.com/watch?v=F15dEqZ4pMM
