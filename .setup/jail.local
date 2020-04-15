@@ -1,0 +1,11 @@
+[nginx-http-auth]
+
+enabled = true
+filter = nginx-http-auth
+port = http,https
+logpath = /var/log/nginx/gateway.error.log
+ignoreip = 127.0.0.1/8
+maxretry = 5
+#bantime = 3600    #10 minutes is the default if not specified
+#findtime = 3600   # These lines combine to ban clients that fail
+#maxretry = 6      # to authenticate 6 times within a half hour.
