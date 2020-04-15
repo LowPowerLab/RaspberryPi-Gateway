@@ -21,7 +21,7 @@ exports.events = {
           if (nodeRightNow.metrics['Status'] &&
               nodeRightNow.metrics['Status'].value == 'OPEN') {
 
-            /* Only automatically close between 9pm and 6am */
+            /* Only automatically close between 11pm and 6am */
             if ((nowDate.getHours() >= 23 || nowDate.getHours() <= 6) && nodeRightNow.metrics['Status'].closeCount < 3) {
 
               if (nodeRightNow.metrics['Status'].openDate == null) {

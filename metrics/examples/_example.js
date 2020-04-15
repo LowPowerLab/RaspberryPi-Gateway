@@ -1,11 +1,30 @@
-﻿//This sample metric will override that which is already defined in main metrics.js
-//You can redefine defaults or write your own new custom metrics in 1 or more files in this folder, separate them as you'd like - they all get merged together when the app loads
+﻿// This sample METRICS MODULE defines some metrics, events and mote templates which will override any previously
+//   loaded MODULE (either the core.js MODULE which is loaded FIRST, or other MODULES loaded prior to it)
+// You can redefine default metrics/events/mote templates or write your own new custom ones in 1 or more files
+//   in the 'metrics' folder or use subfolders to separate them as illustrated with the LowPowerLab folder.
+//   They all get merged together when the app loads, first the core.js, then all other files in the 'metrics' folder,
+//   then all files within subfolders (all alphabetical case insensitive order - both files and folders).
 
-//you will have to import any used functions from metrics.js this way:
-exports.timeoutOffset = require('../metrics.js').timeoutOffset;
-exports.futureDateOffset = require('../metrics.js').futureDateOffset;
+// GLOBAL functions and variables can be defined in this MODULE by prefixing them with 'exports.varOrFunctionName'.
+//   Once this MODULE is loaded any functions/variables prefixed with 'exports.' will be injected into the global object
+//   and are then available be invoked across ALL MODULES events/functions.
+// You may define local-use-only variables and functions the usual way - use 'var/const/let variableName' or 'function functionName(..){..}'
+
+//example GLOBAL variable to use anywhere in the entire application as soon as this MODULE is loaded in main app
+exports.ONEDAYHOURS = 24;
+
+//example GLOBAL helper function to use anywhere in the entire application as soon as this module is loaded in main app
+exports.secondsInOneDay = function() {
+  var result = ONEDAYHOURS * 3600;
+  return result;
+};
 
 exports.metrics = {
+  //Power monitoring metrics
+  VRMS : { name:'VRMS', regexp:/VRMS\:([\d\.]+)(?:V)?/i, value:'', unit:'V', },
+  IRMS : { name:'IRMS', regexp:/IRMS\:([\d\.]+)(?:A)?/i, value:'', unit:'A', },
+  WATT : { name:'W', regexp:/W\:([\d\.]+)(?:W)/i, value:'', unit:'W', pin:1, },
+
   V:
   {
     name: 'V',
@@ -54,8 +73,8 @@ exports.metrics = {
       {
         curvedLines:
         {
-          active: true,
-          apply: true,
+          //active: true,
+          //apply: true,
           //monotonicFit: true, //makes the curve tight to datapoints
           //nrSplinePoints: 5 //number of sample points (of the spline) in between two consecutive points (more = smoother)
         }
@@ -64,7 +83,7 @@ exports.metrics = {
   }
 };
 
-//example of overriding a mote
+//example of overriding a mote template
 exports.motes = {
   SprinklerMote: {
     label  : 'Sprinkler Controller',
@@ -89,6 +108,7 @@ exports.motes = {
       Z9 : { states: [{ label:'9', action:'ON:9', css:'background-color:#FF9B9B;', condition:''+function(node) { return node.metrics['ZONE']!=null && node.metrics['ZONE'].value != '9'; }},
                       { label:'9', action:'OFF', css:'background-color:#9BFFBE;color:#000000', condition:''+function(node) { return node.metrics['ZONE']==null || node.metrics['ZONE'].value == '9'; }}], breakAfter:true},
       MN : { states: [{ label:'Run Z1-8 5min', action:'PRG 1:300 2:300 3:300 4:200 5:300 5:300 6:300 7:300 8:300'}]},
+      MX : { states: [{ label:'Run Z1-8 10min', action:'PRG 1:600 2:600 3:600 4:600 5:600 5:600 6:600 7:600 8:600'}]},
       M67 : { states: [{ label:'Run Z6-7 200s', action:'PRG 6:200 7:200'}]},
     },
   },
@@ -96,15 +116,8 @@ exports.motes = {
 
 //example of overriding an event
 exports.events = {
-  sprinklersEvenDays : { label:'Even days Z1-9 @730AM', icon:'clock', descr:'Run Zones 1-9, even days @7:30AM', nextSchedule:function(node) { return exports.timeoutOffset(7,30); }, scheduledExecute:function(node) { if ((new Date().getDate()%2)==0) sendMessageToNode({nodeId:node._id, action:'PRG 1:400 2:400 3:400 4:300 5:400 6:400 7:400 8:300 9:150' /*runs stations 1-5*/}); } },
-  sprinklers6and7_8am : { label:'Sprinklers Z6-7 200s 8am daily', icon:'clock', descr:'Run Z6-7 200s @ 8am', nextSchedule:function(node) { return exports.timeoutOffset(8,00); }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'PRG 6:200 7:200' /*runs stations 6-7 (200sec each, daily))*/}); } },
-  sprinklers6and7_3pm : { label:'Sprinklers Z6-7 200s 3pm daily', icon:'clock', descr:'Run Z6-7 200s @ 3am', nextSchedule:function(node) { return exports.timeoutOffset(15,00); }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'PRG 6:200 7:200' /*runs stations 6-7 (200sec each, daily))*/}); } },
-};
-//example of defining a property to use anywhere in the app/events or in other custom functions
-exports.ONEDAYHOURS = 24;
-
-//example of defining a general purpose function to use in the app/events or in other custom functions
-exports.secondsInOneDay = function() {
-  var result = exports.ONEDAYHOURS * 3600;
-  return result;
+  sprinklersEvenDays : { label:'Even days Z1-9 @730AM', icon:'clock', descr:'Run Zones 1-9, even days @7:30AM', nextSchedule:function(node) { return timeoutOffset(7,30); }, scheduledExecute:function(node) { if ((new Date().getDate()%2)==0) sendMessageToNode({nodeId:node._id, action:'PRG 1:400 2:400 3:400 4:300 5:400 6:400 7:400 8:300 9:150' /*runs stations 1-5*/}); } },
+  sprinklers6and7_8am : { label:'Sprinklers Z6-7 200s 8am daily', icon:'clock', descr:'Run Z6-7 200s @ 8am', nextSchedule:function(node) { return timeoutOffset(8,00); }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'PRG 6:200 7:200' /*runs stations 6-7 (200sec each, daily))*/}); } },
+  sprinklers6and7_3pm : { label:'Sprinklers Z6-7 200s 3pm daily', icon:'clock', descr:'Run Z6-7 200s @ 3am', nextSchedule:function(node) { return timeoutOffset(15,00); }, scheduledExecute:function(node) { sendMessageToNode({nodeId:node._id, action:'PRG 6:200 7:200' /*runs stations 6-7 (200sec each, daily))*/}); } },
+  motionLightON27 : { label:'Motion: SM27 ON!', icon:'action', descr:'Turn SwitchMote:27 ON when MOTION is detected', serverExecute:function(node) { if (node.metrics['M'] && node.metrics['M'].value == 'MOTION' && (Date.now() - new Date(node.metrics['M'].updated).getTime() < 2000)) { sendMessageToNode({nodeId:27, action:'MOT:1'}); }; } },
 };

@@ -56,8 +56,8 @@
   <link rel="manifest" href="js/manifest.json" crossOrigin="use-credentials">
   <link rel="icon" href="images/favicon.ico" type="image/x-icon">
   <script src="/socket.io/socket.io.js"></script>
-  <link type="text/css" rel="stylesheet" href="css/jquery.mobile-1.4.5.min.css" />
-  <link type="text/css" rel="stylesheet" href="css/jqm-font-awesome-usvg-upng.min.css" /><!--FA icons gallery: http://cssnite.jp/x10ai/followup/Font-Awesome-Cheetsheet-4.4.0-v3.pdf -->
+  <link type="text/css" rel="stylesheet" href="css/jquery.mobile-1.4.5.min.css">
+  <link type="text/css" rel="stylesheet" href="css/jqm-font-awesome-usvg-upng.min.css"><!--FA icons gallery: http://cssnite.jp/x10ai/followup/Font-Awesome-Cheetsheet-4.4.0-v3.pdf -->
   <script src="js/jquery-1.12.1.min.js"></script>
   <script src="js/jquery-ui.min.js"></script>
   <script src="js/jquery.mobile-1.4.5.min.js"></script>
@@ -71,10 +71,11 @@
   <script src="js/dateFormat.js"></script> <!-- for demo see http://jsfiddle.net/phZr7/1/ -->
   <script src="js/bind.1.0.1.min.js"></script>
   <!-- support for datepicker: -->
-  <link rel="stylesheet" href="css/jquery.mobile.datepicker.css" />
+  <link rel="stylesheet" href="css/jquery.mobile.datepicker.css">
   <script src="js/jquery.ui.datepicker.js"></script>
   <script src="js/jquery.mobile.datepicker.js"></script>
   <script language="javascript" type="text/javascript" src="js/FileSaver.min.js"></script>
+  <link type="text/css" rel="stylesheet" href="css/listview-grid.css">
   <style type="text/css">
   .ui-content { padding-top:0; }
   .btn-text, #loadingsocket { font-size: 32px; }
@@ -102,7 +103,8 @@
   .center-wrapper{ text-align: center; }
   .center-wrapper * { margin: 0 auto; }
   #nodeControls { padding: 0 0.5em 0 0.5em; }
-  .listIcon20px { max-width:20px; }
+  .listIcon { max-width:16px; }
+  .reqIcon { width:24px;vertical-align:top; }
 
   textarea.ui-input-text {
     height:auto;
@@ -131,29 +133,34 @@
     display:none;
   }
 
-  /*styling of inline raw action controls*/
-  .rawAction .ui-mini { margin:0; }
-  .rawAction .ui-btn { margin:0; padding: .3em 0; }
-  .rawAction a { margin:4px 0; }
-  #rawActionIDspan {
+  /*styling of inline terminal controls*/
+  .terminal input {font-family:consolas;font-weight:bold;}
+  .terminal .ui-mini { margin:0; }
+  .nodeMsg span:first-child {
       padding: 12px 0 12px 12px;
       float:left;
       width:15%;
   }
-  #rawActionTextspan {
+  .nodeMsg span:nth-child(2) {
       padding: 12px 0;
       float:left;
-      width:55%;
+      width:60%;
   }
-  #rawActionSendspan {
-      padding: 12px 12px 12px 0;
+  .fakeMsg span:first-child {
+      padding: 0 0 12px 12px;
       float:left;
-      width:20%;
+      width:75%;
   }
-  #rawActionIDspan div { border-radius: 0.3em 0 0 0.3em; }
-  #rawActionTextspan div { border-radius: 0; }
-  #rawActionSend { border-radius: 0 0.3em 0.3em 0; }
-  
+  .terminal span:last-child {
+      padding: 12px 0;
+      float:left;
+      width:22%;
+  }
+  .fakeMsg span:last-child { padding:0 0 12px 0; }
+  .terminal span:first-child div.ui-input-text { border-radius: 0.3em 0 0 0.3em; }
+  .terminal span:nth-child(2) div.ui-input-text { border-radius: 0 }
+  .terminal a.ui-btn { border-radius: 0 0.3em 0.3em 0; margin:0; padding: 0.3em 0; }
+
   .hiddenNodeShow a { background-color: #ffe5e5 !important; }
   
   #nodeList > li.ui-li-has-thumb > a { padding-right:2.5em;  }
@@ -289,18 +296,33 @@
         <li data-icon="fa-database">
           <a id="compactDB" title="Compact node database">Compact DB</a>
         </li>
+        <li data-icon="refresh">
+          <a href="#processExit" title="Restart gateway app">Restart App</a>
+        </li>
+        <li data-icon="recycle">
+          <a href="#restartPi" title="Restart Pi">Restart Pi Host</a>
+        </li>
         <li data-icon="power">
-          <a href="#processExit" title="Restart gateway app">Restart app</a>
+          <a href="#shutdownPi" title="Shutdown Pi">Shutdown Pi Host</a>
         </li>
       </ul>
       <div style="font-weight:bold;padding:5px;">
-        <span>Uptime: </span><span id="server-uptime" class="nodeAgo"></span>
+        <span>Server Uptime: </span><span id="server-uptime" class="nodeAgo"></span>
       </div>
-      <div style="padding:5px;">
+      <div style="font-size:0.9em;padding:5px;">
+        <span>Gateway Uptime: </span><span id="gateway-uptime"></span>
+      </div>
+        <div style="font-size:0.9em;padding:5px;">
+        <span>Gateway Freq: </span><span id="gateway-frequency"></span>
+      </div>
+      <div style="font-size:0.9em;padding:5px;">
         <span>DBCompacted: </span><span id="db-compacted" class="nodeAgo"></span>
       </div>
-      <div style="padding-left:5px;">
-        <span>Version: </span><span id="server-version"></span>
+      <div style="font-size:0.9em;padding-left:5px;">
+        <span>App Version: </span><span id="server-version"></span>
+      </div>
+      <div style="font-size:0.9em;padding-left:5px;">
+        <span>Node Version: </span><span id="node-version"></span>
       </div>
     </div><!-- /panel -->
         
@@ -308,7 +330,7 @@
       <a href="http://lowpowerlab.com/gateway" target="new" data-role="none"><img src="images/logo.png" alt="LowPowerLab" title="LowPowerLab.com" style="float:left;display:inline;max-width:30px;padding:4px"/></a>
       <h1 id="dashboardTitle">IoT Gateway</h1>
       <div class="ui-btn-right" data-role="controlgroup" data-type="horizontal" data-mini="true">
-        <a class="sideMenuButton" href="#nav-panel" data-icon="bars" data-role="button" data-rel="popup" data-transition="slide" data-position-to="window">Menu</a>
+        <a id="sideMenuButton" href="#nav-panel" style="display:none" data-icon="bars" data-role="button" data-rel="popup" data-transition="slide" data-position-to="window" data-iconpos="notext">Menu</a>
       </div>
     </div>
 
@@ -330,14 +352,15 @@
       <form id="searchBox" class="ui-filterable" style="display:none">
         <input id="filter" data-type="search" placeholder="Search nodes..">
       </form>
-      <ul id="nodeList" data-role="listview" data-inset="true" data-filter="true" data-input="#filter" data-theme="a" data-dividertheme="b"></ul>
-      <div id="addEmptyNodeWrapper" data-role="controlgroup" data-type="horizontal" class="center-wrapper">
-        <a id="addEmptyNode" href="#addEmptyNodePage" data-role="button" data-icon="plus" style="background-color:#9BFFBE" title="Create a new empty node">New Node</a>
+      <div id="nodeList-wrapper" class="ul-responsive">
+        <ul id="nodeList" data-role="listview" data-inset="true" data-filter="true" data-input="#filter" data-theme="a" data-dividertheme="b"></ul>
       </div>
     </div>
-
+    <div id="addEmptyNodeWrapper" data-role="controlgroup" data-type="horizontal" class="center-wrapper">
+      <a id="addEmptyNode" href="#addEmptyNodePage" data-role="button" data-icon="plus" style="background-color:#9BFFBE" title="Create a new empty node">Node</a>
+    </div>
     <div data-role="footer">
-      <h1><span style="font-size:11px">&#169; <a href="http://lowpowerlab.com">LowPowerLab.com</a> 2015-2019. All rights reserved. <a href="http://lowpowerlab.com/gateway">About</a></span></h1>
+      <h1><span style="font-size:11px">&#169; <a href="http://lowpowerlab.com">LowPowerLab.com</a> 2015-2020. All rights reserved. <a href="http://lowpowerlab.com/gateway">About</a></span></h1>
     </div>
   </div>
 
@@ -403,6 +426,7 @@
       </div>
       
       <ul id="metricList" data-role="listview" data-inset="true" data-theme="a" data-dividertheme="b"></ul>
+      <ul id="requestList" data-role="listview" data-inset="true" data-theme="a" data-dividertheme="b"></ul>
 
       <div class="center-wrapper">
         <div id="nodeControls" class="center-div"></div>
@@ -411,9 +435,10 @@
       <ul id="eventList" class="eventList" data-role="listview" data-inset="true" data-theme="a" data-dividertheme="b"></ul>
 
       <div class="center-wrapper" style="margin-top:10px">
-        <div id="nodeEvents" class="center-div">
-          <div id="nodeControls" data-role="controlgroup" data-type="horizontal">
+        <div class="center-div">
+          <div data-role="controlgroup" data-type="horizontal">
             <a id="addNodeEvent" href="#addEvent" data-role="button" data-icon="plus" style="background-color:#9BFFBE" title="Add new event">Event</a>
+            <a id="addNodeRequest" href="#addRequestDialog" data-role="button" data-icon="plus" style="background-color:#DDD" title="Add new request">Request</a>
             <a href="#exportCSVDateRange" data-role="button" data-icon="fa-download" style="background-color:#daca25" title="Export all available metrics (combined, CSV format)">Export all data (CSV)</a>
           </div>
         </div>
@@ -432,6 +457,26 @@
       <div class="center-wrapper" style="padding:8px; font-size:12px; font-weight:bold; color:red"><span id="addEventDescr">&nbsp;</span></div>
       <div class="center-wrapper">
         <a id="addEvent_OK" href="#nodedetails" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-check ui-btn-icon-left ui-mini" data-rel="nodedetails" style="background-color:#9BFFBE;color:#000">Add</a>
+        <a href="#" class="ui-btn ui-btn-inline ui-shadow ui-corner-all ui-mini ui-icon-back ui-btn-icon-left" data-rel="back">Cancel</a>
+      </div>
+    </div>
+  </div>
+
+  <div data-role="page" id="addRequestDialog" data-dialog="true">
+    <div data-role="main" class="ui-content">
+      <div class="center-wrapper" style="padding:20px">
+        <h3>Request Parameter & Value:</h3>
+        <h4>(each limited to 10 characters)</h4>
+      </div>
+      <form id="addRequestForm" autocomplete="off">
+        <input type="text" id="addRequestDescr" maxlength="10" placeholder="name (required)" style="text-align:center" value="" data-clear-btn="true">
+        <input type="text" id="addRequestValue" maxlength="10" placeholder="value (if any)" style="text-align:center" value="" data-clear-btn="true">
+        <div class="center-wrapper"><span style="padding:10px">Timeout (seconds, default: 86400 (1 day)):</span></div>
+        <input type="number" id="addRequestTimeout" maxlength="5" placeholder="timeout (seconds)" style="text-align:center" value="" data-clear-btn="true">
+      </form>
+      <div class="center-wrapper">
+        <span id="addRequest_msg" style="padding-bottom:10px;color:red;display:block">error</span>
+        <a id="addNodeRequest_OK" href="#nodedetails" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-check ui-btn-icon-left ui-mini" data-rel="nodedetails" style="background-color:#9BFFBE;color:#000">Submit</a>
         <a href="#" class="ui-btn ui-btn-inline ui-shadow ui-corner-all ui-mini ui-icon-back ui-btn-icon-left" data-rel="back">Cancel</a>
       </div>
     </div>
@@ -488,7 +533,7 @@
   <div data-role="page" id="metricdetails">
     <div data-role="header">
       <h3><span id="nodeDetailTitleMetric">Node title</span> (<span id="metricDetailTitle">Metric details</span> <span class="metricUpdated">x</span>)</h3>
-      <a id="metric_update" href="#" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-back ui-btn-icon-left ui-mini" data-rel="back">Node</a>
+      <a id="metric_update" href="#nodedetails" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-back ui-btn-icon-left ui-mini" data-rel="nodedetails">Node</a>
       <div class="ui-btn-right" data-role="controlgroup" data-type="horizontal">
         <a id="btnPinMetric" href="#" data-role="button" data-icon="fa-thumb-tack" data-iconpos="notext" title="Show on dashboard">Pin</a>
         <a id="btnGraphMetric" href="#" data-role="button" data-icon="fa-bar-chart" data-iconpos="notext" title="Data log this metric">Graph</a>
@@ -527,6 +572,35 @@
      </div>
   </div>
 
+  <div data-role="page" id="requestdetails">
+    <div data-role="header">
+      <h3><span id="nodeDetailTitleRequest">Request title</span> (<span id="requestDetailTitle">Request details</span> <span class="requestUpdated">x</span>)</h3>
+      <a id="request_update" href="#nodedetails" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-back ui-btn-icon-left ui-mini" data-rel="nodedetails">Node</a>
+      <div class="ui-btn-right" data-role="controlgroup" data-type="horizontal">
+        <!--<a id="btnGraphMetric" href="#" data-role="button" data-icon="fa-bar-chart" data-iconpos="notext" title="Data log this metric">Graph</a>-->
+        <a id="deleteRequest" href="#nodedetails" data-role="button" data-icon="fa-trash" data-iconpos="notext" data-transition="fade" title="Delete this request">Delete</a>
+      </div>
+    </div>
+    <div data-role="main" class="ui-content">
+      <div class="ui-field-contain">
+        <label for="requestName" class="labelbold">Name:</label>
+        <input type="text" name="requestName" id="requestName" readonly />
+        <label for="requestValue" class="labelbold">Last value:</label>
+        <input type="text" name="requestValue" id="requestValue" readonly />
+        <label for="requestSent" class="labelbold">Actual request:</label>
+        <input type="text" name="requestSent" id="requestSent" readonly />
+        <label for="requestTimeout" class="labelbold">Timeout (s):</label>
+        <input type="text" name="requestTimeout" id="requestTimeout" readonly />
+        <label for="requestStatus" class="labelbold">Status:</label>
+        <input type="text" name="requestStatus" id="requestStatus" readonly />
+      </div>
+      
+      <div data-role="controlgroup" data-type="horizontal" class="center-wrapper">
+        <a id="editRequest" href="#addRequestDialog" data-role="button" data-icon="edit" style="background-color:#9BFFBE" title="Create a new empty node">Edit / Resubmit</a>
+      </div>
+     </div>
+  </div>
+  
   <div data-role="page" id="deleteNode" data-dialog="true">
     <div data-role="main" class="ui-content">
       <div class="center-wrapper" style="padding:20px">
@@ -554,7 +628,7 @@
       </div>
     </div>
   </div>
-  
+
   <div data-role="page" id="editData" data-dialog="true">
     <div data-role="main" class="ui-content">
       <div class="center-wrapper" style="padding:20px">
@@ -568,7 +642,7 @@
       </div>
     </div>
   </div>
-  
+
   <div data-role="page" id="processExit" data-dialog="true">
     <div data-role="main" class="ui-content">
       <div class="center-wrapper" style="padding:20px">
@@ -579,7 +653,37 @@
         <span style="display:block;padding:5px"><strong>Did you know:</strong> This command can also be quickly invoked using <b style="color:red">Ctrl+Shift+Alt+R</b> !</span>
       </div>
       <div class="center-wrapper" style="padding:20px">
-        <a id="processExit_yes" href="#nodedetails" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-check ui-btn-icon-left ui-mini" data-rel="nodedetails" style="background:red;color:white;">Restart!</a>
+        <a id="processExit_yes" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-check ui-btn-icon-left ui-mini" style="background:red;color:white;">Restart App Now!</a>
+        <a href="#" class="ui-btn ui-btn-inline ui-shadow ui-corner-all ui-mini ui-icon-back ui-btn-icon-left" data-rel="back">Cancel</a>
+      </div>
+    </div>
+  </div>
+
+  <div data-role="page" id="restartPi" data-dialog="true">
+    <div data-role="main" class="ui-content">
+      <div class="center-wrapper" style="padding:20px">
+        <h3>Are you sure you want to restart <b>the Pi Host</b>?</h3>
+      </div>
+      <div class="center-wrapper" style="padding:10px">
+        <span style="display:block;padding:5px"><strong>NOTE:</strong> This command will execute a <b>sudo reboot</b>. The UI will try reconnecting while the Pi is restarting.</span>
+      </div>
+      <div class="center-wrapper" style="padding:20px">
+        <a id="restartPi_yes" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-check ui-btn-icon-left ui-mini" style="background:red;color:white;">Restart Pi Now!</a>
+        <a href="#" class="ui-btn ui-btn-inline ui-shadow ui-corner-all ui-mini ui-icon-back ui-btn-icon-left" data-rel="back">Cancel</a>
+      </div>
+    </div>
+  </div>
+
+  <div data-role="page" id="shutdownPi" data-dialog="true">
+    <div data-role="main" class="ui-content">
+      <div class="center-wrapper" style="padding:20px">
+        <h3>Are you sure you want to shutdown <b>the Pi Host</b>?</h3>
+      </div>
+      <div class="center-wrapper" style="padding:10px">
+        <span style="display:block;padding:5px"><strong>NOTE:</strong> This command will execute a <b>sudo shutdown</b>. The UI will disconnect. A <b>manual reboot</b> of the Pi Host is required to come back online.</span>
+      </div>
+      <div class="center-wrapper" style="padding:20px">
+        <a id="shutdownPi_yes" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-check ui-btn-icon-left ui-mini" style="background:red;color:white;">Shutdown Pi Now!</a>
         <a href="#" class="ui-btn ui-btn-inline ui-shadow ui-corner-all ui-mini ui-icon-back ui-btn-icon-left" data-rel="back">Cancel</a>
       </div>
     </div>
@@ -590,21 +694,26 @@
       <a href="#homepage" class="ui-btn ui-corner-all ui-shadow ui-icon-home ui-btn-icon-left">Home</a>
       <h1>Terminal</h1>
       <div class="ui-btn-right" data-role="controlgroup" data-type="horizontal" data-mini="true">
-        <!--<a id="beepBtn" data-role="button" data-icon="fa-bell-o" data-iconpos="notext" title="Beep">Beep</a>-->
-        <a id="btnRawToggle" href="#" data-role="button" data-icon="arrow-u" data-iconpos="notext" title="Send raw data to gateway Moteino">Raw send</a>
         <a id="clearbtn" href="#" data-role="button" data-icon="fa-remove" data-iconpos="notext" title="clear console/log textbox">Clear</a>
       </div>
     </div>
-
-    <div class="rawAction" style="display:none">
-      <span id="rawActionIDspan">
-        <input type="text" id="rawActionID" data-mini="true" placeholder="node ID" />
+    <div class="terminal nodeMsg">
+      <span>
+        <input type="text" id="nodeMsgID" data-mini="true" placeholder="nodeID" />
       </span>
-      <span id="rawActionTextspan">
-         <input type="text" id="rawActionText" data-mini="true" placeholder="message..." />
+      <span>
+         <input type="text" id="nodeMsgPayload" data-mini="true" placeholder="message (ex: BEEP)" />
       </span>
-      <span id="rawActionSendspan">
-        <a id="rawActionSend" data-role="button">Send</a>
+      <span>
+        <a data-role="button">Send</a>
+      </span>
+    </div>
+    <div class="terminal fakeMsg">
+      <span>
+        <input type="text" id="fakeMsgPayload" data-mini="true" placeholder="simulate a node's data (ex: [123] MOTION)" />
+      </span>
+      <span>
+        <a data-role="button">Process</a>
       </span>
     </div>
 
@@ -617,16 +726,9 @@
     <div data-role="header">
       <a href="#homepage" class="ui-btn ui-corner-all ui-shadow ui-icon-home ui-btn-icon-left">Home</a>
       <h1>Settings</h1>
-      <div class="ui-btn-right" data-role="controlgroup" data-type="horizontal" data-mini="true">
-        <a href="#logpage" data-role="button" data-icon="fa-terminal" data-iconpos="notext" title="terminal/log">Log</a>
-      </div>
     </div>
     <div data-role="main" class="ui-content">
       <ul id="settingsList" data-role="listview" data-inset="true" data-theme="a" data-dividertheme="b"></ul>
-    </div>
-    <div data-role="footer">
-      <a href="#homepage" class="ui-btn ui-btn-right ui-corner-all ui-shadow ui-btn-icon-left ui-icon-delete" style="background-color:#FF9B9B;margin:.5em;">Cancel</a>
-      <a id="settingsSave" class="ui-btn ui-corner-all ui-shadow ui-btn-icon-left ui-icon-check" style="background-color:#9BFFBE;color:#000000;margin:.5em;">Save</a>
     </div>
   </div>
   
@@ -669,12 +771,15 @@
     var nodes = {};        //this holds the current nodes data
     var selectedNodeId;    //points to the selected node ID
     var selectedMetricKey; //points to the selected metric name of the selected node
+    var selectedRequestKey; //points to the selected request name of the selected node
     var motesDef;          //holds the definition of the motes (from server side metrics.js)
     var metricsDef;        //holds the definition of the metrics (from server side metrics.js)
     var eventsDef;
     var settingsDef;
     var settingsDefBindMap;
     var boundSettings;
+    var piRestarted = false;
+    var piShutdown = false;
     var showHiddenNodes=false, showRawSend=false;
     $('#nodeList, #addEmptyNodeWrapper').hide();
     var socket = io(); //TODO: fix when io is not defined
@@ -700,7 +805,7 @@
 
     function sortNodeListByOrderCSV(newOrderCSV) {
       var orderArray = newOrderCSV.split(',');
-      $('#nodeList').find('li:not(:first)').sort(function (a, b) {
+      $('#nodeList').find('li:not(#uldivider)').sort(function (a, b) {
         return orderArray.indexOf($(a).attr('id')) > orderArray.indexOf($(b).attr('id'));
       }).appendTo('#nodeList');
     }
@@ -713,16 +818,29 @@
     socket.on('connect', function(){
       LOG('Connected!');
       $('#loadingSocket').html('<span style="color:#2d0">Connected!</span><br/><br/>Waiting for data..');
+      $('#sideMenuButton').show();
     });
 
     socket.on('disconnect', function () {
       $('#log').val(new Date().toLocaleTimeString() + ' : Disconnected!\n' + $('#log').val());
       $("#loader").show();
-      $('#loadingSocket').html('Socket was <span style="color:red">disconnected.</span><br/><br/>Waiting for socket connection..');
+      if (piRestarted) {
+        piRestarted = false;
+        $('#loadingSocket').html('Host server <span style="color:green">reboot</span> in progress.<br/><br/>Waiting for new connection..');
+      }
+      else if (piShutdown) {
+        piShutdown = false;
+        $('#loadingSocket').html('Host server was <span style="color:red">shutdown</span>.<br/><br/>Waiting for new connection..');
+      }
+      else
+        $('#loadingSocket').html('App server was <span style="color:red">disconnected.</span><br/><br/>Waiting for new connection..');
+
       if ($.mobile.activePage.attr('id') != 'homepage')
         $.mobile.navigate('#homepage', { transition : 'slide'});
       $('#nodeList, #addEmptyNodeWrapper').hide();
       $('#allEventsList').empty();
+      $('#nav-panel').popup('close');
+      $('#sideMenuButton').hide();
     });
 
     socket.on('UPDATENODE', function(entry) {
@@ -733,7 +851,7 @@
     socket.on('UPDATENODES', function(entries) {
       $("#loader").hide();
       $("#nodeList").empty();
-      $('#nodeList').append('<li id="uldivider" data-role="divider"><h2>Nodes</h2><span class="ui-li-count ui-li-count16">Count: 0</span></li>');
+      //$('#nodeList').append('<li id="uldivider" data-role="divider"><h2>Nodes</h2><span class="ui-li-count ui-li-count16">Count: 0</span></li>');
       $('#nodeList, #addEmptyNodeWrapper').show();
       for (var i = 0; i < entries.length; ++i)
         updateNode(entries[i]);
@@ -742,26 +860,11 @@
         $.mobile.navigate('#homepage', { transition : 'slide'});
     });
 
-    socket.on('MOTESDEF', function(motesDefinition) {
-      motesDef = motesDefinition;
-      $("#nodeMoteType").empty();
-      $('#nodeMoteType').append('<option value="">Select type...</option>');
-      
-      Object.keys(motesDef).sort().forEach(function(key) {
-        $('#nodeMoteType').append('<option value="' + key + '">' + motesDef[key].label || key + '</option>');
-      });
-        
-      //for(var mote in motesDef)
-      //  $('#nodeMoteType').append('<option value="' + mote + '">' + motesDef[mote].label || mote + '</option>');
-      $("#nodeMoteType").selectmenu();
-    });
-
     socket.on('METRICSDEF', function(metricsDefinition) {
-      metricsDef = metricsDefinition;
-    });
-
-    socket.on('EVENTSDEF', function(eventsDefinition) {
-      eventsDef = eventsDefinition;
+      metricsDef = metricsDefinition.metrics;
+      eventsDef = metricsDefinition.events;
+      motesDef = metricsDefinition.motes;
+      
       $('#addEventType').change(function() {
         if ($(this).val())
         {
@@ -773,6 +876,17 @@
           $('#addEvent_OK').hide();
         }
       });
+
+      $("#nodeMoteType").empty();
+      $('#nodeMoteType').append('<option value="">Select type...</option>');
+      
+      Object.keys(motesDef).sort().forEach(function(key) {
+        $('#nodeMoteType').append('<option value="' + key + '">' + motesDef[key].label || key + '</option>');
+      });
+        
+      //for(var mote in motesDef)
+      //  $('#nodeMoteType').append('<option value="' + mote + '">' + motesDef[mote].label || mote + '</option>');
+      $("#nodeMoteType").selectmenu();
     });
     
     socket.on('SETTINGSDEF', function(newSettingsDef) {
@@ -818,7 +932,7 @@
 
           settingsDefBindMap[sectionName+'.'+settingName+'.value'] = '#'+sectionName+'-'+settingName;
           $('#settingsList').append(settingLI);
-          
+
           //for range INPUTs, we need to rehidrate the value in the INPUT.value because jqueryUI does not do it (it injects an anchor where it keeps the value in an attribute, doh!)
           if (setting.type=='range' || setting.type == 'checkbox')
           {
@@ -834,28 +948,34 @@
       $('#settingsList').listview().listview('refresh').trigger("create");
       boundSettings = Bind(settingsDef, settingsDefBindMap);
 
-      if (boundSettings.general.uiTitle.value)
-        $('#dashboardTitle').text(boundSettings.general.uiTitle.value);
-        $('title').text(boundSettings.general.uiTitle.value);
-    });
-
-    $("#settingsSave").click(function () { 
-        socket.emit('UPDATESETTINGSDEF', boundSettings);
-        $.mobile.navigate('#homepage', { transition : 'fade'});
+      if (boundSettings.interface && boundSettings.interface.uiTitle && boundSettings.interface.uiTitle.value) {
+        $('#dashboardTitle').text(boundSettings.interface.uiTitle.value);
+        $('title').text(boundSettings.interface.uiTitle.value);
+      }
+      
+      if (boundSettings.interface && boundSettings.interface.responsive && boundSettings.interface.responsive.value && boundSettings.interface.responsive.value=='true')
+        $('#nodeList-wrapper').addClass('ul-responsive');
+      else
+        $('#nodeList-wrapper').removeClass('ul-responsive');
     });
 
     socket.on('NODELISTREORDER', function(orderCSV) {
       sortNodeListByOrderCSV(orderCSV);
     });
 
-    socket.on('SERVERTIME', function(serverMillisSinceEpoch) {
-      serverTimeOffset = Date.now() - serverMillisSinceEpoch;
-      LOG('SERVERTIME OFFSET: ' + serverTimeOffset + 'ms');
-    });
-
     socket.on('SERVERINFO', function(info) {
-      $('#server-uptime').attr('data-time', info.uptime + serverTimeOffset);
       $('#server-version').html(info.version);
+      $('#server-uptime').attr('data-time', info.uptime + serverTimeOffset);
+      if (isNumeric(info.gatewayUptime))
+        $('#gateway-uptime').addClass('nodeAgo').attr('data-time', info.gatewayUptime + serverTimeOffset);
+      else {
+        $('#gateway-uptime').removeClass('nodeAgo').removeAttr('style').html(info.gatewayUptime);
+      }
+      if (isNumeric(info.gatewayFrequency)) info.gatewayFrequency = (info.gatewayFrequency/1000000) + ' Mhz';
+      $('#gateway-frequency').html(info.gatewayFrequency);
+      $('#node-version').html(info.nodeVersion);
+      serverTimeOffset = Date.now() - info.serverMillisSinceEpoch;
+      LOG('SERVERTIME OFFSET: ' + serverTimeOffset + 'ms');
     });
 
     socket.on('DBCOMPACTED', function(timestamp) {
@@ -874,6 +994,7 @@
       new Audio(soundFile).play();
     });
 
+    //global variables
     graphData=[];
     metricGraphWrapper = $('#metricGraphWrapper');
     metricGraph = $('#metricGraph');
@@ -984,8 +1105,7 @@
       $(document).off("pageshow", "#metricdetails", renderAndCloneStat);
     }
 
-    function refreshGraph(freezeGraph) {
-      graphData = [];
+    function refreshGraph(freezeGraph=undefined, getNewData=true) {
       graphFrozen = freezeGraph || false;
       graphOptions = { //whole plot options object
         lines: {show: true, /*steps: true,*/ fill:true },
@@ -998,8 +1118,10 @@
         zoom: { interactive: true },
         //pan: { interactive: true },
       };
-      //ask socket for the data
-      socket.emit('GETGRAPHDATA', selectedNodeId, selectedMetricKey, graphView.start, graphView.end);
+      if (getNewData) {
+        graphData = [];
+        socket.emit('GETGRAPHDATA', selectedNodeId, selectedMetricKey, graphView.start, graphView.end); //ask socket for the data
+      }
     }
     
     nodeMultiGraphWrapper = $('#nodeMultiGraphWrapper');
@@ -1366,11 +1488,11 @@
     function metricsValues(metrics, ignorePin) {
       if(ignorePin === undefined) ignorePin = false; //default param
       var label = '';
-      var metric;
+      var metrics = Object.values(metrics).filter(function(m){ return (m.pin !=0 && m.pin !=undefined) || ignorePin }).sort((a, b) => (a.pin > b.pin) ? -1 : 1); //filter only pinned metrics, and sort them descending
       for(var key in metrics)
       {
         metric = metrics[key];
-        if(metric.pin=='1' || metrics.length==1 || ignorePin)
+        if((metric.pin!=0 && metric.pin!=undefined) || metrics.length==1 || ignorePin)
         {
           var agoText = ago(metric.updated).text;
           //metric.value + (metric.unit || '')
@@ -1384,14 +1506,14 @@
 
     function getNodeIcon(node) {
       if (node.icon) return node.icon;
-      var iconDefault = (node.metrics.RSSI == undefined) ? 'icon_default_LAN.png' : 'icon_default.png';
+      var iconDefault = (node.metrics && node.metrics.RSSI == undefined) ? 'icon_default_LAN.png' : 'icon_default.png';
       if (motesDef != undefined && node.type != undefined && motesDef[node.type] != undefined)
         return motesDef[node.type].icon || iconDefault;
       return iconDefault;
     };
 
     function resolveRSSIImage(node) {
-      if (node.metrics.RSSI == undefined) return '';
+      if (!node.metrics || !node.metrics.RSSI) return '';
       rssi = node.metrics.RSSI.value;
       var img;
       if (Math.abs(rssi) > 95) img = 'rssi_7.png';
@@ -1401,7 +1523,7 @@
       else if (Math.abs(rssi) > 75) img = 'rssi_3.png';
       else if (Math.abs(rssi) > 70) img = 'rssi_2.png';
       else img = 'rssi_1.png';
-      return '<img class="listIcon20px" src="images/'+img+'" title="RSSI:-'+Math.abs(rssi)+'dB" /> ';
+      return '<img class="listIcon" src="images/'+img+'" title="RSSI:-'+Math.abs(rssi)+'dB" /> ';
     }
 
     function updateNode(node) {
@@ -1411,19 +1533,56 @@
         nodes[node._id] = node;
         var nodeValue = metricsValues(node.metrics);
         var lowVoltageSetting = node.settings && node.settings['lowVoltageValue'] ? node.settings['lowVoltageValue'] : (motesDef[node.type] && motesDef[node.type].settings && motesDef[node.type].settings.lowVoltageValue ? motesDef[node.type].settings.lowVoltageValue : boundSettings.general.lowVoltageValue.value);
-        var lowBat = node.metrics.V != null && node.metrics.V.value < lowVoltageSetting;
-        var newLI = $('<li id="' +  node._id + '"><a node-id="' + node._id + '" href="#nodedetails" class="nodedetails"><img src="images/'+getNodeIcon(node)+'"><h2>' + (nodeResolveString(node.label||'', node.metrics) || node._id) + ' ' + resolveRSSIImage(node) + ' ' + (lowBat ? '<img src="images/lowbattery.png" class="lowbattimg"/> ' : '') + ago(node.updated, 0).tag + (node.hidden ? ' <img class="listIcon20px" src="images/icon_hidden.png" />' : '') + '</h2><p>' + (nodeResolveString(node.descr || "", node.metrics) || '&nbsp;') + '</p>' + (nodeValue ? '<span class="ui-li-count ui-li-count16">' + nodeValue + '</span>' : '') + '</a></li>');
+        var lowBat = node.metrics && node.metrics.V != null && node.metrics.V.value < lowVoltageSetting;
+
+        //check node requests for any note-worthy statuses to display an icon
+        var requestStatusImg = '';
+        var pendingRequest=false;
+        var exceptionRequest=false;
+        for(var key in node.requests)
+        {
+          req = node.requests[key];
+          if (req.status == 'PENDING') pendingRequest=true;
+          if (['OK', 'CHANGED', 'PENDING'].indexOf(req.status) == -1) {
+            exceptionRequest = true;
+            break;
+          }
+        }
+
+        if (exceptionRequest)
+          requestStatusImg = ' <img class="reqIcon" src="images/warning.png" title="REQUEST WARNING(s)"/> ';
+        else if (pendingRequest)
+          requestStatusImg = ' <img class="reqIcon" src="images/loading-gear.gif" title="PENDING REQUEST(s)"/> ';
+
+        var newLI = $('<li id="' +  node._id + '">\
+                         <a node-id="' + node._id + '" href="#nodedetails" class="nodedetails">\
+                           <img src="images/'+getNodeIcon(node)+'" class="ui-li-thumb">\
+                           '+(lowBat ? '<img src="images/lowbattery.png" class="lowbattimg"/> ' : '') + '\
+                           <h2>' + (nodeResolveString(node.label||'', node.metrics) || node._id) + ' ' + resolveRSSIImage(node) + ' ' +
+                           (requestStatusImg ? requestStatusImg : '') +
+                           ago(node.updated, 0).tag +
+                           (node.hidden ? ' <img class="listIcon" src="images/icon_hidden.png" />' : '') + 
+                           '</h2><p>' + (nodeResolveString(node.descr || "", node.metrics) || '&nbsp;') + '</p>' +
+                           (nodeValue ? '<span class="ui-li-count ui-li-count16">' + nodeValue + '</span>' : '') +
+                         '</a></li>');
+
         var existingNode = $('#nodeList li#' + escapeSelector(node._id));
+
         if (node.hidden)
           if (showHiddenNodes)
             newLI.addClass('hiddenNodeShow');
           else
             newLI.addClass('hiddenNode');
+
         if(existingNode.length)
           existingNode.replaceWith(newLI);
         else $('#nodeList').append(newLI);
-        if (node._id == selectedNodeId && $.mobile.activePage.attr('id') == 'nodedetails') refreshNodeDetails(node);
 
+        if (selectedNodeId == node._id && (['nodedetails','metricdetails','requestdetails'].indexOf($.mobile.activePage.attr('id')) > -1))
+          refreshNodeDetails(node);
+
+        if ($.mobile.activePage.attr('id')=='metricdetails') refreshGraph(true, false);
+        
         //update this node's events on the events page
         for(var key in node.events)
         {
@@ -1439,8 +1598,9 @@
                                         : execTime ? ' on <b>' + dt.format('mmm-d @ h:MMt') + '</b>' : '';
 
           var newLI = $('<li id="'+node._id+'-'+key+'"><a data-icon="delete" node-id="' + node._id + '" event-id="' + key + '" href="#" class="eventEnableDisable"><span class="ui-btn-icon-notext ui-icon-'+ (enabled ? (evt.icon ? evt.icon : 'action') : 'minus') + (enabled ? " enabled" : " disabled") + '"></span><h2>[' + node._id + '] ' + evt.label + '</h2><p>Action: ' + (evt.descr || '&nbsp;') + '</p><p>' + execTimeString + remainingExecTimeString + '</p></a><a node-id="' + node._id + '" event-id="' + key + '" href="#" class="eventDelete" data-transition="pop" data-icon="delete"></a></li>');
-          
+
           var allEventsListNode = $('#allEventsList li#' + node._id + '-' + key);
+
           if(allEventsListNode.length)
             allEventsListNode.replaceWith(newLI);
           else $('#allEventsList').append(newLI);
@@ -1451,9 +1611,9 @@
 
     function refreshNodeListUI() {
       var hiddenCount = $('.hiddenNode, .hiddenNodeShow').length;
-      $('#uldivider span').html('Count: ' + ($('#nodeList li:not(#uldivider)').length) + (hiddenCount > 0 ? ', ' +hiddenCount +' hidden' : ''));
+      //$('#uldivider span').html('Count: ' + ($('#nodeList li:not(#uldivider)').length) + (hiddenCount > 0 ? ', ' +hiddenCount +' hidden' : ''));
       if (hiddenCount > 0)
-        $('#btnHiddenNodesToggle').show();
+        $('#btnHiddenNodesToggle').show().html(`Show Hidden (${hiddenCount})`);
       else
       {
         showHiddenNodes = false;
@@ -1462,14 +1622,14 @@
       
       //default jquery sortable - will only work in desktop browsers but is the best and most consistent (+ it's jquery native)
       $('#nodeList').sortable({
-        items: 'li:not(:first)',
+        items: 'li:not(#uldivider)',
         containment: 'parent',
         opacity: 0.5,
         delay: 200,
         scroll: true,
         update: function(event, ui) {
           var listIds = [];
-          var items = $('#nodeList li:not(:first)');
+          var items = $('#nodeList li:not(#uldivider)');
           for(var i=0;typeof(items[i])!='undefined';listIds.push(items[i++].getAttribute('id')));
           socket.emit('UPDATENODELISTORDER', listIds.join(','));
         },
@@ -1494,15 +1654,15 @@
       var h = s/3600;
       var d = s/86400;
       var updated = s.toFixed(0) + 's';
-      if (s <6) updated = 'now';
+      if (s <2) updated = 'now';
       if (s>=60) updated = m.toFixed(0)+'m';
       if (h>=2) updated = h.toFixed(0)+'h';
       if (h>=24) updated = Math.floor(d)+'d' + ((s%86400)/3600).toFixed(0) + 'h'; //2d3h = two days and 3 hours ago (51hrs)
-      var theColor = 'ff8800'; //dark orange //"rgb(255,125,20)";
-      if (s<6) theColor = "00ff00"; //dark green
+      var theColor = 'ff6600'; //dark orange //"rgb(255,125,20)";
+      if (s<6) theColor = "00ee00"; //dark green
       if (s<30) theColor = "33cc33"; //green
-      else if (s<60) theColor = 'ffcc00'; //light orange
-      if (h>=3) theColor = 'ff0000'; //red
+      else if (s<60) theColor = 'ffbb00'; //light orange
+      if (h>=3) theColor = 'dd0000'; //red
       theColor = '#'+theColor;
       updated = updated+(agoPrefix && updated!=='now'?' ago':'');
       return {text:updated,color:theColor,tag:'<span data-time="'+time+'" class="nodeAgo" style="color:'+theColor+';">'+updated+'</span>'};
@@ -1512,6 +1672,7 @@
     function updateAgos() {
       $("span.nodeAgo").each(function(){
         var timestamp = parseInt($(this).attr('data-time'));
+        if (isNaN(timestamp)) return;
         var agoResult = ago(timestamp, false);
         $(this).css('color', agoResult.color);
         $(this).html(agoResult.text);
@@ -1519,14 +1680,15 @@
 
       $("span.nodeMetricAgo").each(function(){
         var timestamp = parseInt($(this).attr('data-time'));
+        if (isNaN(timestamp)) return;
         var agoResult = ago(timestamp);
         $(this).css('color', agoResult.color);
         $(this).prop('title', agoResult.text);
       });
     }
-    
+
     //refresh "updated X ago" indicators
-    var updateAgosTimer = setInterval(updateAgos,3000);
+    var updateAgosTimer = setInterval(updateAgos, 2000);
 
     $("#btnSearch").click("tap", function(event) {
       if ($("#searchBox").is(":visible"))
@@ -1562,23 +1724,6 @@
       if ($("#btnHideNodeToggle").hasClass('hidden'))
         $("#btnHideNodeToggle").removeClass('hidden').css('background-color','');
       else $("#btnHideNodeToggle").addClass('hidden').css('background-color','#D00');;
-    });
-
-    $("#btnRawToggle").click("tap", function(event) {
-      if ($(".rawAction").is(":visible"))
-      {
-        $(".rawAction").slideUp('fast');
-        $("#btnRawToggle").removeClass('ui-btn-b');
-      }
-      else
-      {
-        $(".rawAction").slideDown('fast');
-        $("#btnRawToggle").addClass('ui-btn-b');
-      }
-    });
-
-    $("#beepBtn").click("tap", function(event) {
-      socket.emit('GATEWAYMESSAGE', 'BEEP');
     });
     
     function graphBottomPosition(graphWrapper) {
@@ -1645,13 +1790,14 @@
         graphHidePoints();
       else graphShowPoints();
     });
-    
+
     function refreshNodeDetails(node) {
       $('#nodeLabel').val(node.label || '');
       $('#nodeDetailTitle').html(nodeResolveString(node.label||'', node.metrics) || 'Node details');
       $('#nodeMoteType').val(node.type || '');
       $("#nodeMoteType").selectmenu('refresh',true);
-      $('#nodeDescr').val(node.descr || '['+node._id+']');
+      defaultDescr = node.descr || '['+node._id+']';
+      $('#nodeDescr').val(node.descr || defaultDescr);
       $('#nodeID').val(node._id);
       $('#nodeDetailImage').attr('src', 'images/'+getNodeIcon(node));
 
@@ -1661,7 +1807,10 @@
       if (node.rssi) { $('#rssiinfo').show(); $('.nodeRSSI').html(node.rssi); }
       else $('#rssiinfo').hide();
       $('.nodeUpdated').html(ago(node.updated, false).tag);
-      if (node.label) $('#nodeDetailTitleMetric').html(node.label.replace(/\{.+\}/ig, ''));
+      if (node.label) {
+        $('#nodeDetailTitleMetric').html(node.label.replace(/\{.+\}/ig, defaultDescr));
+        $('#nodeDetailTitleRequest').html(node.label.replace(/\{.+\}/ig, defaultDescr));
+      }
 
       //populate metrics list
       $('#metricList').empty();
@@ -1669,10 +1818,10 @@
       for(var key in node.metrics)
       {
         var metric = node.metrics[key];
-        var metricValue = metricsValues([metric]);
-        var newLI = $('<li id="' + key + '"><a metric-id="' + key + '" href="#metricdetails" class="metricdetails"><img class="ui-li-icon" src="images/' + (metric.pin==1 ? 'dock.png' : 'blank.png') + '" />' +  metric.label + ' ' + (metric.graph==1 ? '<img style="width:16px" src="images/graph.png" /> ' : '') + ago(metric.updated, 0).tag + '<span class="ui-li-count ui-li-count16">' + metricValue +  '</span></a></li>');
+        var metricValue = metricsValues({0:metric}, true);
+        var newLI = $('<li id="' + key + '"><a metric-id="' + key + '" href="#metricdetails" class="metricdetails"><img class="ui-li-icon" src="images/' + ((metric.pin!=0 && metric.pin!=undefined) ? 'dock.png' : 'blank.png') + '" />' +  metric.label + ' ' + (metric.graph==1 ? '<img style="width:16px" src="images/graph.png" /> ' : '') + ago(metric.updated, 0).tag + '<span class="ui-li-count ui-li-count16">' + metricValue +  '</span></a></li>');
         $('#metricList').append(newLI);
-        if (key == selectedMetricKey)
+        if (key == selectedMetricKey && (['metricdetails'].indexOf($.mobile.activePage.attr('id')) > -1))
         {
           $('.metricUpdated').html(ago(metric.updated, 0).tag);
           $('#metricValue').val(metric.value + (metric.unit || ''));
@@ -1681,6 +1830,27 @@
         if (metric.graph) hasGraphedMetrics = true;
       }
       $('#metricList').listview().listview('refresh');
+
+      //populate request list
+      $('#requestList').empty();
+      for(var key in node.requests)
+      {
+        var req = node.requests[key];
+        var statusImg = '';
+        if (req.status == 'PENDING') statusImg = ' <img class="reqIcon" src="images/loading-gear.gif" title="PENDING"/>';        
+        else if (req.status == 'OK') statusImg = ' <img class="reqIcon" src="images/check.png" title="OK"/>';
+        else if (req.status == 'CHANGED') statusImg = ' <img class="reqIcon" style="opacity:.4" src="images/random.png" title="CHANGED"/>';
+        else if (req.status == 'TIMEOUT') statusImg = ' <img class="reqIcon" style="opacity:.8" src="images/timeout.png" title="TIMEOUT"/>';
+        else statusImg = ' <img class="reqIcon" src="images/warning.png" title="'+req.status+'"/>';
+
+        var newLI = $('<li id="' + key + '"><a request-id="' + key + '" href="#requestdetails" class="requestdetails">' +  req.name + ' ' + (req.graph==1 ? '<img style="width:16px" src="images/graph.png" /> ' : '') + ago(req.updated, 0).tag + '<span class="ui-li-count ui-li-count16">' + (req.value||'<span style="color:#ddd">(blank)</span>') + statusImg +  '</span></a></li>');
+        $('#requestList').append(newLI);
+        if (key == selectedRequestKey)
+        {
+          refreshRequestDetails(req);
+        }
+      }
+      $('#requestList').listview().listview('refresh');
 
       //display Create-Graph button
       if (hasGraphedMetrics==true)
@@ -1848,16 +2018,16 @@
     }
 
     function refreshMetricDetails(metric) {
-      $('#metricDetailTitle').html(metric.label || 'Node details');
+      $('#metricDetailTitle').html(metric.label || 'Metric Label');
       $('.metricUpdated').html(ago(metric.updated, 0).tag);
       $('#metricValue').val(metric.value + (metric.unit || ''));
       $('#metricLabel').val(metric.label || '');
 
-      if (metric.pin=='1')
+      if (metric.pin!=0 && metric.pin!=undefined)
         $("#btnPinMetric").addClass('pinned').css('background-color','#38C');
       else $("#btnPinMetric").removeClass('pinned').css('background-color','');
 
-      graphData=[];
+      //graphData=[];
       metricGraphWrapper.hide();
       $("#btnGraphMetric").show();
       if (metric.graph==1) {
@@ -1876,6 +2046,27 @@
       }
     }
 
+    function refreshRequestDetails(request) {
+      $('#requestDetailTitle').html(request.name || 'Request');
+      $('#requestName').val(request.name);
+      $('.requestUpdated').html(ago(request.updated, 0).tag);
+      $('#requestValue').val(request.value);
+      $('#requestTimeout').val(request.timeout/1000); //convert from millis to seconds
+      $('#requestSent').val('"' + request.name + (request.value?(':'+request.value):'') + '"');
+      $('#requestStatus').val(request.status);
+    }
+    
+    function updateSelectedMetricSettings() {
+      var metric = nodes[selectedNodeId].metrics[selectedMetricKey];
+      if (metric != undefined)
+      {
+        metric.label = $('#metricLabel').val();
+        metric.pin = $('#btnPinMetric').hasClass('pinned') ? (metric.pin || 1) : 0; //pin=0 if unpinned; pin=1 only if just got pinned - on server side UPDATEMETRICSETTINGS pin=1 will trigger a pin=now() timestamp, this matters for pinned order (ex sorting metrics values in node bubble)
+        if (metric.graph!=undefined) metric.graph = $('#btnGraphMetric').hasClass('graphed') ? 1 : 0;
+        socket.emit('UPDATEMETRICSETTINGS', selectedNodeId, selectedMetricKey, metric);
+      }
+    }
+
     $(document).on("click", ".nodedetails", function () {
       var nodeId = $(this).attr('node-id');
       selectedNodeId = isNumeric(nodeId) ? parseInt(nodeId) : nodeId;
@@ -1889,6 +2080,13 @@
       var metric = nodes[selectedNodeId].metrics[metricKey];
       refreshMetricDetails(metric);
     });
+    
+    $(document).on("click", ".requestdetails", function () {
+      var requestKey = $(this).attr('request-id');
+      selectedRequestKey = requestKey;
+      refreshRequestDetails(nodes[selectedNodeId].requests[requestKey]);
+    });
+
 
     $(document).on("click", ".eventEnableDisable", function () {
       var eventKey = $(this).attr('event-id');
@@ -1911,6 +2109,7 @@
       if ($("#btnPinMetric").hasClass('pinned'))
         $("#btnPinMetric").removeClass('pinned').css('background-color','');
       else $("#btnPinMetric").addClass('pinned').css('background-color','#38C');;
+      updateSelectedMetricSettings();
     });
 
     $("#btnGraphMetric").click("tap", function(event) {
@@ -1946,7 +2145,7 @@
       node.hidden = $("#btnHideNodeToggle").hasClass('hidden'); //only persist when it's hidden
       if (node.label.trim()=='' || node.label == motesDef[node.type])
         node.label = node.type ? motesDef[node.type].label : node.label;
-        
+
       $('#nodeSettingsList li input').each(function() {
         var newVal = (this.type=='checkbox' ? this.checked.toString() : $(this).val());
         var id = $(this).attr('id');
@@ -1983,6 +2182,22 @@
       }
     });
 
+    $('#addNodeRequest').click("tap", function(event) {
+      $('#addRequestDescr').val('');
+      $('#addRequestValue').val('');
+      $('#addRequestTimeout').val(86400);
+      $('#addRequest_msg').hide();
+      $('#addRequestDescr').focus();
+    });
+    
+    $('#editRequest').click("tap", function(event) {
+      
+      $('#addRequestDescr').val(nodes[selectedNodeId].requests[selectedRequestKey].name);
+      $('#addRequestValue').val(nodes[selectedNodeId].requests[selectedRequestKey].value);
+      $('#addRequestTimeout').val(nodes[selectedNodeId].requests[selectedRequestKey].timeout/1000);
+      $('#addRequest_msg').hide();
+    });
+
     $('#changeNodeIcon').click("tap", function(event) {
       $("#nodeIconsSelect").empty();
       $('#nodeIconsSelect').append('<option value="">Select new icon...</option>');
@@ -1990,7 +2205,6 @@
         $('#nodeIconsSelect').append('<option value="'+nodeIcons[i]+'" data-image="images/'+nodeIcons[i]+'">'+nodeIcons[i]+'</option>');
       theIcon = getNodeIcon(nodes[selectedNodeId]);
       $("#nodeIconsSelect").val(theIcon);
-      //$('#changeNodeIconCurrent').attr('src', 'images/'+theIcon);
     });
 
     $('#changeNodeIconPage').on('pagebeforeshow', function(event){
@@ -2001,12 +2215,12 @@
     $('#nodeIconsSelect').change(function(){
       $('#nodeIconUpload').val('');
     });
-    
+
     $('#addNodeGraph').click("tap", function(event) {
       $("#addNodeGraphMetrics").empty();
       $('#addNodeGraph_OK').hide();
       $('#addNodeGraphMetrics').append('<option value="">Select metrics...</option>');
-      
+
       for(var key in nodes[selectedNodeId].metrics)
       {
         var metric = nodes[selectedNodeId].metrics[key];
@@ -2014,20 +2228,20 @@
           $('#addNodeGraphMetrics').append('<option value="' + key + '">' + (metric.label || key) + '</option>');
       }
     });
-    
+
     $('#addEmptyNode').click("tap", function(event) {
       $('#addEmptyNode_OK').hide();
       $("#addEmptyNode_msg").hide();
       $("#addEmptyNodeID").val('');
     });
-    
+
     $("#addEmptyNode_OK").click("tap", function(event) {
-      socket.emit("INJECTNODE", {nodeId:$("#addEmptyNodeID").val()});
+      socket.emit("ADDNEWNODE", {nodeId:$("#addEmptyNodeID").val()});
     });
-    
+
     $('#exportCSVDateRange_export').click("tap", function(event) {
       var start = $("#exportCSVDateRange_start").datepicker("getDate").getTime();
-      var end   = $("#exportCSVDateRange_end").datepicker("getDate").getTime();
+      var end   = $("#exportCSVDateRange_end").datepicker("getDate").getTime() + 86400000; //add a day so we include end date's data
       var points   = $('#exportCSVDateRange_points').val();
       socket.emit('EXPORTNODELOGSCSV', selectedNodeId, start, end, points); //[unix epoch, end of time], how many points to return
     });
@@ -2036,6 +2250,27 @@
       socket.emit('EDITNODEEVENT', selectedNodeId, $('#addEventType').val(), true);
     });
 
+    $("#addNodeRequest_OK").click("tap", function(event) {
+      var reqDescr = $('#addRequestDescr').val().trim();
+      var reqValue = $('#addRequestValue').val().trim();
+      var reqTimeout = $('#addRequestTimeout').val().trim();
+      reqTimeout = (isNumeric(reqTimeout)?parseInt(reqTimeout):0);
+
+      if (!reqDescr) { //allow empty value, ex value request: 'P_TXP:60' ; ex. no-value request: 'DOSOMETHING'
+        $("#addRequest_msg").text('Name cannot be empty').show();
+        event.preventDefault();
+        return;
+      }
+
+      if (reqTimeout < 10) {
+        $("#addRequest_msg").text('Timeout needs to be at least 10 (seconds)').show();
+        event.preventDefault();
+        return;
+      }
+
+      socket.emit('SUBMITNODEREQUEST', selectedNodeId, reqDescr, reqValue, reqTimeout*1000);
+    });
+    
     $("#addNodeGraph_OK").click("tap", function(event) {
       socket.emit('ADDNODEGRAPH', selectedNodeId, $('#addNodeGraphMetrics').val());
     });
@@ -2069,7 +2304,6 @@
                 nodes[selectedNodeId].icon = data['filePath'];
                 socket.emit('REFRESHICONS');
                 $.mobile.navigate('#nodedetails');
-                
               }
               else alert('Expected filePath back, got nothing');
             }
@@ -2099,12 +2333,28 @@
       socket.emit('DELETENODEMETRIC', selectedNodeId, selectedMetricKey);
     });
 
+    $("#deleteRequest").click("tap", function(event) {
+      delete(nodes[selectedNodeId].requests[selectedRequestKey]);
+      $('#requestList li#' + selectedRequestKey).remove();
+      socket.emit('DELETENODEREQUEST', selectedNodeId, selectedRequestKey);
+    });
+
     $("#editData_OK").click("tap", function(event) {
       socket.emit('EDITMETRICDATA', selectedNodeId, selectedMetricKey, editDataStart, editDataEnd, $("#editDataNewValue").val());
     });
         
     $("#processExit_yes").click("tap", function(event) {
       socket.emit('PROCESSEXIT');
+    });
+
+    $("#restartPi_yes").click("tap", function(event) {
+      piRestarted = true;
+      socket.emit('RESTARTPI');
+    });
+
+    $("#shutdownPi_yes").click("tap", function(event) {
+      piShutdown = true;
+      socket.emit('SHUTDOWNPI');
     });
 
     $("#compactDB").click("tap", function(event) {
@@ -2115,19 +2365,42 @@
       $('#log').val('');
     });
 
-    $("#rawActionTextspan").keypress(function(event) {
+    $("#addRequestDescr").keypress(function(event) {
+      var newDescr = $(this).val() + String.fromCharCode(event.which);
+      if (!newDescr.match(/^[_a-zA-Z][_a-zA-Z0-9]*$/))
+        event.preventDefault();
+    });
+
+    $("#addRequestValue").keypress(function(event) {
+      var newValue = $(this).val() + String.fromCharCode(event.which);
+      if (!newValue.match(/^[-_a-zA-Z0-9]*$/))
+        event.preventDefault();
+    });
+
+    $(".nodeMsg input").keypress(function(event) {
       if (event.which == 13) //if ENTER pressed in the message box .. then "click" the SEND button
       {
-        $("#rawActionSend").click();
+        $(".nodeMsg a").click();
+        return false;
+      }
+    });
+    $(".fakeMsg input").keypress(function(event) {
+      if (event.which == 13) //if ENTER pressed in the message box .. then "click" the SEND button
+      {
+        $(".fakeMsg a").click();
         return false;
       }
     });
 
-    $("#rawActionSend").click("tap", function(event) {
-      //LOG(JSON.stringify({nodeId:$("#rawActionID").val(), action:$("#rawActionText").val()}));
-      var id = $("#rawActionID").val();
-      var value = $("#rawActionText").val();
+    $(".nodeMsg a").click("tap", function(event) {
+      //LOG(JSON.stringify({nodeId:$("#nodeMsgID").val(), action:$("#nodeMsgPayload").val()}));
+      var id = $("#nodeMsgID").val();
+      var value = $("#nodeMsgPayload").val();
       socket.emit("NODEMESSAGE", {nodeId:id, action:value});
+    });
+    
+    $(".fakeMsg a").click("tap", function(event) {
+      socket.emit("FAKEMESSAGE", $("#fakeMsgPayload").val());
     });
 
     //request the gateway app the restart its process on [Ctrl+Shift+Alt+R]
@@ -2137,13 +2410,11 @@
     });
 
     //enforce positive numeric input
-    $("#rawActionID").on("keypress keyup blur",function (event) {
+    $("#nodeMsgID").on("keypress keyup blur",function (event) {
       $(this).val($(this).val().replace(/[^\d].+/, ""));
       if ((event.which < 48 || event.which > 57) || $(this).val().length > 3) {
         event.preventDefault();
       }
-      //max node ID is 255 with packet header defaults in RFM69 library
-      if ($(this).val() > 255) $(this).val(255);
     });
 
     //graph value tooltips container
@@ -2221,6 +2492,13 @@
       }
     });
 
+    $("#homepage").on('pagebeforeshow', function(event, data) {
+      if (data.prevPage.attr('id')=='settingspage') {
+        socket.emit('UPDATESETTINGSDEF', boundSettings);
+        $.mobile.navigate('#homepage', { transition : 'fade'});        
+      }
+    });
+
     $("#nodedetails").on('pagebeforeshow', function(event, data) {
       //show/hide IP box - this is for numeric ID nodes, that also have an _ip property (request made via HTTPENDPOINT)
       if (nodes[selectedNodeId] && nodes[selectedNodeId]._ip)
@@ -2236,14 +2514,7 @@
         $('#nodeIP').hide().parent('div.ui-input-text').hide();
       }
       if (data.prevPage.attr('id')=='metricdetails') {
-        var metric = nodes[selectedNodeId].metrics[selectedMetricKey];
-        if (metric != undefined)
-        {
-          metric.label = $('#metricLabel').val();
-          metric.pin = $('#btnPinMetric').hasClass('pinned') ? 1 : 0;
-          if (metric.graph!=undefined) metric.graph = $('#btnGraphMetric').hasClass('graphed') ? 1 : 0;
-          socket.emit('UPDATEMETRICSETTINGS', selectedNodeId, selectedMetricKey, metric);
-        }
+        updateSelectedMetricSettings();
         $("#graphTogglePoints").removeClass('active').css('background-color','');
         $("#graphDeleteDataToggle").removeClass('active').css('background-color','');
         $("#graphEditDataToggle").removeClass('active').css('background-color','');

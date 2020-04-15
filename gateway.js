@@ -27,33 +27,43 @@
 // _id field is special - if not used it is automatically added and used as unique index
 //                      - we can set that field when inserting to use it as an automatic unique index for fast lookups of nodes (by node Id)
 // ********************************************************************************************
+// Note: In NodeJS modules are loaded synchronously and processed in the order they occur
+// ********************************************************************************************
 var nconf = require('nconf');                                   //https://github.com/indexzero/nconf
 var JSON5 = require('json5');                                   //https://github.com/aseemk/json5
 var path = require('path');
 var dbDir = 'data/db';
 var packageJson = require('./package.json')
-var metricsFile = 'metrics.js';
-var userMetricsDir = 'userMetrics';
-nconf.argv().file({ file: path.resolve(__dirname, 'settings.json5'), format: JSON5 });
-settings = nconf.get('settings');
-var dbLog = require(path.resolve(__dirname,'logUtil.js'));
+var coreMetricsFilePath = './metrics/core.js';
+nconf.argv().file({ file: './settings.json5', format: JSON5 });
+global.settings = nconf.get('settings');
+var dbLog = require('./logUtil.js');
 io = require('socket.io').listen(settings.general.socketPort.value);
 var serialport = require("serialport");                         //https://github.com/node-serialport/node-serialport
 var Datastore = require('nedb');                                //https://github.com/louischatriot/nedb
 var nodemailer = require('nodemailer');                         //https://github.com/andris9/Nodemailer
-var request = require('request');
 var http = require('http');
 var url = require('url');
 db = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.name.value), autoload: true });       //used to keep all node/metric data
-var dbunmatched = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.nonMatchesName.value), autoload: true });
 var dbCompacted = Date.now();
-fs = require('fs');
-
-//old: port = new serialport.SerialPort(settings.serial.port.value, { baudrate : settings.serial.baud.value, parser: serialport.parsers.readline("\n") }, false);
+var fs = require('fs');
+var gatewayUptime='';
+var gatewayFrequency='';
 var port = new serialport(settings.serial.port.value, {baudRate : settings.serial.baud.value});
 var Readline = serialport.parsers.Readline;
 var parser = new Readline();
+var unmatchedDataDB = null;
+if (settings.database.nonMatchesName.value)
+  unmatchedDataDB = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.nonMatchesName.value), autoload: true });
 port.pipe(parser);
+require("console-stamp")(console, settings.general.consoleLogDateFormat.value); //timestamp logs - https://github.com/starak/node-console-stamp
+
+//HTTP ENDPOINT - accept HTTP: data from the internet/LAN
+http.createServer(httpEndPointHandler).listen(8081);
+
+console.info('*********************************************************************');
+console.info('************************* GATEWAY APP START *************************');
+console.info('*********************************************************************');
 
 port.on('error', function serialErrorHandler(error) {
   //Send serial error messages to console. Better error handling needs to be here in the future.
@@ -68,44 +78,61 @@ port.on('close', function serialCloseHandler(error) {
 
 parser.on("data", function(data) { processSerialData(data); });
 
-require("console-stamp")(console, settings.general.consoleLogDateFormat.value); //timestamp logs - https://github.com/starak/node-console-stamp
+global.caseInsensitiveSorter = function (a, b) {return a.toLowerCase().localeCompare(b.toLowerCase())};
 
-//HTTP ENDPOINT - accept HTTP: data from the internet/LAN
-http.createServer(httpEndPointHandler).listen(8081);
+
+var merge = require('merge');
+global.loadMetricsFile = function(file, globalizeFunctions, fatal) {
+  if (fs.lstatSync(file).isFile() && file.match(/\.js$/) !== null) {
+    console.info(`LOADING METRICS MODULE [${file}]`);
+    try {
+      var tmp = require(file);
+      if (!global.metricsDef) global.metricsDef = {};
+      metricsDef.metrics = merge(true, metricsDef.metrics, tmp.metrics);
+      metricsDef.motes = merge(true, metricsDef.motes, tmp.motes);
+      metricsDef.events = merge(true, metricsDef.events, tmp.events);
+      if (globalizeFunctions) {
+        Object.getOwnPropertyNames(tmp).forEach(function(variable){
+          let type = typeof tmp[variable];
+          if (['function','number','string'].indexOf(type)>-1) {
+            console.log(`|- GLOBALIZING ${variable}${type=='function'?'()':''}${global[variable]!=undefined?' (WARNING:OVERRIDING PREVIOUS VALUE!)':''}`);
+            global[variable] = tmp[variable];
+          }
+        });
+      }
+
+      delete tmp.metrics;
+      delete tmp.motes;
+      delete tmp.events;
+      metricsDef = merge(true, metricsDef, tmp); //merge anything else (properties, variables, objects, functions)
+    } catch (ex) {
+      console.error(`FAIL LOADING METRICS MODULE [${file}]: ${ex.message}\n${ex.stack}`);
+      if (fatal) throw ex;
+    }
+  }
+}
 
 //LOAD NODE/METRICS DEFINITIONS:
-// - First load main metrics.js definitions (metrics, motes, events etc)
-metricsDef = require(path.resolve(__dirname, metricsFile));
-// - Then load user metrics which can override default metrics
+// - First load main core.js definitions (metrics, motes, events etc)
+loadMetricsFile(coreMetricsFilePath, true, true); //import core metrics file and globalize its objects & functions
+// - Then load other metrics which can override core metrics
 try {
-  console.info('LOADING USER METRICS...');
-  merge = require('merge');
-  if (fs.existsSync(__dirname + '/' + userMetricsDir))
-  {
-    fs.readdirSync(__dirname + '/' + userMetricsDir).forEach(function(file) {
-      if (file.match(/\.js$/) !== null) {
-        console.info('LOADING USER METRICS MODULE [' + file + ']');
-        try {
-          var tmp = require(__dirname + '/' + userMetricsDir + '/' + file);
-          metricsDef.metrics = merge(true, metricsDef.metrics, tmp.metrics);
-          metricsDef.motes = merge(true, metricsDef.motes, tmp.motes);
-          metricsDef.events = merge(true, metricsDef.events, tmp.events);
-          delete tmp.metrics;
-          delete tmp.motes;
-          delete tmp.events;
-          metricsDef = merge(true, metricsDef, tmp); //merge anything else (properties, variables, objects, functions)
-          //console.info('USER METRICS MERGE RESULT V: ' + JSON.stringify(metricsDef.metrics.V)); //verify that a custom metric was loaded
-          //console.info('USER METRICS MERGE RESULT VAR: ' + JSON.stringify(metricsDef.ONEDAYHOURS)); //verify that a custom variable was loaded
-          //console.info('USER METRICS MERGE RESULT FUNC: ' + metricsDef.secondsInOneDay.toString()); //verify that a custom function was loaded
-        } catch (ex) {
-          console.error('FAIL LOADING USER METRICS MODULE ['+ file + ']: ' + ex.message);
-        }
-      }
+  fs.readdirSync(__dirname + '/metrics').sort(caseInsensitiveSorter).forEach(function(file) {
+    var subdirs = [];
+    if (fs.lstatSync(__dirname + '/metrics/' + file).isDirectory()) //check 1 level subdirs only
+      subdirs.push(__dirname + '/metrics/' + file);
+    else if (file != coreMetricsFilePath.substring(coreMetricsFilePath.lastIndexOf("/") + 1)) { //skip core.js, already loaded
+      loadMetricsFile(__dirname + '/metrics/'+file, true);
+    }
+    subdirs.forEach(function(subdir){
+      fs.readdirSync(__dirname + '/metrics/'+file).sort(caseInsensitiveSorter).forEach(function(subdirFile) {
+        loadMetricsFile(__dirname + '/metrics/'+file+'/'+subdirFile, true);
+      });
     });
-  } else console.info('NO USER METRICS DEFINED (dir: /' + userMetricsDir + '), SKIPPING');
+  });
 }
 catch (ex) {
-  console.error('FAIL ACCESSING USER METRICS: '+ ex.message);
+  console.error('FAIL ACCESSING METRICS MODULE: '+ ex.message);
 }
 
 db.persistence.setAutocompactionInterval(settings.database.compactDBInterval.value); //compact the database every 24hrs
@@ -150,23 +177,19 @@ global.sendMessageToNode = function(node) {
   if (metricsDef.isValidNodeId(node.nodeId) && node.action)
   {
     if (metricsDef.isNumeric(node.nodeId)) //numeric ID - send to serial port (RF network)
-    {
-      port.write(node.nodeId + ':' + node.action + '\n', function () { port.drain(); });
-      console.log('NODEACTION: ' + JSON.stringify(node));
-    }
+      sendMessageToGateway(node.nodeId + ':' + node.action); //port.write(node.nodeId + ':' + node.action + '\n', function () { port.drain(); });
     else if (metricsDef.isValidIP()) //IP address, send via HTTP
-    {
       console.warning('NODEACTION FAIL: http sending not implemented yet. Request: ' + JSON.stringify(node));
-    }
   }
   else if (node.action)
   {
-    port.write(node.action + '\n', function () { port.drain(); });
-    console.log('NODEACTION: ' + JSON.stringify(node));
+    sendMessageToGateway(node.action);
+    //console.log('NODEACTION: ' + JSON.stringify(node));
   }
 }
 
 global.sendMessageToGateway = function(msg) {
+  console.log('sendMessageToGateway: ' + msg.replace('\n','\\n').replace('\r','\\r'));
   port.write(msg + '\n', function () { port.drain(); });
 }
 
@@ -183,9 +206,9 @@ global.handleNodeEvents = function(node) {
           try {
             evt.serverExecute(node);
           }
-          catch(ex) {console.warn('Event ' + key + ' execution failed: ' + ex.message);}
+          catch(ex) {console.warn(`Event ${key} execution failed: ${ex.message}`);}
       }
-    } catch(ex) {console.warn('-------> EXCEPTION: nodeId:' + node._id + ' key:' + key + ' JSON: ' + JSON.stringify(node)); throw ex;}
+    } catch(ex) {console.warn(`-------> EXCEPTION: nodeId:${node._id} key:${key} JSON:${JSON.stringify(node)}`); throw ex;}
     }
   }
 }
@@ -229,7 +252,7 @@ global.getNodeIcons = function(dir, files_, steps){
 //this was tested on Socket.IO v1.2.1 and will not work on older versions
 io.use(function(socket, next) {
   var handshakeData = socket.request.connection;
-  console.info('AUTHORIZING CONNECTION FROM ' + handshakeData.remoteAddress + ':' + handshakeData.remotePort);
+  console.info(`AUTHORIZING CONNECTION FROM ${handshakeData.remoteAddress}:${handshakeData.remotePort}`);
   if (handshakeData.remoteAddress == "localhost" || handshakeData.remoteAddress == "127.0.0.1" || handshakeData.remoteAddress == "::1" || handshakeData.remoteAddress == "::ffff:127.0.0.1")
   {
     next();
@@ -243,16 +266,28 @@ io.use(function(socket, next) {
   }
 });
 
+function broadcastServerInfo(socket) {
+  infoObj = {
+    uptime:(Date.now() - process.uptime()*1000),
+    gatewayUptime:(metricsDef.isNumeric(gatewayUptime) ? gatewayUptime : 'unknown'),
+    gatewayFrequency:(metricsDef.isNumeric(gatewayFrequency) ? gatewayFrequency : 'unknown'),
+    version: packageJson.version,
+    nodeVersion: process.version,
+    serverMillisSinceEpoch: Date.now(),
+  };
+  if (socket)
+    socket.emit('SERVERINFO', infoObj);
+  else
+    io.sockets.emit('SERVERINFO', infoObj);
+}
+
 io.sockets.on('connection', function (socket) {
   var address = socket.handshake.headers['x-forwarded-for'] || socket.request.connection.remoteAddress;
   //var port = socket.request.connection.remotePort;
   console.info("NEW CONNECTION FROM " + address /*+ ":" + port*/);
-  socket.emit('MOTESDEF', metricsDef.motes);
-  socket.emit('METRICSDEF', metricsDef.metrics);
-  socket.emit('EVENTSDEF', metricsDef.events);
+  socket.emit('METRICSDEF', metricsDef);
   socket.emit('SETTINGSDEF', settings);
-  socket.emit('SERVERTIME', Date.now());
-  socket.emit('SERVERINFO', { uptime:(Date.now() - process.uptime()*1000), version: packageJson.version });
+  broadcastServerInfo(socket);
   socket.emit('DBCOMPACTED', dbCompacted);
   socket.emit('NODEICONS', getNodeIcons());
 
@@ -260,7 +295,7 @@ io.sockets.on('connection', function (socket) {
   db.find({ _id : { $exists: true } }, function (err, entries) {
     socket.emit('UPDATENODES', sortNodes(entries));
   });
-  
+
   socket.on('COMPACTDB', function () {
     console.log('**** DB COMPACTION REQUESTED');
     db.persistence.compactDatafile();
@@ -270,11 +305,11 @@ io.sockets.on('connection', function (socket) {
     socket.emit('DBCOMPACTED', dbCompacted);
     console.log('**** DB COMPACTION DONE');
   });
-  
+
   socket.on('REFRESHICONS', function () {
     io.sockets.emit('NODEICONS', getNodeIcons());
   });
-  
+
   socket.on('UPDATENODELISTORDER', function (newOrder) {
     db.findOne({_id:'NODELISTORDER'}, function (err, doc) {
       var entry = {_id:'NODELISTORDER', order:newOrder};
@@ -309,7 +344,7 @@ io.sockets.on('connection', function (socket) {
       {
         var dbNode = entries[0];
         dbNode.metrics[metricKey].label = metric.label;
-        dbNode.metrics[metricKey].pin = metric.pin;
+        dbNode.metrics[metricKey].pin = (metric.pin==1) ? Date.now() : metric.pin;
         dbNode.metrics[metricKey].graph = metric.graph;
         db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) { /*console.log('UPDATEMETRICSETTINGS records replaced:' + numReplaced);*/ });
         io.sockets.emit('UPDATENODE', dbNode); //post it back to all clients to confirm UI changes
@@ -347,7 +382,7 @@ io.sockets.on('connection', function (socket) {
                 {
                   if (scheduledEvents[s].nodeId == nodeId && scheduledEvents[s].eventKey == eventKey)
                   {
-                    console.log('**** REMOVING SCHEDULED EVENT - nodeId:' + nodeId + ' event:' + eventKey);
+                    console.log(`**** REMOVING SCHEDULED EVENT - nodeId:${nodeId} event:${eventKey}}`);
                     clearTimeout(scheduledEvents[s].timer);
                     scheduledEvents.splice(scheduledEvents.indexOf(scheduledEvents[s]), 1)
                     dbNode.events[eventKey].executeDateTime=undefined;
@@ -400,7 +435,7 @@ io.sockets.on('connection', function (socket) {
         io.sockets.emit('UPDATENODE', dbNode); //post it back to all clients to confirm UI changes
       }
     });
-  });  
+  });
 
   socket.on('DELETENODE', function (nodeId) {
     //delete all node-metric log files
@@ -409,10 +444,12 @@ io.sockets.on('connection', function (socket) {
         if (entries.length == 1)
         {
           var dbNode = entries[0];
-          Object.keys(dbNode.metrics).forEach(function(mKey,index) { //syncronous/blocking call
-            if (dbNode.metrics[mKey].graph == 1)
-              dbLog.removeMetricLog(path.join(__dirname, dbDir, dbLog.getLogName(dbNode._id, mKey)));
-          });
+          if (dbNode.metrics) {
+            Object.keys(dbNode.metrics).forEach(function(mKey,index) { //syncronous/blocking call
+              if (dbNode.metrics[mKey].graph == 1)
+                dbLog.removeMetricLog(path.join(__dirname, dbDir, dbLog.getLogName(dbNode._id, mKey)));
+            });
+          }
         }
       });
 
@@ -430,7 +467,7 @@ io.sockets.on('connection', function (socket) {
     for(var s in scheduledEvents)
       if (scheduledEvents[s].nodeId == nodeId)
       {
-        console.log('**** REMOVING SCHEDULED EVENT FOR DELETED NODE - NodeId:' + nodeId + ' event:' + scheduledEvents[s].eventKey);
+        console.log(`**** REMOVING SCHEDULED EVENT FOR DELETED NODE - NodeId:${nodeId} event:${scheduledEvents[s].eventKey}`);
         clearTimeout(scheduledEvents[s].timer);
         scheduledEvents.splice(scheduledEvents.indexOf(scheduledEvents[s]), 1);
       }
@@ -438,7 +475,6 @@ io.sockets.on('connection', function (socket) {
 
   socket.on('DELETENODEMETRIC', function (nodeId, metricKey) {
     db.find({ _id : nodeId }, function (err, entries) {
-      console.log('DELETENODEMETRIC '+nodeId+': DB found : ' + entries.length + ' err: ' + err);
       if (entries.length == 1)
       {
         var dbNode = entries[0];
@@ -446,6 +482,21 @@ io.sockets.on('connection', function (socket) {
         db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) { console.log('DELETENODEMETRIC DB-Replaced:' + numReplaced); });
         if (settings.general.keepMetricLogsOnDelete.value != 'true')
           dbLog.removeMetricLog(path.join(__dirname, dbDir, dbLog.getLogName(dbNode._id, metricKey)));
+        io.sockets.emit('UPDATENODE', dbNode); //post it back to all clients to confirm UI changes
+      }
+    });
+  });
+
+  socket.on('DELETENODEREQUEST', function (nodeId, requestKey) {
+    db.find({ _id : nodeId }, function (err, entries) {
+      if (entries.length == 1)
+      {
+        var dbNode = entries[0];
+        reqName = dbNode.requests[requestKey].name;
+        reqValue = dbNode.requests[requestKey].value;
+        sendMessageToGateway(dbNode._id+':VOID:'+reqName+(reqValue?':'+reqValue:'')); //remove pending request from gateway's REQUEST queue
+        delete(dbNode.requests[requestKey]);
+        db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) { console.log('DELETENODEREQUEST DB-Replaced:' + numReplaced); });
         io.sockets.emit('UPDATENODE', dbNode); //post it back to all clients to confirm UI changes
       }
     });
@@ -476,7 +527,7 @@ io.sockets.on('connection', function (socket) {
         var dbNode = entries[0];
         var logfile = path.join(__dirname, dbDir, dbLog.getLogName(dbNode._id, metricKey));
         var count = dbLog.editData(logfile, sts, ets, newValue);
-        console.log('EDITMETRICDATA DB-Updated points:' + count +' to: ' + newValue);
+        console.log(`EDITMETRICDATA DB-Updated points:${count} to:${newValue}`);
         socket.emit('EDITMETRICDATA_OK', count); //post it back to requesting client only
       }
     });
@@ -501,12 +552,17 @@ io.sockets.on('connection', function (socket) {
   socket.on('NODEMESSAGE', function (msg) {
     sendMessageToNode(msg);
   });
+  
+  socket.on('FAKEMESSAGE', function (msg) {
+    console.info(`FAKEMESSAGE: ${msg}`);
+    processSerialData(msg);
+  });
 
   socket.on('GATEWAYMESSAGE', function (msg) {
     sendMessageToGateway(msg);
   });
 
-  socket.on('INJECTNODE', function(node) {
+  socket.on('ADDNEWNODE', function(node) {
     if (metricsDef.isValidNodeId(node.nodeId))
     {
       node.nodeId = parseInt(node.nodeId);
@@ -516,27 +572,61 @@ io.sockets.on('connection', function (socket) {
         {
           var entry = { _id:node.nodeId, updated:Date.now(), label:node.label || 'NEW NODE', metrics:{} };
           db.insert(entry);
-          console.log('   ['+node.nodeId+'] DB-Insert new _id:' + node.nodeId);
-          socket.emit('LOG', 'NODE INJECTED, ID: ' + node.nodeId);
+          console.log(`   [${node.nodeId}] DB-Insert new _id:${node.nodeId}`);
+          socket.emit('LOG', 'NODE ADDED, ID: ' + node.nodeId);
           io.sockets.emit('UPDATENODE', entry);
         }
         else
-          socket.emit('LOG', 'CANNOT INJECT NODE, ID ALREADY EXISTS: ' + node.nodeId);
+          socket.emit('LOG', 'CANNOT ADD NODE, ID ALREADY EXISTS: ' + node.nodeId);
       });
     }
-    else socket.emit('LOG', 'CANNOT INJECT NODE, INVALID NEW ID: ' + node.nodeId);
+    else socket.emit('LOG', 'CANNOT ADD NODE, INVALID NEW ID: ' + node.nodeId);
+  });
+
+  socket.on('SUBMITNODEREQUEST', function (nodeId, reqName, reqValue, reqTimeout) {
+    db.find({ _id : nodeId }, function (err, entries) {
+      if (entries.length == 1)
+      {
+        var dbNode = entries[0];
+        if (dbNode.requests == undefined) dbNode.requests = {};
+
+        isNew = false;
+        if (dbNode.requests[reqName] == null) {
+          dbNode.requests[reqName] = {};
+          isNew = true;
+        }
+
+        dbNode.requests[reqName].name = reqName;
+        dbNode.requests[reqName].value = reqValue;
+        dbNode.requests[reqName].updated = Date.now();
+        dbNode.requests[reqName].status = 'PENDING';
+        dbNode.requests[reqName].timeout = reqTimeout || metricsDef.ONEDAY;
+
+        requestString='';
+        if (!isNew) //VOID previous request value before queuing adding latest value
+          requestString += nodeId + ':VOID:' + reqName + (reqValue?':'+reqValue.trim():'') + '\n';
+
+        requestString += nodeId + ':' + reqName + (reqValue?':'+reqValue.trim():'') + '\n';
+        sendMessageToGateway(requestString);
+        console.log('REQUEST SENT: ' + requestString.replace('\n','\\n').replace('\r','\\r'));
+        db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) { console.log('SUBMITNODEREQUEST DB-Replaced:' + numReplaced); });
+        console.log(`   [${nodeId}] ${(isNew?'Added':'Updated')} request:${reqName}`);
+        socket.emit('LOG', 'NODE ['+nodeId+'] Request '+(isNew?'Added':'Updated')+': ' + reqName);
+        io.sockets.emit('UPDATENODE', dbNode);
+      }
+    });
   });
 
   socket.on('GETGRAPHDATA', function (nodeId, metricKey, start, end, exportMode) {
     var graphData = getGraphData(nodeId, metricKey, start, end, exportMode);
     socket.emit(exportMode ? 'EXPORTGRAPHDATAREADY' : 'GRAPHDATAREADY', graphData);
   });
-  
+
   socket.on('GETMULTIGRAPHDATA', function (nodeId, multiGraphId, start, end, exportMode) {
     var sts = Math.floor(start / 1000); //get timestamp in whole seconds
     var ets = Math.floor(end / 1000); //get timestamp in whole seconds
     var series = [];
-    
+
     db.find({ _id : nodeId }, function (err, entries) {
       if (entries.length == 1)
       {
@@ -560,7 +650,7 @@ io.sockets.on('connection', function (socket) {
     var sts = Math.floor(start / 1000); //get timestamp in whole seconds
     var ets = Math.floor(end / 1000); //get timestamp in whole seconds
     var sets = [];
-    
+
     db.find({ _id : nodeId }, function (err, entries) {
       if (entries.length == 1)
       {
@@ -601,7 +691,7 @@ io.sockets.on('connection', function (socket) {
         socket.emit('LOG', 'UPDATESETTINGSDEF ERROR: '+err);
       else
       {
-        global.metricsDef = require(path.resolve(__dirname, metricsFile))
+        global.metricsDef = require(path.resolve(__dirname, coreMetricsFilePath))
         io.sockets.emit('SETTINGSDEF', settings);
       }
     });
@@ -610,6 +700,16 @@ io.sockets.on('connection', function (socket) {
   socket.on('PROCESSEXIT', function () {
     console.log('PROCESS EXIT REQUESTED from ' + address);
     process.exit();
+  });
+
+  socket.on('RESTARTPI', function () {
+    console.log('PI RESTART REQUESTED from ' + address);
+    require('child_process').exec('sudo /sbin/shutdown -r now "GATEWAY RESTART REQUEST"', function (msg) { console.log(msg) });
+  });
+
+  socket.on('SHUTDOWNPI', function () {
+    console.log('PI SHUTDOWN REQUESTED from ' + address);
+    require('child_process').exec('sudo /sbin/shutdown now "GATEWAY SHUTDOWN REQUEST"', function (msg) { console.log(msg) });
   });
 });
 
@@ -633,21 +733,48 @@ function sortNodes(entries) {
   return entries;
 }
 
+global.handleNodeRequest = function (existingNode, reqName, oldValue, newValue, returnedStatus, timeout) {
+  existingNode.requests[reqName].value = newValue;
+  existingNode.requests[reqName].updated = Date.now();
+  existingNode.requests[reqName].timeout = timeout;
+
+  if (['PENDING','INVALID','CHANGED'].indexOf(existingNode.requests[reqName].status) > -1)
+    sendMessageToGateway(existingNode._id+':VOID:'+reqName+(oldValue?':'+oldValue:'')); //remove pending request from gateway's REQUEST queue
+
+  if (oldValue == undefined)
+    existingNode.requests[reqName].status = 'OK';
+  else if (oldValue == newValue)
+  {
+    if (existingNode.requests[reqName].status != 'CHANGED')
+      existingNode.requests[reqName].status = 'OK';
+  }
+  else
+    existingNode.requests[reqName].status = 'CHANGED';
+
+  if (returnedStatus == 'INV')
+    existingNode.requests[reqName].status = 'INVALID';
+  else if (returnedStatus)
+    existingNode.requests[reqName].status = returnedStatus; //override status with returnedStatus, if any returned
+}
+
 global.msgHistory = new Array();
 global.processSerialData = function (data) {
-  var regexMaster = /\[(\d+)\]([^\n]+)/gi; //modifiers: g:global i:caseinsensitive
-  var match = regexMaster.exec(data);
+  var regexNodeData = /\[(\d+)\]([a-z0-9!"#\$%&'()*+,.\/:;<=>?@\[\] ^_`{|}~-]+)/ig; //modifiers: g:global i:caseinsensitive
+  var regexTokenizedLine = /[a-z0-9!"#\$%&'()*+,.\/:;<=>?@\[\]^_`{|}~-]+/ig; //match (almost) any non whitespace human readable character
+  var regexpGeneralRequests = /^([_a-z][_a-z0-9]*)(\:[-_a-z0-9]+)?(\:[-_a-z0-9]+)?(\:[-_a-z0-9]+)?$/i; //up to 5 capture groups: [0]whole_string [1]name ([2]:optional value) ([3]:optional status) ([4]:optional extra)
+  var match = regexNodeData.exec(data);
   console.log('>: ' + data)
 
+  //first try to match normal data from nodes: [nodeID] token:value ... token:value RSSI:-XX
   if (match != null)
   {
     var msgTokens = match[2];
     var id = parseInt(match[1]); //get ID of node
 
-    db.find({ _id : id }, function (err, entries) {
+    db.findOne({ _id : id }, function (err, dbEntry) {
       var existingNode = {};
       var hasMatchedMetrics = false;
-      if (entries.length == 1) existingNode = entries[0]; //update
+      if (dbEntry != null) existingNode = dbEntry; //update
 
       //check for duplicate messages - this can happen when the remote node sends an ACK-ed message but does not get the ACK so it resends same message repeatedly until it receives an ACK
       if (existingNode.updated != undefined && (Date.now() - existingNode.updated < 500) && msgHistory[id] == msgTokens)
@@ -660,27 +787,51 @@ global.processSerialData = function (data) {
       existingNode._id = id;
       existingNode.updated = Date.now(); //update timestamp we last heard from this node, regardless of any matches
       if (existingNode.metrics == undefined) existingNode.metrics = {};
+      if (existingNode.requests == undefined) existingNode.requests = {};
 
-      var regexpTokens = /[\w\:\.\$\!\\\'\"\?\[\]\-\(\)@%^&#+\/<>*~=,|]+/ig; //match (almost) any non space human readable character
-      while (match = regexpTokens.exec(msgTokens)) //extract each token/value pair from the message and process it
+      while (match = regexTokenizedLine.exec(msgTokens)) //extract each token/value pair from the message and process it
       {
         var matchingMetric;
-        for(var metric in metricsDef.metrics) //try to match a metric definition
+
+        //try to match a metric definition
+        for(var metric in metricsDef.metrics)
         {
           if (metricsDef.metrics[metric].regexp.test(match[0]))
           {
-            //found matching metric, add/update the node with it
+            //found matching metric, extract the token:value and add/update the node with it
             var tokenMatch = metricsDef.metrics[metric].regexp.exec(match[0]);
             matchingMetric = metricsDef.metrics[metric];
+
+            //handle TYPE metric
             if (metric == 'TYPE') {
               nodetype = metricsDef.determineValue(matchingMetric, tokenMatch);
-              //console.log(" %%%%%% TYPE METRIC - metricsDef.motes["+nodetype+"]=" + JSON.stringify(metricsDef.motes[nodetype]));
-              if (metricsDef.motes[nodetype]) {
+              if (metricsDef.motes[nodetype] && existingNode.type !== nodetype) {
                 existingNode.type = nodetype;
                 existingNode.icon = metricsDef.motes[nodetype].icon || existingNode.icon;
               }
               continue;
             }
+
+            //handle requests - they are of this format: REQUEST_NAME:REQUEST_VALUE(:OPTIONAL_REQUEST_STATUS)
+            //regex definitions in core.js gives the strict format and case sensitivity
+            if (matchingMetric.isRequest)
+            {
+              reqName = matchingMetric.name;
+              if (existingNode.requests[reqName] == null) {
+                existingNode.requests[reqName] = {};
+              }
+
+              newValue = matchingMetric.value || tokenMatch[1] || tokenMatch[0];
+              oldValue = existingNode.requests[reqName].value;
+              returnedStatus = tokenMatch[2];
+              timeout = matchingMetric.timeout*1000 || metricsDef.ONEDAY;
+
+              existingNode.requests[reqName].name = reqName;
+              handleNodeRequest(existingNode, reqName, oldValue, newValue, returnedStatus, timeout);
+              continue;
+            }
+
+            //handle all other regular metrics
             if (existingNode.metrics[matchingMetric.name] == null) existingNode.metrics[matchingMetric.name] = {};
             existingNode.metrics[matchingMetric.name].label = existingNode.metrics[matchingMetric.name].label || matchingMetric.name;
             existingNode.metrics[matchingMetric.name].descr = existingNode.metrics[matchingMetric.name].descr || matchingMetric.descr || undefined;
@@ -707,8 +858,27 @@ global.processSerialData = function (data) {
             }
 
             if (matchingMetric.name != 'RSSI') hasMatchedMetrics = true; //excluding RSSI because noise can produce a packet with a valid RSSI reading
-            break; //--> this stops matching as soon as 1 metric definition regex is matched on the data. You could keep trying to match more definitions and that would create multiple metrics from the same data token, but generally this is not desired behavior.
+            break; //--> this stops matching as soon as 1 metric definition regex is matched on the data. You could keep trying to match more definitions and that would create multiple metrics from the same data token, but generally this is not desired behavior. In that case the on-the-fly request matching section below should be done conditionally - only if no defined metrics matched
           }
+        }
+
+        //no matched metrics, last chance: look for any on-the-fly/manually added requests or requests with custom/unknown/non-matching statuses
+        var tokenMatch = regexpGeneralRequests.exec(match[0]);
+        if (tokenMatch) {
+          reqName = tokenMatch[1];
+          if (existingNode.requests && existingNode.requests[reqName] != null) //found an on-the-fly node request for the node
+          {
+            newValue = (tokenMatch[2] || '').replace(/^\:/, ''); //get captured value, if any
+            oldValue = existingNode.requests[reqName].value;
+            returnedStatus = (tokenMatch[3] || '').replace(/^\:/, '');
+            timeout = existingNode.requests[reqName].timeout || metricsDef.ONEDAY;
+            handleNodeRequest(existingNode, reqName, oldValue, newValue, returnedStatus, timeout);
+          }
+        }
+        else if (!hasMatchedMetrics) { //else : we do not generate unknown requests (not defined in metrics) by default even if they are transmitted
+          console.log('NODEDATA PARTIAL NOMATCH>: ' + match[0].replace('\n','\\n').replace('\r','\\r'));
+          if (unmatchedDataDB)
+            unmatchedDataDB.insert({_id:Date.now(), data:match[0]});
         }
       }
 
@@ -721,7 +891,8 @@ global.processSerialData = function (data) {
         descr:existingNode.descr||undefined,
         hidden:existingNode.hidden||undefined,
         rssi:existingNode.rssi,
-        metrics:Object.keys(existingNode.metrics).length > 0 ? existingNode.metrics : {},
+        metrics:Object.keys(existingNode.metrics).length > 0 ? existingNode.metrics : undefined,
+        requests:Object.keys(existingNode.requests).length > 0 ? existingNode.requests : undefined,
         events:existingNode.events,
         settings:existingNode.settings,
         multiGraphs:existingNode.multiGraphs,
@@ -729,30 +900,110 @@ global.processSerialData = function (data) {
       };
 
       //save to DB
-      db.findOne({_id:id}, function (err, doc) {
-        if (doc == null)
+      if (dbEntry==null) //it is an INSERT
+      {
+        if (settings.general.genNodeIfNoMatch.value == true || settings.general.genNodeIfNoMatch.value == 'true' || hasMatchedMetrics)
         {
-          if (settings.general.genNodeIfNoMatch.value == true || settings.general.genNodeIfNoMatch.value == 'true' || hasMatchedMetrics)
-          {
-            db.insert(entry);
-            console.log('   ['+id+'] DB-Insert new _id:' + id);
-          }
-          else return;
+          db.insert(entry);
+          console.log(`   [${id}] DB-Insert new _id:${id}`);
+          io.sockets.emit('UPDATENODE', entry);
+          return;
         }
-        else
-          db.update({ _id: id }, { $set : entry}, {}, function (err, numReplaced) { console.log('   ['+id+'] DB-Updates:' + numReplaced);});
-
-        //publish updated node to clients
-        io.sockets.emit('UPDATENODE', entry);
-        //handle any server side events (email, sms, custom actions)
-        handleNodeEvents(entry);
-      });
+      }
+      else {
+        db.update({ _id: id }, { $set : entry}, {}, function (err, numReplaced) { console.log(`[${id}] DB-Updates:` + numReplaced);});
+        io.sockets.emit('UPDATENODE', entry);      
+      }
+      //handle any server side events (email, sms, custom actions)
+      handleNodeEvents(entry);
     });
   }
   else
   {
-    //console.log('no match: ' + data);
-    dbunmatched.insert({_id:Date.now(), data:data});
+    somethingMatched=false;
+    validTokenMatched=false;
+
+    //atempt to process any commands/requests between gateway.js server and serial RF GATEWAY
+    while (match = regexTokenizedLine.exec(data)) //extract each token/value pair from serial data and process it
+    {
+      somethingMatched=true;
+      var tokenMatch = regexpGeneralRequests.exec(match[0]);  //format is  REQUEST:VALUE:STATUS  with VALUE and STATUS optional
+      var partialMatch = false;
+      
+      //check "known" REQUESTs
+      if (tokenMatch != null) {
+        updateServerInfo=false;
+        tokenValue = (tokenMatch[2] || '').replace(/^\:/, '');
+
+        if (tokenMatch[1] == 'GATEWAYSTART') //indicates a GATEWAY (re)start
+        {
+          gatewayUptime = Date.now();
+          updateServerInfo=true;
+          validTokenMatched=true;
+          partialMatch = true;
+
+          // if for any reason the RF gateway resets, any queued REQUESTS are lost (the queue is dynamically allocated in RAM)
+          // hence: (re)send any PENDING requests for any nodes to make sure the GATEWAY has them ready for the (sleepy) target nodes
+          db.find({ _id : { $exists: true }, requests : { $exists: true } }, function (err, entries) {
+            var updates = [];
+            var ts = Date.now();
+            
+            for (var i = 0; i < entries.length; i++) {
+              var nodeUpdated=false;
+              var dbNode = entries[i];
+              for (var key in dbNode.requests) {
+                if (dbNode.requests[key].status=='PENDING')
+                {
+                  reqValue = dbNode.requests[key].value;
+                  reqStr = dbNode._id + ':' + dbNode.requests[key].name + (reqValue?':'+reqValue.trim():'') + '\n';
+                  console.log('REQUEUING: ' + reqStr);
+                  sendMessageToGateway(reqStr);
+                }
+              }
+            }
+          });
+        }
+
+        if (tokenMatch[1] == 'UPTIME' && metricsDef.isNumeric(tokenValue)) //millis() from RF GATEWAY
+        {
+          io.sockets.emit('LOG',tokenMatch[0]);
+          gatewayUptime = Date.now() - tokenValue;
+          updateServerInfo=true;
+          validTokenMatched=true;
+          partialMatch = true;
+        }
+
+        if (tokenMatch[1] == 'SYSFREQ' && tokenValue)
+        {
+          io.sockets.emit('LOG',tokenMatch[0]);
+          gatewayFrequency = tokenValue;
+          updateServerInfo=true;
+          validTokenMatched=true;
+          partialMatch = true;
+        }
+
+        if (tokenMatch[1] == 'REQUESTQUEUE' || tokenMatch[1] == 'FREERAM' || tokenMatch[1] == 'GTWCMD' || tokenMatch[1] == 'ACK')
+        {
+          io.sockets.emit('LOG',tokenMatch[0]);
+          validTokenMatched=true;
+          partialMatch = true;
+        }
+
+        if (updateServerInfo) broadcastServerInfo();
+      }
+
+      if (!partialMatch) {
+        console.log('GENERAL PARTIAL NOMATCH>: ' + match[0].replace('\n','\\n').replace('\r','\\r'));
+        if (unmatchedDataDB)
+          unmatchedDataDB.insert({_id:Date.now(), data:match[0]});
+      }
+    }
+
+    if (!somethingMatched) {
+      console.log('GENERAL NOMATCH>: ' + data.replace('\n','\\n').replace('\r','\\r'));
+      if (unmatchedDataDB)
+        unmatchedDataDB.insert({_id:Date.now(), data:data});
+    }
   }
 }
 
@@ -802,7 +1053,7 @@ function httpEndPointHandler(req, res) {
                 var ts = Math.floor(Date.now() / 1000); //get timestamp in whole seconds
                 var logfile = path.join(__dirname, dbDir, dbLog.getLogName(id, matchingMetric.name));
                 try {
-                  console.log('post: ' + logfile + '[' + ts + ','+graphValue + ']');
+                  console.log(`post: ${logfile} [${ts},${graphValue}]`);
                   dbLog.postData(logfile, ts, graphValue, matchingMetric.duplicateInterval || null);
                 } catch (err) { console.error('   POST ERROR: ' + err.message); /*console.log('   POST ERROR STACK TRACE: ' + err.stack); */ } //because this is a callback concurrent calls to the same log, milliseconds apart, can cause a file handle concurrency exception
               }
@@ -833,20 +1084,20 @@ function httpEndPointHandler(req, res) {
       };
 
       //console.log('HTTP REQUEST MATCH from: ' + id + ' : ' + JSON.stringify(entry));
-      
+
       //save to DB
       db.findOne({_id:id}, function (err, doc) {
         if (doc == null)
         {
-          if (settings.general.genNodeIfNoMatch.value == true || settings.general.genNodeIfNoMatch.value == 'true' || matchedMetrics)
+          if (settings.general.genNodeIfNoMatch.value == true || settings.general.genNodeIfNoMatch.value == 'true' || hasMatchedMetrics)
           {
             db.insert(entry);
-            console.log('   ['+id+'] DB-Insert new _id:' + id);
+            console.log(`   [${id}] DB-Insert new _id:${id}`);
           }
           else return;
         }
         else
-          db.update({ _id: id }, { $set : entry}, {}, function (err, numReplaced) { console.log('   ['+id+'] DB-Updates:' + numReplaced);});
+          db.update({ _id: id }, { $set : entry}, {}, function (err, numReplaced) { console.log(`[${id}] DB-Updates:${numReplaced}`);});
 
         //publish updated node to clients
         io.sockets.emit('UPDATENODE', entry);
@@ -869,21 +1120,21 @@ function httpEndPointHandler(req, res) {
 
 
 //keep track of scheduler based events - these need to be kept in sych with the UI - if UI removes an event, it needs to be cancelled from here as well; if UI adds a scheduled event it needs to be scheduled and added here also
-scheduledEvents = []; //each entry should be defined like this: {nodeId, eventKey, timer}
+var scheduledEvents = []; //each entry should be defined like this: {nodeId, eventKey, timer}
 
 //schedule and register a scheduled type event
-function schedule(node, eventKey) {
+global.schedule = function(node, eventKey) {
   var nextRunTimeout = metricsDef.events[eventKey].nextSchedule(node);
   if (nextRunTimeout < 1000)
   {
-    console.error('**** SCHEDULING EVENT ERROR - nodeId:' + node._id+' event:'+eventKey+' cannot schedule event in ' + nextRunTimeout + 'ms (less than 1s)');
+    console.error(`**** SCHEDULING EVENT ERROR - nodeId:${node._id} event:${eventKey} cannot schedule event in ${nextRunTimeout}ms (less than 1s)`);
     return;
   }
   var hrs = parseInt(nextRunTimeout/3600000);
   var min = parseInt((nextRunTimeout - hrs*3600000) / 60000);
   var sec = parseInt((nextRunTimeout - hrs*3600000 - min*60000) / 1000);
   var timeoutStr = (hrs > 0 ? hrs+'h': '') + (min>0?min+'m':'') + (sec>0&&hrs==0?sec+'s':'');
-  console.log('**** SCHEDULING EVENT - nodeId:' + node._id+' event:'+eventKey+' to run in ~' + timeoutStr);
+  console.log(`**** SCHEDULING EVENT - nodeId:${node._id} event:${eventKey} to run in ~${timeoutStr}`);
 
   //clear any previous instances of the event
   for(var s in scheduledEvents)
@@ -903,15 +1154,14 @@ function schedule(node, eventKey) {
   //save to DB
   db.findOne({_id:node._id}, function (err, dbNode) {
     dbNode.events = node.events;
-    db.update({_id:dbNode._id}, { $set : dbNode }, {}, function (err, numReplaced) { console.log('   ['+dbNode._id+'] DB-Updates:' + numReplaced);});
-    //publish updated node to clients
-    io.sockets.emit('UPDATENODE', dbNode);
+    db.update({_id:dbNode._id}, { $set : dbNode }, {}, function (err, numReplaced) { console.log(`[${dbNode._id}] DB-Updates:${numReplaced}`);});
+    io.sockets.emit('UPDATENODE', dbNode); //push updated node to client sockets
   });
 }
 
 //run a scheduled event and reschedule it
-function runAndReschedule(functionToExecute, node, eventKey) {
-  console.log('**** RUNNING SCHEDULED EVENT - nodeId:' + node._id + ' event:' + eventKey + '...');
+global.runAndReschedule = function(functionToExecute, node, eventKey) {
+  console.log(`**** RUNNING SCHEDULED EVENT - nodeId:${node._id} event:${eventKey}...`);
   db.findOne({_id:node._id}, function (err, dbNode) {
     try
     {
@@ -944,3 +1194,33 @@ db.find({ events : { $exists: true } }, function (err, entries) {
       }
     }
 });
+
+//run at start/restart - attempt to get uptime & any other info from RF GATEWAY
+sendMessageToGateway('UPTIME\nFREERAM\nSYSFREQ');
+
+//periodic checking of node requests expiration
+setInterval(function(){
+  //pull all nodes from the database and check each node's request collection
+  db.find({ _id : { $exists: true }, requests : { $exists: true } }, function (err, entries) {
+    var updates = [];
+    var ts = Date.now();
+    
+    for (var i = 0; i < entries.length; i++) {
+      var nodeUpdated=false;
+      var dbNode = entries[i];
+        for (var key in dbNode.requests) {
+          if ((['PENDING'].indexOf(dbNode.requests[key].status) > -1)
+              && (ts - dbNode.requests[key].timeout > dbNode.requests[key].updated))
+          {
+            dbNode.requests[key].status = 'TIMEOUT'; //mark all expired requests
+            dbNode.requests[key].updated = ts;
+            db.update({_id:dbNode._id}, { $set : dbNode }); //save to db
+            nodeUpdated = true;
+          }
+        }
+
+        if (nodeUpdated)
+          io.sockets.emit('UPDATENODE', entries[i]); //push updated node to clients
+    }
+  });
+}, 10000);
