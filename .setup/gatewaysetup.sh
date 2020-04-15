@@ -131,6 +131,10 @@ echo -e "You can change httpauth password using ${YLW}htpasswd $APPSRVDIR/data/s
 
 echo -e "${CYAN}************* STEP: Copy default site config to sites-available *************${NC}"
 cp -rf $APPSRVDIR/.setup/default /etc/nginx/sites-available/default
+#determine php-fpm version and replace in gateway site config
+phpfpmsock=$(grep -ri "listen = " /etc/php)
+phpfpmsock=${phpfpmsock##*/}
+sudo sed -i "s/PHPFPMSOCK/${phpfpmsock}/g" /etc/nginx/sites-available/default
 cd /etc/nginx/sites-enabled
 sudo ln -s /etc/nginx/sites-available/default
 sudo service nginx restart
