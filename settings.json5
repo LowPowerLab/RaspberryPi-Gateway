@@ -36,7 +36,7 @@
         description: 'replace this with whatever serial port you have on your Pi/gateway (ttyAMA0 is the default GPIO serial port). If you use a MoteinoUSB then your Pi will emulate a serial port like /dev/ttyUSB0',
       },
       baud: {
-        value: 19200,
+        value: 115200,
         type: 'number',
         description: 'needs to match the Serial baud speed in the sketch running on the Moteino or MightyHat that is attached to this Pi',
       },
@@ -64,10 +64,6 @@
       consoleLogDateFormat: {
         value: 'mm-dd-yy_HH:MM:ss.l',
         exposed: false,
-      },
-      uiTitle: {
-        value: 'My IoT Gateway',
-        type: 'text',
       },
       socketPort: {
         value: 8080,
@@ -119,12 +115,17 @@
         max: 180,
       },
     },
-    radiothermostat: {
+    interface: {
       editable: true,
       exposed: true,
-      ip: {
-        value: '192.168.1.100',
-        description: 'If you have a wifi RadioThermostat CT50/CT80 this is the IP address',
+      uiTitle: {
+        value: 'VF Gateway v9.1.0',
+        type: 'text',
+      },
+      responsive: {
+        value: 'true',
+        description: 'nodelist becomes a responsive tile grid when screen is larger than [768,1020px]. This settting affects all UI clients.',
+        type: 'checkbox',
       },
     },
     misc: {
