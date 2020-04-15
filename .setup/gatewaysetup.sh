@@ -9,10 +9,7 @@ GRN='\033[1;32m'
 YLW='\033[1;33m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
-
 APPSRVDIR='/home/pi/gateway/'
-#NODEDIR='/opt/nodejs'
-#NODEARCH=$(uname -m)
 
 echo -e "${GRN}#########################################################################${NC}"
 echo -e "${GRN}#                 Low Power Lab Gateway App Setup                       #${NC}"
@@ -20,7 +17,7 @@ echo -e "${GRN}#################################################################
 echo -e "${YLW}Note: script can take long on older Pis${NC}"
 echo -e "${YLW}Note: setup requires your input at certain steps${NC}"
 
-if (whiptail --title "  Gateway User License Agreement  " --yesno "This software requires a license for any commercial use.\n\nBy installing this software I certify that either:\n\n- I use this software for personal/non-profit purposes\n- I have obtained a commercial license already" 12 78) then
+if (whiptail --title "  Gateway User License Agreement  " --yesno "This software is licensed with CC-BY-NC-4.0 and requires a commercial license for any commercial or for-profit use.\n\nBy installing this software I certify that either:\n\n- I use this software for personal/non-profit purposes\n- I have obtained a commercial license already" 12 78) then
   echo -e "${GRN}#                 LICENSE confirmation applied.                #${NC}"
 else
   echo -e "${RED}#                 License required, exiting.                #${NC}"
@@ -34,61 +31,16 @@ sudo apt-get update -m
 # sudo apt-get upgrade
 # echo -e "${CYAN}************* STEP: Running dist-upgrade *************${NC}"
 # sudo apt-get dist-upgrade
-#sudo apt-get clean
 
 echo -e "${CYAN}************* STEP: Installing git & apache2-utils *************${NC}"
 sudo apt-get -y install git apache2-utils
 
 #install NGINX
 echo -e "${CYAN}************* STEP: Install latest NGINX *************${NC}"
-#echo "deb http://mirrordirector.raspbian.org/raspbian/ stretch main contrib non-free rpi" | sudo tee -a /etc/apt/sources.list
-#sudo apt-get update
 sudo apt-get -y install nginx
-#sudo sed -e '/stretch/ s/^#*/#/' -i /etc/apt/sources.list
-#sudo apt-get update
 
 # echo -e "${CYAN}************* STEP: Install PHP7 *************${NC}"
 sudo apt-get -y install php-common php-cli php-fpm
-
-#install NodeJS
-# echo -e "${CYAN}************* STEP: Install NodeJS *************${NC}"
-# if [[ "$NODEARCH" == "armv6l" ]] ; then
-  # mkdir ~/tempnode -p
-  # cd ~/tempnode
-  # wget https://nodejs.org/dist/v4.6.2/node-v4.6.2-linux-armv6l.tar.gz
-  # tar -xzf node-v4.6.2-linux-armv6l.tar.gz
-  # sudo rm node-v4.6.2-linux-armv6l.tar.gz
-  # sudo rm -rf $NODEDIR
-  # mkdir -p $NODEDIR
-  # sudo mv node-v4.6.2-linux-armv6l/* $NODEDIR
-  # sudo rm -rf ~/tempnode;
-  # cd ~/
-  # # sudo unlink /usr/bin/node;
-  # # sudo unlink /usr/sbin/node;
-  # # sudo unlink /sbin/node;
-  # # sudo unlink /usr/local/bin/node;
-  # # sudo unlink /usr/bin/npm;
-  # # sudo unlink /usr/sbin/npm;
-  # # sudo unlink /sbin/npm;
-  # # sudo unlink /usr/local/bin/npm;
-  # # sudo ln -s /opt/node/bin/node /usr/bin/node;
-  # # sudo ln -s opt/node/bin/node /usr/sbin/node;
-  # # sudo ln -s /opt/node/bin/node /sbin/node;
-  # # sudo ln -s /opt/node/bin/node /usr/local/bin/node;
-  # # sudo ln -s /opt/node/bin/npm /usr/bin/npm;
-  # # sudo ln -s /opt/node/bin/npm /usr/sbin/npm;
-  # # sudo ln -s /opt/node/bin/npm /sbin/npm;
-  # # sudo ln -s /opt/node/bin/npm /usr/local/bin/npm;
-  # echo 'Creating symbolic link to node in /usr/bin/'
-  # sudo ln -sf $NODEDIR/bin/node /usr/bin/node
-  # echo 'Creating symbolic link to nodejs in /usr/bin/'
-  # sudo ln -sf $NODEDIR/bin/node /usr/bin/nodejs
-  # echo 'Creating symbolic link to npm in /usr/bin/'
-  # sudo ln -sf $NODEDIR/bin/npm /usr/bin/npm
-# else
-  # curl -sL https://deb.nodesource.com/setup_4.x | sudo -E bash -;
-  # sudo apt-get -y install nodejs;
-# fi
 
 #install latest NodeJS --- https://www.raspberrypi.org/forums/viewtopic.php?t=141770
 sudo wget -O - https://raw.githubusercontent.com/LowPowerLab/RaspberryPi-Gateway/master/.setup/Install-Node.sh | sudo bash
@@ -96,11 +48,25 @@ sudo wget -O - https://raw.githubusercontent.com/LowPowerLab/RaspberryPi-Gateway
 echo -e "${CYAN}************* STEP: Setup Gateway app & dependencies *************${NC}"
 sudo mkdir -p $APPSRVDIR    #main dir where gateway app lives
 cd $APPSRVDIR || exit
-#could use git clone but that requires empty target directory which won't work if executed repeatedly
-#git clone --single-branch https://github.com/LowPowerLab/RaspberryPi-Gateway.git $APPSRVDIR
+
 git init
 git remote add origin https://github.com/LowPowerLab/RaspberryPi-Gateway.git
-git pull origin master
+LASTTAG=$(curl --silent "https://api.github.com/repos/LowPowerLab/RaspberryPi-Gateway/releases/latest" | grep -Po '"tag_name": "\K.*?(?=")')
+WHICH=$(
+whiptail --title "Choose version to install" --menu "Pick version" 16 100 9 \
+	"${LASTTAG}" "Latest stable release [recommended] (git checkout)"   \
+	"HEAD" "Latest available code [warning] (git pull)" 3>&2 2>&1 1>&3
+)
+if [ "$WHICH" == "HEAD" ]; then
+  echo -e "${RED}#    Installing LATEST GATEWAY CODE (HEAD).              #${NC}"
+  #could use git clone but that requires empty target directory which won't work if executed repeatedly
+  git pull origin master
+else
+  echo -e "${GRN}#    Installing Latest Stable (v${LASTTAG}).                #${NC}"
+  git fetch --tags
+  git checkout $LASTTAG
+fi
+
 sudo npm install --unsafe-perm --build-from-source
 sudo npm cache verify    #clear any caches/incomplete installs
 sudo mkdir $APPSRVDIR/logs -p
@@ -112,9 +78,9 @@ touch $APPSRVDIR/data/db/gateway_nonmatches.db
 
 #create self signed certificate
 #WARNING: must do this *AFTER* the gateway app was git-cloned
-echo -e "${CYAN}************* STEP: Create self signed HTTPS certificate (5 year) *************${NC}"
+echo -e "${CYAN}************* STEP: Create self signed HTTPS certificate (10 year) *************${NC}"
 sudo mkdir $APPSRVDIR/data/secure -p
-sudo openssl req -new -x509 -nodes -days 1825 -newkey rsa:2048 -out $APPSRVDIR/data/secure/server.crt -keyout $APPSRVDIR/data/secure/server.key -subj "/C=US/ST=MI/L=Detroit/O=LowPowerLab/OU=IoT Department/CN=lowpowerlab.com"
+sudo openssl req -new -x509 -nodes -days 3650 -newkey rsa:2048 -out $APPSRVDIR/data/secure/server.crt -keyout $APPSRVDIR/data/secure/server.key -subj "/C=US/ST=MI/L=Detroit/O=LowPowerLab/OU=IoT Department/CN=lowpowerlab.com"
 sudo chown -R pi:pi $APPSRVDIR
 
 #create uploads dir for user icons
@@ -129,17 +95,24 @@ touch $APPSRVDIR/data/secure/.htpasswd
 htpasswd -b $APPSRVDIR/data/secure/.htpasswd $HTTPUSER $HTTPPASS
 echo -e "You can change httpauth password using ${YLW}htpasswd $APPSRVDIR/data/secure/.htpasswd user newpassword${NC}"
 
-echo -e "${CYAN}************* STEP: Copy default site config to sites-available *************${NC}"
-cp -rf $APPSRVDIR/.setup/default /etc/nginx/sites-available/default
+echo -e "${CYAN}************* STEP: Copy gateway site config to sites-available *************${NC}"
+cp -rf $APPSRVDIR/.setup/gateway /etc/nginx/sites-available/gateway
 #determine php-fpm version and replace in gateway site config
 phpfpmsock=$(grep -ri "listen = " /etc/php)
 phpfpmsock=${phpfpmsock##*/}
-sudo sed -i "s/PHPFPMSOCK/${phpfpmsock}/g" /etc/nginx/sites-available/default
+sudo sed -i "s/PHPFPMSOCK/${phpfpmsock}/g" /etc/nginx/sites-available/gateway
 cd /etc/nginx/sites-enabled
-sudo ln -s /etc/nginx/sites-available/default
+sudo ln -s /etc/nginx/sites-available/gateway
 sudo service nginx restart
 
-echo -e "${CYAN}************* STEP: ATXRaspi shutdown script setup *************${NC}"
+echo -e "${CYAN}************* STEP: Fail2Ban install *************${NC}"
+if (whiptail --title "Proftpd" --yesno "Do you want to install Fail2Ban?\nNote: Fail2Ban couples into the NGINX webserver to ban clients that make repeated failed attempts to authenticate to the Gateway App." 12 78) then
+  sudo apt-get -y install fail2ban
+  cp -n $APPSRVDIR/.setup/jail.local /etc/fail2ban/
+  sudo service fail2ban restart
+fi
+
+echo -e "${CYAN}************* STEP: ATXRaspi/MightyHat shutdown script setup *************${NC}"
 if (whiptail --title "ATXRaspi shutdown script" --yesno "Do you have a MightyHat or ATXRaspi installed on this Pi?\nNote: the script will start running only after a reboot so make sure to your ATXRaspi is wired before next boot otherwise leaving the feedback GPIO7 floating can cause unexpected reboots/shutdown!" 12 78) then
   sudo wget https://raw.githubusercontent.com/LowPowerLab/ATX-Raspi/master/shutdownchecksetup.sh
   sudo bash shutdownchecksetup.sh && sudo rm shutdownchecksetup.sh
@@ -147,10 +120,10 @@ fi
 
 echo -e "${CYAN}************* STEP: Disable GPIO serial console *************${NC}"
 sudo raspi-config nonint do_serial 1
-# sudo wget https://raw.githubusercontent.com/lurch/rpi-serial-console/master/rpi-serial-console -O /usr/bin/rpi-serial-console && sudo chmod +x /usr/bin/rpi-serial-console
-# if [[ "$(rpi-serial-console status | grep wheezy)" == *"enabled"* ]]; then
-  # sudo rpi-serial-console disable
-# fi
+
+echo -e "${CYAN}************* STEP: Disconnect GPIO/ttyAMA0 serial port from BT module *************${NC}"
+echo "enable_uart=1" >> /boot/config.txt
+echo "dtoverlay=pi3-disable-bt" >> /boot/config.txt
 
 echo -e "${CYAN}************* STEP: Run raspi-config *************${NC}"
 if (whiptail --title "Run raspi-config ?" --yesno "Would you like to run raspi-config?\nNote: you should run this tool and configure the essential settings of your Pi if you haven't done it yet!" 12 78) then
@@ -179,11 +152,17 @@ sudo systemctl daemon-reload
 sudo systemctl enable gateway.service
 sudo systemctl start gateway.service
 
+echo -e "${CYAN}************* STEP: Proftpd install *************${NC}"
+if (whiptail --title "Proftpd" --yesno "Do you want to install Proftpd?\nNote: Proftpd makes it easy to connect to the Pi via FTP." 12 78) then
+  sudo apt-get -y install proftpd
+fi
+
+sudo apt-get clean
+
 echo -e "${RED}Make sure: ${YLW}to edit your gateway settings from the UI or from settings.json5 (and restart to apply changes)${NC}"
 echo -e "${RED}By default ${YLW}the gateway app uses the GPIO serial port. Run ${GRN}raspi-config${NC} and ensure the GPIO serial is enabled and GPIO console is disabled.${NC}"
 echo -e "${YLW}If you use MoteinoUSB or another serial port you must edit the serial port setting or the app will not receive messages from your Moteino nodes.${NC}"
 echo -e "${RED}App restarts ${YLW}can be requested from the Gateway UI (power symbol button on settings page, or from the terminal via ${RED}sudo systemctl restart gateway.service${NC}"
-echo -e "${RED}Don't forget: ${YLW}install proftpd (choose standalone mode) if you plan to FTP transfer files to your Pi (very useful!) with ${GRN}sudo apt-get install proftpd${NC}"
 echo -e "${RED}Don't forget: ${YLW}install minicom - useful for serial port debugging with ${GRN}sudo apt-get install minicom${NC}"
 echo -e "${RED}Adding users: ${YLW}You can run tool again to add more gateway users (skip all other steps, reboot when done)${NC}"
 echo -e "${RED}! Important : ${YLW}If not done already - configure your Pi core settings (timezone, expand SD etc) by running ${GRN}raspi-config${NC}"
