@@ -17,7 +17,7 @@ echo -e "${GRN}#################################################################
 echo -e "${YLW}Note: script can take long on older Pis${NC}"
 echo -e "${YLW}Note: setup requires your input at certain steps${NC}"
 
-if (whiptail --title "  Gateway User License Agreement  " --yesno "This software is licensed with CC-BY-NC-4.0 and requires a commercial license for any commercial or for-profit use.\n\nBy installing this software I certify that either:\n\n- I use this software for personal/non-profit purposes\n- I have obtained a commercial license already" 12 78) then
+if (whiptail --title "  Gateway User License Agreement  " --yesno "This software is licensed with CC-BY-NC-4.0 and requires a commercial license for any commercial or for-profit use.\n\nBy installing this software I certify that either:\n\n- I use this software for personal/non-profit purposes\n- I have obtained a commercial license already" 15 78) then
   echo -e "${GRN}#                 LICENSE confirmation applied.                #${NC}"
 else
   echo -e "${RED}#                 License required, exiting.                #${NC}"
@@ -66,6 +66,7 @@ else
   git fetch --tags
   git checkout $LASTTAG
 fi
+rm -rf blueprints #remove irrelevant blueprints directory
 
 sudo npm install --unsafe-perm --build-from-source
 sudo npm cache verify    #clear any caches/incomplete installs
