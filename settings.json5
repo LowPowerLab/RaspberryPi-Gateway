@@ -119,7 +119,7 @@
       editable: true,
       exposed: true,
       uiTitle: {
-        value: 'VF Gateway v9.1.0',
+        value: 'Gateway v9.1.0',
         type: 'text',
       },
       responsive: {
