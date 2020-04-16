@@ -102,6 +102,7 @@ phpfpmsock=$(grep -ri "listen = " /etc/php)
 phpfpmsock=${phpfpmsock##*/}
 sudo sed -i "s/PHPFPMSOCK/${phpfpmsock}/g" /etc/nginx/sites-available/gateway
 cd /etc/nginx/sites-enabled
+sudo rm /etc/nginx/sites-enabled/default
 sudo ln -s /etc/nginx/sites-available/gateway
 sudo service nginx restart
 
