@@ -15,7 +15,7 @@
 // *******************************************************************************
 var fs = require('fs');
 var path = require('path');
-var metrics = require(path.resolve(__dirname,'metrics.js'));
+var metrics = require(path.resolve(__dirname,'metrics/core.js'));
 
 exports.getLogName = function(nodeId, metricId) {
   if (metrics.isNumeric(nodeId))
