@@ -55,7 +55,7 @@ LASTTAG=$(curl --silent "https://api.github.com/repos/LowPowerLab/RaspberryPi-Ga
 WHICH=$(
 whiptail --title "Choose version to install" --menu "Pick version" 16 100 9 \
 	"${LASTTAG}" "Latest stable release [recommended] (git checkout)"   \
-	"HEAD" "Latest available code [warning] (git pull)" 3>&2 2>&1 1>&3
+	"HEAD" "Latest available code [warning] (git pull)" --nocancel 3>&2 2>&1 1>&3
 )
 if [ "$WHICH" == "HEAD" ]; then
   echo -e "${RED}#    Installing LATEST GATEWAY CODE (HEAD).              #${NC}"
@@ -91,7 +91,7 @@ sudo chown -R www-data:pi $APPSRVDIR/www/images/uploads
 #create HTTP AUTH credentials
 echo -e "${CYAN}************* STEP: Create HTTP AUTH credentials *************${NC}"
 HTTPUSER=$(whiptail --inputbox "\nEnter the Gateway http_auth username:" 8 78 "pi" --title "Gateway HTTP_AUTH Setup" --nocancel 3>&1 1>&2 2>&3)
-HTTPPASS=$(whiptail --inputbox "\nEnter the Gateway http_auth password:" 10 78 "raspberry" --title "Gateway HTTP_AUTH Setup" --nocancel 3>&1 1>&2 2>&3)
+HTTPPASS=$(whiptail --passwordbox "\nEnter the Gateway http_auth password:" 10 78 "raspberry" --title "Gateway HTTP_AUTH Setup" --nocancel 3>&1 1>&2 2>&3)
 touch $APPSRVDIR/data/secure/.htpasswd
 htpasswd -b $APPSRVDIR/data/secure/.htpasswd $HTTPUSER $HTTPPASS
 echo -e "You can change httpauth password using ${YLW}htpasswd $APPSRVDIR/data/secure/.htpasswd user newpassword${NC}"
@@ -108,7 +108,7 @@ sudo ln -s /etc/nginx/sites-available/gateway
 sudo service nginx restart
 
 echo -e "${CYAN}************* STEP: Fail2Ban install *************${NC}"
-if (whiptail --title "Proftpd" --yesno "Do you want to install Fail2Ban?\nNote: Fail2Ban couples into the NGINX webserver to ban clients that make repeated failed attempts to authenticate to the Gateway App." 12 78) then
+if (whiptail --title "Fail2ban" --yesno "Do you want to install Fail2Ban?\nNote: Fail2Ban couples into the NGINX webserver to ban clients that make repeated failed attempts to authenticate to the Gateway App." 12 78) then
   sudo apt-get -y install fail2ban
   cp -n $APPSRVDIR/.setup/jail.local /etc/fail2ban/
   sudo service fail2ban restart
