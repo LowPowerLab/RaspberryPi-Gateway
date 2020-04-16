@@ -9,7 +9,73 @@ GRN='\033[1;32m'
 YLW='\033[1;33m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
-APPSRVDIR='/home/pi/gateway/'
+APPSRVDIR=/home/pi/gateway/
+CONFIG=/boot/config.txt
+USER=${SUDO_USER:-$(who -m | awk '{ print $1 }')}
+
+#usage ex:
+#   if [ $(get_config_var gpu_mem_1024 $CONFIG) != "0" ]
+#   CUR_GPU_MEM=$(get_config_var gpu_mem_1024 $CONFIG)
+get_config_var() {
+  lua - "$1" "$2" <<EOF
+local key=assert(arg[1])
+local fn=assert(arg[2])
+local file=assert(io.open(fn))
+local found=false
+for line in file:lines() do
+  local val = line:match("^%s*"..key.."=(.*)$")
+  if (val ~= nil) then
+    print(val)
+    found=true
+    break
+  end
+end
+if not found then
+   print(0)
+end
+EOF
+}
+
+#usage ex:
+#  set_config_var enable_uart 1 $CONFIG
+#  set_config_var gpu_mem "$NEW_GPU_MEM" $CONFIG
+set_config_var() {
+  lua - "$1" "$2" "$3" <<EOF > "$3.bak"
+local key=assert(arg[1])
+local value=assert(arg[2])
+local fn=assert(arg[3])
+local file=assert(io.open(fn))
+local made_change=false
+for line in file:lines() do
+  if line:match("^#?%s*"..key.."=.*$") then
+    line=key.."="..value
+    made_change=true
+  end
+  print(line)
+end
+
+if not made_change then
+  print(key.."="..value)
+end
+EOF
+mv "$3.bak" "$3"
+}
+
+#usage ex: clear_config_var gpu_mem_256 $CONFIG
+clear_config_var() {
+  lua - "$1" "$2" <<EOF > "$2.bak"
+local key=assert(arg[1])
+local fn=assert(arg[2])
+local file=assert(io.open(fn))
+for line in file:lines() do
+  if line:match("^%s*"..key.."=.*$") then
+    line="#"..line
+  end
+  print(line)
+end
+EOF
+mv "$2.bak" "$2"
+}
 
 echo -e "${GRN}#########################################################################${NC}"
 echo -e "${GRN}#                 Low Power Lab Gateway App Setup                       #${NC}"
@@ -18,9 +84,9 @@ echo -e "${YLW}Note: script can take long on older Pis${NC}"
 echo -e "${YLW}Note: setup requires your input at certain steps${NC}"
 
 if (whiptail --title "  Gateway User License Agreement  " --yesno "This software is licensed with CC-BY-NC-4.0 and requires a commercial license for any commercial or for-profit use.\n\nBy installing this software I certify that either:\n\n- I use this software for personal/non-profit purposes\n- I have obtained a commercial license already" 15 78) then
-  echo -e "${GRN}#                 LICENSE confirmation applied.                #${NC}"
+  echo -e "${GRN}#                 LICENSE confirmation applied.                         #${NC}"
 else
-  echo -e "${RED}#                 License required, exiting.                #${NC}"
+  echo -e "${RED}#                 License required, exiting.                            #${NC}"
   exit 0
 fi
 
@@ -88,20 +154,25 @@ sudo chown -R pi:pi $APPSRVDIR
 sudo mkdir $APPSRVDIR/www/images/uploads -p
 sudo chown -R www-data:pi $APPSRVDIR/www/images/uploads
 
-#create HTTP AUTH credentials
 echo -e "${CYAN}************* STEP: Create HTTP AUTH credentials *************${NC}"
-HTTPUSER=$(whiptail --inputbox "\nEnter the Gateway http_auth username:" 8 78 "pi" --title "Gateway HTTP_AUTH Setup" --nocancel 3>&1 1>&2 2>&3)
-HTTPPASS=$(whiptail --passwordbox "\nEnter the Gateway http_auth password:" 10 78 "raspberry" --title "Gateway HTTP_AUTH Setup" --nocancel 3>&1 1>&2 2>&3)
+HTTPUSER=""
+HTTPPASS=""
+while [ -z ${HTTPUSER} ]; do
+  HTTPUSER=$(whiptail --inputbox "\nEnter the Gateway http_auth username (cannot be blank):" 8 78 "pi" --title "Gateway HTTP_AUTH Setup" --nocancel 3>&1 1>&2 2>&3)
+done
+
+while [ -z ${HTTPPASS} ]; do
+  HTTPPASS=$(whiptail --passwordbox "\nEnter the Gateway http_auth password (cannot be blank):" 10 78 "raspberry" --title "Gateway HTTP_AUTH Setup" --nocancel 3>&1 1>&2 2>&3)
+done
 touch $APPSRVDIR/data/secure/.htpasswd
 htpasswd -b $APPSRVDIR/data/secure/.htpasswd $HTTPUSER $HTTPPASS
-echo -e "You can change httpauth password using ${YLW}htpasswd $APPSRVDIR/data/secure/.htpasswd user newpassword${NC}"
 
 echo -e "${CYAN}************* STEP: Copy gateway site config to sites-available *************${NC}"
 cp -rf $APPSRVDIR/.setup/gateway /etc/nginx/sites-available/gateway
 #determine php-fpm version and replace in gateway site config
-phpfpmsock=$(grep -ri "listen = " /etc/php)
-phpfpmsock=${phpfpmsock##*/}
-sudo sed -i "s/PHPFPMSOCK/${phpfpmsock}/g" /etc/nginx/sites-available/gateway
+phpfpmsock=$(grep -ri "listen = " /etc/php)  #search for file containing "listen =" in php path
+phpfpmsock=${phpfpmsock##*/}                 #extract everything after last /
+sudo sed -i "s/PHPFPMSOCK/${phpfpmsock}/g" /etc/nginx/sites-available/gateway  #replace PHPFPMSOCK with it in site config file
 cd /etc/nginx/sites-enabled
 sudo rm /etc/nginx/sites-enabled/default
 sudo ln -s /etc/nginx/sites-available/gateway
@@ -120,17 +191,11 @@ if (whiptail --title "ATXRaspi shutdown script" --yesno "Do you have a MightyHat
   sudo bash shutdownchecksetup.sh && sudo rm shutdownchecksetup.sh
 fi
 
-echo -e "${CYAN}************* STEP: Disable GPIO serial console *************${NC}"
-sudo raspi-config nonint do_serial 1
-
-echo -e "${CYAN}************* STEP: Disconnect GPIO/ttyAMA0 serial port from BT module *************${NC}"
-echo "enable_uart=1" >> /boot/config.txt
-echo "dtoverlay=pi3-disable-bt" >> /boot/config.txt
-
-echo -e "${CYAN}************* STEP: Run raspi-config *************${NC}"
-if (whiptail --title "Run raspi-config ?" --yesno "Would you like to run raspi-config?\nNote: you should run this tool and configure the essential settings of your Pi if you haven't done it yet!" 12 78) then
-  sudo raspi-config
-fi
+echo -e "${CYAN}************* STEP: Enable GPIO/serial0 port & disconnect from BT module *************${NC}"
+#sudo raspi-config nonint do_serial 0
+#echo "dtoverlay=pi3-disable-bt" >> /boot/config.txt
+set_config_var enable_uart 1 $CONFIG
+set_config_var dtoverlay pi3-disable-bt $CONFIG
 
 echo -e "${CYAN}************* STEP: Configuring logrotate *************${NC}"
 sudo echo "#this is used by logrotate and should be placed in /etc/logrotate.d/
@@ -161,20 +226,16 @@ fi
 
 sudo apt-get clean
 
+echo -e "${CYAN}************* STEP: Run raspi-config *************${NC}"
+if (whiptail --title "Run raspi-config ?" --yesno "Would you like to run raspi-config?\nNote: you should run this tool and configure the essential settings of your Pi if you haven't done it yet!" 12 78) then
+  sudo raspi-config
+fi
+
 echo -e "${RED}Make sure: ${YLW}to edit your gateway settings from the UI or from settings.json5 (and restart to apply changes)${NC}"
-echo -e "${RED}By default ${YLW}the gateway app uses the GPIO serial port. Run ${GRN}raspi-config${NC} and ensure the GPIO serial is enabled and GPIO console is disabled.${NC}"
+echo -e "${RED}By default ${YLW}the gateway app uses the GPIO serial port (/dev/ttyserial0)"
 echo -e "${YLW}If you use MoteinoUSB or another serial port you must edit the serial port setting or the app will not receive messages from your Moteino nodes.${NC}"
 echo -e "${RED}App restarts ${YLW}can be requested from the Gateway UI (power symbol button on settings page, or from the terminal via ${RED}sudo systemctl restart gateway.service${NC}"
-echo -e "${RED}Don't forget: ${YLW}install minicom - useful for serial port debugging with ${GRN}sudo apt-get install minicom${NC}"
-echo -e "${RED}Adding users: ${YLW}You can run tool again to add more gateway users (skip all other steps, reboot when done)${NC}"
-echo -e "${RED}! Important : ${YLW}If not done already - configure your Pi core settings (timezone, expand SD etc) by running ${GRN}raspi-config${NC}"
-
-# echo -e "${CYAN}************* STEP: Run raspi-config *************${NC}"
-# if (whiptail --title "Run raspi-config ?" --yesno "Would you like to run raspi-config now?\nNote: you should run this tool if you haven't done it yet!\nAlso: raspi-config allows a reboot after changes" 10 80) then
-  # sleep 5
-  # sudo raspi-config
-# fi
-
+echo -e "${YLW}You can change httpauth password using ${RED}htpasswd $APPSRVDIR/data/secure/.htpasswd user newpassword${NC}"
 echo -e "${CYAN}************* ALL DONE! *************${NC}"
 cd ~/
 exit 0
