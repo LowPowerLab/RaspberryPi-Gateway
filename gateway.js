@@ -76,7 +76,7 @@ port.on('close', function serialCloseHandler(error) {
   process.exit(1);
 });
 
-parser.on("data", function(data) { processSerialData(data); });
+parser.on("data", function(data) { processSerialData(data.replace(/\0/g, '')); }); //replace nulls in received string
 
 global.caseInsensitiveSorter = function (a, b) {return a.toLowerCase().localeCompare(b.toLowerCase())};
 
@@ -979,6 +979,13 @@ global.processSerialData = function (data) {
           partialMatch = true;
         }
 
+        if (tokenMatch[1] == 'ENCRYPTKEY' && tokenValue)
+        {
+          io.sockets.emit('LOG',tokenMatch[0]);
+          validTokenMatched=true;
+          partialMatch = true;
+        }
+
         if (tokenMatch[1] == 'REQUESTQUEUE' || tokenMatch[1] == 'FREERAM' || tokenMatch[1] == 'GTWCMD' || tokenMatch[1] == 'ACK')
         {
           io.sockets.emit('LOG',tokenMatch[0]);
@@ -1194,7 +1201,7 @@ db.find({ events : { $exists: true } }, function (err, entries) {
 });
 
 //run at start/restart - attempt to get uptime & any other info from RF GATEWAY
-sendMessageToGateway('UPTIME\nFREERAM\nSYSFREQ');
+sendMessageToGateway('\nUPTIME\nFREERAM\nSYSFREQ');
 
 //periodic checking of node requests expiration
 setInterval(function(){
