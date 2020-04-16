@@ -80,7 +80,6 @@ parser.on("data", function(data) { processSerialData(data); });
 
 global.caseInsensitiveSorter = function (a, b) {return a.toLowerCase().localeCompare(b.toLowerCase())};
 
-
 var merge = require('merge');
 global.loadMetricsFile = function(file, globalizeFunctions, fatal) {
   if (fs.lstatSync(file).isFile() && file.match(/\.js$/) !== null) {
@@ -669,6 +668,7 @@ io.sockets.on('connection', function (socket) {
   });
   
   socket.on('UPDATESETTINGSDEF', function (newSettings) {
+    //console.info(`UPDATESETTINGSDEF requested, new settings: ${JSON.stringify(newSettings)}`);
     var settings = nconf.get('settings');
 
     for(var sectionName in settings)
@@ -690,10 +690,7 @@ io.sockets.on('connection', function (socket) {
       if (err !=null)
         socket.emit('LOG', 'UPDATESETTINGSDEF ERROR: '+err);
       else
-      {
-        global.metricsDef = require(path.resolve(__dirname, coreMetricsFilePath))
         io.sockets.emit('SETTINGSDEF', settings);
-      }
     });
   });
 
@@ -1125,6 +1122,7 @@ var scheduledEvents = []; //each entry should be defined like this: {nodeId, eve
 //schedule and register a scheduled type event
 global.schedule = function(node, eventKey) {
   var nextRunTimeout = metricsDef.events[eventKey].nextSchedule(node);
+
   if (nextRunTimeout < 1000)
   {
     console.error(`**** SCHEDULING EVENT ERROR - nodeId:${node._id} event:${eventKey} cannot schedule event in ${nextRunTimeout}ms (less than 1s)`);
@@ -1173,7 +1171,7 @@ global.runAndReschedule = function(functionToExecute, node, eventKey) {
       console.error(msg);
       io.sockets.emit('LOG', msg);
     }
-    schedule(dbNode, eventKey);    
+    schedule(dbNode, eventKey);
   });
 }
 
