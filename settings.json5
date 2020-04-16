@@ -119,7 +119,7 @@
       editable: true,
       exposed: true,
       uiTitle: {
-        value: 'Gateway v9.1.0',
+        value: 'PiGateway v9.1.0',
         type: 'text',
       },
       responsive: {
