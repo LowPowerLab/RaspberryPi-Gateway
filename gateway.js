@@ -280,8 +280,8 @@ io.use(function(socket, next) {
 function broadcastServerInfo(socket) {
   infoObj = {
     uptime:(Date.now() - process.uptime()*1000),
-    gatewayUptime:(metricsDef.isNumeric(gatewayUptime) ? gatewayUptime : 'unknown'),
-    gatewayFrequency:(metricsDef.isNumeric(gatewayFrequency) ? gatewayFrequency : 'unknown'),
+    gatewayUptime:(isNumeric(gatewayUptime) ? gatewayUptime : 'unknown'),
+    gatewayFrequency:(isNumeric(gatewayFrequency) ? gatewayFrequency : 'unknown'),
     version: packageJson.version,
     nodeVersion: process.version,
     serverMillisSinceEpoch: Date.now(),
@@ -573,7 +573,7 @@ io.sockets.on('connection', function (socket) {
   });
 
   socket.on('ADDNEWNODE', function(node) {
-    if (metricsDef.isValidNodeId(node.nodeId))
+    if (isValidNodeId(node.nodeId))
     {
       node.nodeId = parseInt(node.nodeId);
       //only add node if given ID does not already exist in the DB
@@ -610,7 +610,7 @@ io.sockets.on('connection', function (socket) {
         dbNode.requests[reqName].value = reqValue;
         dbNode.requests[reqName].updated = Date.now();
         dbNode.requests[reqName].status = 'PENDING';
-        dbNode.requests[reqName].timeout = reqTimeout || metricsDef.ONEDAY;
+        dbNode.requests[reqName].timeout = reqTimeout || ONEDAY;
 
         requestString='';
         if (!isNew) //VOID previous request value before queuing adding latest value
@@ -741,7 +741,7 @@ io.sockets.on('connection', function (socket) {
 function sortNodes(entries) {
   var orderCSV;
   for (var i = entries.length-1; i>=0; i--)
-    if (!metricsDef.isValidNodeId(entries[i]._id)) //remove non-numeric id nodes
+    if (!isValidNodeId(entries[i]._id)) //remove non-numeric id nodes
     {
       if ((entries[i]._id).toString().toUpperCase() == 'NODELISTORDER') //if node order entry was found, remember it
         orderCSV = entries[i].order.split(',');
@@ -830,7 +830,7 @@ global.processSerialData = function (data, simulated) {
 
             //handle TYPE metric
             if (metric == 'TYPE') {
-              nodetype = metricsDef.determineValue(matchingMetric, tokenMatch);
+              nodetype = determineValue(matchingMetric, tokenMatch);
               if (metricsDef.motes[nodetype] && existingNode.type !== nodetype) {
                 existingNode.type = nodetype;
                 existingNode.icon = metricsDef.motes[nodetype].icon || existingNode.icon;
@@ -850,7 +850,7 @@ global.processSerialData = function (data, simulated) {
               newValue = matchingMetric.value || tokenMatch[1] || tokenMatch[0];
               oldValue = existingNode.requests[reqName].value;
               returnedStatus = tokenMatch[2];
-              timeout = matchingMetric.timeout*1000 || metricsDef.ONEDAY;
+              timeout = matchingMetric.timeout*1000 || ONEDAY;
 
               existingNode.requests[reqName].name = reqName;
               handleNodeRequest(existingNode, reqName, oldValue, newValue, returnedStatus, timeout);
@@ -861,7 +861,7 @@ global.processSerialData = function (data, simulated) {
             if (existingNode.metrics[matchingMetric.name] == null) existingNode.metrics[matchingMetric.name] = {};
             existingNode.metrics[matchingMetric.name].label = existingNode.metrics[matchingMetric.name].label || matchingMetric.name;
             existingNode.metrics[matchingMetric.name].descr = existingNode.metrics[matchingMetric.name].descr || matchingMetric.descr || undefined;
-            existingNode.metrics[matchingMetric.name].value = matchingMetric.value || metricsDef.determineValue(matchingMetric, tokenMatch);
+            existingNode.metrics[matchingMetric.name].value = matchingMetric.value || determineValue(matchingMetric, tokenMatch);
             existingNode.metrics[matchingMetric.name].unit = matchingMetric.unit || undefined;
             existingNode.metrics[matchingMetric.name].updated = existingNode.updated;
             existingNode.metrics[matchingMetric.name].pin = existingNode.metrics[matchingMetric.name].pin != undefined ? existingNode.metrics[matchingMetric.name].pin : matchingMetric.pin;
@@ -870,8 +870,8 @@ global.processSerialData = function (data, simulated) {
             //log data for graphing purposes, keep labels as short as possible since this log will grow indefinitely and is not compacted like the node database
             if (existingNode.metrics[matchingMetric.name].graph==1)
             {
-              var graphValue = metricsDef.isNumeric(matchingMetric.logValue) ? matchingMetric.logValue : metricsDef.determineGraphValue(matchingMetric, tokenMatch); //existingNode.metrics[matchingMetric.name].value;
-              if (metricsDef.isNumeric(graphValue))
+              var graphValue = isNumeric(matchingMetric.logValue) ? matchingMetric.logValue : determineGraphValue(matchingMetric, tokenMatch); //existingNode.metrics[matchingMetric.name].value;
+              if (isNumeric(graphValue))
               {
                 var ts = Math.floor(Date.now() / 1000); //get timestamp in whole seconds
                 var logfile = path.join(__dirname, dbDir, dbLog.getLogName(id, matchingMetric.name));
@@ -897,7 +897,7 @@ global.processSerialData = function (data, simulated) {
             newValue = (tokenMatch[2] || '').replace(/^\:/, ''); //get captured value, if any
             oldValue = existingNode.requests[reqName].value;
             returnedStatus = (tokenMatch[3] || '').replace(/^\:/, '');
-            timeout = existingNode.requests[reqName].timeout || metricsDef.ONEDAY;
+            timeout = existingNode.requests[reqName].timeout || ONEDAY;
             handleNodeRequest(existingNode, reqName, oldValue, newValue, returnedStatus, timeout);
           }
         }
@@ -994,7 +994,7 @@ global.processSerialData = function (data, simulated) {
           });
         }
 
-        if (tokenMatch[1] == 'UPTIME' && metricsDef.isNumeric(tokenValue)) //millis() from RF GATEWAY
+        if (tokenMatch[1] == 'UPTIME' && isNumeric(tokenValue)) //millis() from RF GATEWAY
         {
           gatewayUptime = Date.now() - tokenValue;
           updateServerInfo=true;
@@ -1045,15 +1045,15 @@ function httpEndPointHandler(req, res) {
   var ip = req.headers['x-forwarded-for'] /*|| req.connection.remoteAddress*/; //appended by nginx proxy
   var id = queryString.id || ip;
 
-  if (metricsDef.isValidNodeId(id))
+  if (isValidNodeId(id))
   {
-    if (metricsDef.isNumeric(id)) id = parseInt(id);
+    if (isNumeric(id)) id = parseInt(id);
     db.find({ _id : id }, function (err, entries) {
       var existingNode = {};
       var matchedMetrics = 0;
       if (entries.length == 1) existingNode = entries[0]; //update
       existingNode._id = id;
-      if (metricsDef.isNumeric(id)) existingNode._ip = ip; //add/override IP address for HTTP requests, if node ID was specified as a number (so we know what IP to send requests back to)
+      if (isNumeric(id)) existingNode._ip = ip; //add/override IP address for HTTP requests, if node ID was specified as a number (so we know what IP to send requests back to)
       existingNode.updated = Date.now(); //update timestamp we last heard from this node, regardless of any matches
       if (existingNode.metrics == undefined) existingNode.metrics = {};
 
@@ -1071,7 +1071,7 @@ function httpEndPointHandler(req, res) {
             if (existingNode.metrics[matchingMetric.name] == null) existingNode.metrics[matchingMetric.name] = {};
             existingNode.metrics[matchingMetric.name].label = existingNode.metrics[matchingMetric.name].label || matchingMetric.name;
             existingNode.metrics[matchingMetric.name].descr = existingNode.metrics[matchingMetric.name].descr || matchingMetric.descr || undefined;
-            existingNode.metrics[matchingMetric.name].value = matchingMetric.value || metricsDef.determineValue(matchingMetric, tokenMatch);
+            existingNode.metrics[matchingMetric.name].value = matchingMetric.value || determineValue(matchingMetric, tokenMatch);
             existingNode.metrics[matchingMetric.name].unit = matchingMetric.unit || undefined;
             existingNode.metrics[matchingMetric.name].updated = existingNode.updated;
             existingNode.metrics[matchingMetric.name].pin = existingNode.metrics[matchingMetric.name].pin != undefined ? existingNode.metrics[matchingMetric.name].pin : matchingMetric.pin;
@@ -1080,8 +1080,8 @@ function httpEndPointHandler(req, res) {
             //log data for graphing purposes, keep labels as short as possible since this log will grow indefinitely and is not compacted like the node database
             if (existingNode.metrics[matchingMetric.name].graph==1)
             {
-              var graphValue = metricsDef.isNumeric(matchingMetric.logValue) ? matchingMetric.logValue : metricsDef.determineGraphValue(matchingMetric, tokenMatch); //existingNode.metrics[matchingMetric.name].value;
-              if (metricsDef.isNumeric(graphValue))
+              var graphValue = isNumeric(matchingMetric.logValue) ? matchingMetric.logValue : determineGraphValue(matchingMetric, tokenMatch); //existingNode.metrics[matchingMetric.name].value;
+              if (isNumeric(graphValue))
               {
                 var ts = Math.floor(Date.now() / 1000); //get timestamp in whole seconds
                 var logfile = path.join(__dirname, dbDir, dbLog.getLogName(id, matchingMetric.name));
