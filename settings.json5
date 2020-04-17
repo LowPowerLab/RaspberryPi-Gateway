@@ -32,7 +32,7 @@
       editable: true,
       exposed: true,
       port: {
-        value: '/dev/serial0',
+        value: '/dev/ttyAMA0',
         description: 'replace this with whatever serial port you have on your Pi/gateway (ttyAMA0 is the default GPIO serial port). If you use a MoteinoUSB then your Pi will emulate a serial port like /dev/ttyUSB0',
       },
       baud: {
