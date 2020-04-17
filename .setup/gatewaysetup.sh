@@ -101,19 +101,24 @@ sudo apt-get update -m
 echo -e "${CYAN}************* STEP: Installing git & apache2-utils *************${NC}"
 sudo apt-get -y install git apache2-utils
 
-#install NGINX
 echo -e "${CYAN}************* STEP: Install latest NGINX *************${NC}"
 sudo apt-get -y install nginx
 
-# echo -e "${CYAN}************* STEP: Install PHP7 *************${NC}"
+echo -e "${CYAN}************* STEP: Install PHP7 *********************${NC}"
 sudo apt-get -y install php-common php-cli php-fpm
 
+echo -e "${CYAN}************* STEP: Install nodeJS & npm *************${NC}"
 #install latest NodeJS --- https://www.raspberrypi.org/forums/viewtopic.php?t=141770
 sudo wget -O - https://raw.githubusercontent.com/LowPowerLab/RaspberryPi-Gateway/master/.setup/Install-Node.sh | sudo bash
+sudo npm install -g npm
 
 echo -e "${CYAN}************* STEP: Setup Gateway app & dependencies *************${NC}"
 sudo mkdir -p $APPSRVDIR    #main dir where gateway app lives
 cd $APPSRVDIR || exit
+
+#just for sanity
+sudo rm -rf package-lock.json
+sudo rm -rf node_modules
 
 git init
 git remote add origin https://github.com/LowPowerLab/RaspberryPi-Gateway.git
