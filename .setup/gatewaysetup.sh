@@ -178,6 +178,11 @@ sudo rm /etc/nginx/sites-enabled/default
 sudo ln -s /etc/nginx/sites-available/gateway
 sudo service nginx restart
 
+#create simlinks to webserver logs for easy access
+cd $APPSRVDIR
+sudo ln -s -f /var/log/nginx/gateway.access.log
+sudo ln -s -f /var/log/nginx/gateway.error.log
+
 echo -e "${CYAN}************* STEP: Fail2Ban install *************${NC}"
 if (whiptail --title "Fail2ban" --yesno "Do you want to install Fail2Ban?\nNote: Fail2Ban couples into the NGINX webserver to ban clients that make repeated failed attempts to authenticate to the Gateway App." 12 78) then
   sudo apt-get -y install fail2ban
