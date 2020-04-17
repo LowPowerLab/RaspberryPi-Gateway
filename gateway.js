@@ -49,13 +49,11 @@ var dbCompacted = Date.now();
 var fs = require('fs');
 var gatewayUptime='';
 var gatewayFrequency='';
-var port = new serialport(settings.serial.port.value, {baudRate : settings.serial.baud.value});
-var Readline = serialport.parsers.Readline;
-var parser = new Readline();
+global.port=undefined;
+global.parser=undefined;
 var unmatchedDataDB = null;
 if (settings.database.nonMatchesName.value)
   unmatchedDataDB = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.nonMatchesName.value), autoload: true });
-port.pipe(parser);
 require("console-stamp")(console, settings.general.consoleLogDateFormat.value); //timestamp logs - https://github.com/starak/node-console-stamp
 
 //HTTP ENDPOINT - accept HTTP: data from the internet/LAN
@@ -64,19 +62,27 @@ http.createServer(httpEndPointHandler).listen(8081);
 console.info('*********************************************************************');
 console.info('************************* GATEWAY APP START *************************');
 console.info('*********************************************************************');
+serialport.list(function(err, ports) { console.info(`Serial ports: ${JSON.stringify(ports)}`) });
 
-port.on('error', function serialErrorHandler(error) {
-  //Send serial error messages to console. Better error handling needs to be here in the future.
-  console.error(error.message);
-});
+var openPort = (function f(reopen) { 
+  if (reopen) port.close();
+  port = new serialport(settings.serial.port.value, {baudRate : settings.serial.baud.value});
+  parser = port.pipe(new serialport.parsers.Readline()); //new serialport.parsers.Readline(); //port.pipe(parser);
+  parser.on('data', function(data) { processSerialData(data.replace(/\0/g, '')); }); //replace nulls in received string
+  port.on('error', function serialErrorHandler(error) {
+    //Send serial error messages to console. Better error handling needs to be here in the future.
+    console.error('node-serialport error:' + error.message);
+  });
 
-port.on('close', function serialCloseHandler(error) {
-  //Give user a sane error message and exit. Future possibilities could include sending message to front end via socket.io & setup timer to retry opening serial.
-  console.error(error.message);
-  process.exit(1);
-});
-
-parser.on("data", function(data) { processSerialData(data.replace(/\0/g, '')); }); //replace nulls in received string
+  port.on('close', function serialCloseHandler(error) {
+    if (error) {
+      //Give user a sane error message and exit. Future: send message to UI & retry reopening
+      console.error(error.message);
+      process.exit(1);
+    }
+  });
+  return f;
+})();
 
 global.caseInsensitiveSorter = function (a, b) {return a.toLowerCase().localeCompare(b.toLowerCase())};
 
@@ -670,6 +676,8 @@ io.sockets.on('connection', function (socket) {
   socket.on('UPDATESETTINGSDEF', function (newSettings) {
     //console.info(`UPDATESETTINGSDEF requested, new settings: ${JSON.stringify(newSettings)}`);
     var settings = nconf.get('settings');
+    var changed=false;
+    var baudChangedTo = 0;
 
     for(var sectionName in settings)
     {
@@ -680,18 +688,32 @@ io.sockets.on('connection', function (socket) {
         var setting = sectionSettings[settingName];
         if (setting.exposed===false || setting.editable===false) continue
         if (setting.value == undefined || newSettings[sectionName][settingName].value == undefined) continue;
-        setting.value = newSettings[sectionName][settingName].value;
+        if (setting.value != newSettings[sectionName][settingName].value) {
+          changed=true;
+          if (settingName=='baud') baudChanged = true;
+          setting.value = newSettings[sectionName][settingName].value;
+          if (settingName=='baud') baudChangedTo = setting.value;
+        }
       }
     }
 
-    global.settings = settings;
-
-    nconf.save(function (err) {
-      if (err !=null)
-        socket.emit('LOG', 'UPDATESETTINGSDEF ERROR: '+err);
-      else
-        io.sockets.emit('SETTINGSDEF', settings);
-    });
+    if (changed) {
+      global.settings = settings;
+      nconf.save(function (err) {
+        if (err !=null)
+          socket.emit('LOG', 'UPDATESETTINGSDEF ERROR: '+err);
+        else
+          io.sockets.emit('SETTINGSDEF', settings);
+      });
+      
+      if (baudChangedTo) {
+        log = `BAUD changed to ${baudChangedTo} - reopening serial port...`;
+        port.drain();
+        port.update({baudRate: baudChangedTo},function(err,res) { if (err)console.error(msg) });
+        console.log(log);
+        socket.emit('LOG', log);
+      }
+    }
   });
 
   socket.on('PROCESSEXIT', function () {
@@ -921,7 +943,7 @@ global.processSerialData = function (data) {
     validTokenMatched=false;
 
     //atempt to process any commands/requests between gateway.js server and serial RF GATEWAY
-    while (match = regexTokenizedLine.exec(data)) //extract each token/value pair from serial data and process it
+    while (match = regexTokenizedLine.exec(data)) //extract each whitespace separated token/value pair from serial data and process it
     {
       somethingMatched=true;
       var tokenMatch = regexpGeneralRequests.exec(match[0]);  //format is  REQUEST:VALUE:STATUS  with VALUE and STATUS optional
