@@ -36,7 +36,7 @@
         description: 'replace this with whatever serial port you have on your Pi/gateway (ttyAMA0 is the default GPIO serial port). If you use a MoteinoUSB then your Pi will emulate a serial port like /dev/ttyUSB0',
       },
       baud: {
-        value: 115200,
+        value: 19200,
         type: 'number',
         description: 'needs to match the Serial baud speed in the sketch running on the Moteino or MightyHat that is attached to this Pi',
       },
