@@ -9,7 +9,7 @@
   },
   "author": "Felix Rusu (https://github.com/LowPowerLab)",
   "homepage": "http://lowpowerlab.com/gateway",
-  "license" : "CC-BY-NC-4.0",
+  "license" : "CC-BY-NC-SA-4.0",
   "bugs": {
     "url": "https://github.com/LowPowerLab/RaspberryPi-Gateway/issues",
     "email": "bugs@lowpowerlab.com"
@@ -23,7 +23,7 @@
     "nconf": "~0.10.0",
     "nedb": "~1.8",
     "nodemailer": "^6.4.6",
-    "serialport": "~8.0.7",
+    "serialport": "~7.0.2",
     "socket.io": "~2.3.0",
     "speedtest-net": "^1.6.2",
     "suncalc": "~1.8"

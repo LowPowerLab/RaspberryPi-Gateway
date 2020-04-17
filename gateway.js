@@ -565,7 +565,7 @@ io.sockets.on('connection', function (socket) {
   });
   
   socket.on('SIMULATEDMESSAGE', function (str) {
-    if (msg) processSerialData(msg, true);
+    if (str) processSerialData(str, true);
   });
 
   socket.on('GATEWAYMESSAGE', function (msg) {
