@@ -179,23 +179,28 @@ global.sendSMS = function(SUBJECT, BODY) {
 }
 
 global.sendMessageToNode = function(node) {
-  if (metricsDef.isValidNodeId(node.nodeId) && node.action)
+  if (isValidNodeId(node.nodeId) && node.action)
   {
-    if (metricsDef.isNumeric(node.nodeId)) //numeric ID - send to serial port (RF network)
-      sendMessageToGateway(node.nodeId + ':' + node.action); //port.write(node.nodeId + ':' + node.action + '\n', function () { port.drain(); });
-    else if (metricsDef.isValidIP()) //IP address, send via HTTP
-      console.warning('NODEACTION FAIL: http sending not implemented yet. Request: ' + JSON.stringify(node));
+    if (isNumeric(node.nodeId)) { //numeric ID - send to serial port (RF network)
+      console.log('sendMessageToNode(): ' + JSON.stringify(node));
+      sendMessageToGateway(node.nodeId + ':' + node.action);
+    }
+    else if (isValidIP()) //IP address, send via HTTP
+      console.warning('sendMessageToNode() FAIL: http sending not implemented yet. Request: ' + JSON.stringify(node));
   }
   else if (node.action)
   {
+    console.log('sendMessageToNode()-else: ' + JSON.stringify(node));
     sendMessageToGateway(node.action);
-    //console.log('NODEACTION: ' + JSON.stringify(node));
   }
 }
 
 global.sendMessageToGateway = function(msg) {
   console.log('sendMessageToGateway: ' + msg.replace('\n','\\n').replace('\r','\\r'));
-  port.write(msg + '\n', function () { port.drain(); });
+  port.write(msg + '\n', function (err) { 
+    if (err) return console.error('port.write error: ', err.message)
+    port.drain();
+  });
 }
 
 global.handleNodeEvents = function(node) {
