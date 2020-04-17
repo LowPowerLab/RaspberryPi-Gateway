@@ -811,7 +811,7 @@
     }
 
     function LOG(data) {
-      $('#log').val(new Date().toLocaleTimeString() + ' : ' + data + '\n' + $('#log').val());
+      $('#log').val(new Date().format('HH:MM:ss.l') + ' : ' + data + '\n' + $('#log').val());
       if ($('#log').val().length > 10000) $('#log').val($('#log').val().slice(0,10000));
     };
 
