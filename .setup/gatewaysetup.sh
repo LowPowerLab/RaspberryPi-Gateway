@@ -11,6 +11,7 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 APPSRVDIR=/home/pi/gateway/
 CONFIG=/boot/config.txt
+CMDLINE=/boot/cmdline.txt
 USER=${SUDO_USER:-$(who -m | awk '{ print $1 }')}
 
 #usage ex:
@@ -199,11 +200,10 @@ if (whiptail --title "ATXRaspi shutdown script" --yesno "Do you have a MightyHat
   sudo bash shutdownchecksetup.sh && sudo rm shutdownchecksetup.sh
 fi
 
-echo -e "${CYAN}************* STEP: Enable GPIO/serial0 port & disconnect from BT module *************${NC}"
-#sudo raspi-config nonint do_serial 0
-#echo "dtoverlay=pi3-disable-bt" >> /boot/config.txt
-set_config_var enable_uart 1 $CONFIG
-set_config_var dtoverlay pi3-disable-bt $CONFIG
+echo -e "${CYAN}************* STEP: Enable GPIO serial0, disable serial0 shell & Bluetooth *************${NC}"
+sudo raspi-config nonint do_serial 1                 #disables console shell over GPIO serial
+set_config_var enable_uart 1 $CONFIG            #enables GPIO serial
+set_config_var dtoverlay pi3-disable-bt $CONFIG #disables bluetooth
 
 echo -e "${CYAN}************* STEP: Configuring logrotate *************${NC}"
 sudo echo "#this is used by logrotate and should be placed in /etc/logrotate.d/
