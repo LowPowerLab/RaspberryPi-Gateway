@@ -563,8 +563,8 @@ io.sockets.on('connection', function (socket) {
     sendMessageToNode(msg);
   });
   
-  socket.on('FAKEMESSAGE', function (msg) {
-    console.info(`FAKEMESSAGE: ${msg}`);
+  socket.on('SIMULATEDMESSAGE', function (msg) {
+    console.info(`SIMULATEDMESSAGE: ${msg}`);
     processSerialData(msg);
   });
 

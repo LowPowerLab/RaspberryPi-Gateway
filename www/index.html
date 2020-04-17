@@ -146,7 +146,7 @@
       float:left;
       width:60%;
   }
-  .fakeMsg span:first-child {
+  .simulatedMsg span:first-child {
       padding: 0 0 12px 12px;
       float:left;
       width:75%;
@@ -156,7 +156,7 @@
       float:left;
       width:22%;
   }
-  .fakeMsg span:last-child { padding:0 0 12px 0; }
+  .simulatedMsg span:last-child { padding:0 0 12px 0; }
   .terminal span:first-child div.ui-input-text { border-radius: 0.3em 0 0 0.3em; }
   .terminal span:nth-child(2) div.ui-input-text { border-radius: 0 }
   .terminal a.ui-btn { border-radius: 0 0.3em 0.3em 0; margin:0; padding: 0.3em 0; }
@@ -708,12 +708,12 @@
         <a data-role="button">Send</a>
       </span>
     </div>
-    <div class="terminal fakeMsg">
+    <div class="terminal simulatedMsg">
       <span>
-        <input type="text" id="fakeMsgPayload" data-mini="true" placeholder="simulate a node's data (ex: [123] MOTION)" />
+        <input type="text" id="simulatedMsgPayload" data-mini="true" placeholder="simulate a node's data (ex: [123] MOTION)" />
       </span>
       <span>
-        <a data-role="button">Process</a>
+        <a data-role="button">Simulate</a>
       </span>
     </div>
 
@@ -2384,10 +2384,10 @@
         return false;
       }
     });
-    $(".fakeMsg input").keypress(function(event) {
+    $(".simulatedMsg input").keypress(function(event) {
       if (event.which == 13) //if ENTER pressed in the message box .. then "click" the SEND button
       {
-        $(".fakeMsg a").click();
+        $(".simulatedMsg a").click();
         return false;
       }
     });
@@ -2399,8 +2399,8 @@
       socket.emit("NODEMESSAGE", {nodeId:id, action:value});
     });
     
-    $(".fakeMsg a").click("tap", function(event) {
-      socket.emit("FAKEMESSAGE", $("#fakeMsgPayload").val());
+    $(".simulatedMsg a").click("tap", function(event) {
+      socket.emit("SIMULATEDMESSAGE", $("#simulatedMsgPayload").val());
     });
 
     //request the gateway app the restart its process on [Ctrl+Shift+Alt+R]

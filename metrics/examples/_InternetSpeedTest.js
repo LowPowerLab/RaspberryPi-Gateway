@@ -33,7 +33,7 @@ exports.events = {
             var upspeed=data.speeds.upload.toFixed(1); //1 decimal is enough
             var ping = parseInt(data.server.ping); //no decimals
             var fakeSerialMsg = '['+nodeRightNow._id+']'+' PINGISP:'+ping+' DOWNSPEED:'+downspeed+' UPSPEED:'+upspeed;
-            processSerialData(fakeSerialMsg);
+            processSerialData(fakeSerialMsg, true);
           });
 
           test.on('error', err => { console.error('SPEEDTEST-NET FAILED: ' + err.toString()); });

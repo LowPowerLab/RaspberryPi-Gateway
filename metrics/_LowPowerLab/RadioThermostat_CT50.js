@@ -22,7 +22,7 @@ function tstatPoll(nodeId) {
           if (info.temp > 0 && statusCode == 200) {
             var target = info.t_cool || info.t_heat || undefined;
             var fakeSerialMsg = '['+nodeId+'] '+'F:'+(info.temp*100) + (target ? ' TARGET:'+target : '') + ' HOLD:'+(info.hold==1?'ON':'OFF')+' TSTATE:'+(info.tstate==0?'OFF':(info.tstate==1?'HEATING':'COOLING'))+' FSTATE:'+(info.fstate==0?'AUTO':(info.fstate==1?'ON':'AUTOCIRC'))+' MODE:'+(info.tmode==3?'AUTO':(info.tmode==2?'COOL':(info.tmode==1?'HEAT':'OFF')));
-            processSerialData(fakeSerialMsg);
+            processSerialData(fakeSerialMsg, true);
             //io.sockets.emit('LOG', fakeSerialMsg);
           } else console.error(`BAD DATA returned in tstatPoll: ${body}`);
         } catch (e) {
