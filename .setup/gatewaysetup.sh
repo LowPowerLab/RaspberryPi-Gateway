@@ -158,11 +158,10 @@ echo -e "${CYAN}************* STEP: Create HTTP AUTH credentials *************${
 HTTPUSER=""
 HTTPPASS=""
 while [ -z ${HTTPUSER} ]; do
-  HTTPUSER=$(whiptail --inputbox "\nEnter the Gateway http_auth username (cannot be blank):" 8 78 "pi" --title "Gateway HTTP_AUTH Setup" --nocancel 3>&1 1>&2 2>&3)
+  HTTPUSER=$(whiptail --inputbox "\nLogin username (cannot be blank):" 8 78 "pi" --title "Gateway HTTP_AUTH Setup" --nocancel 3>&1 1>&2 2>&3)
 done
-
 while [ -z ${HTTPPASS} ]; do
-  HTTPPASS=$(whiptail --passwordbox "\nEnter the Gateway http_auth password (cannot be blank):" 10 78 "raspberry" --title "Gateway HTTP_AUTH Setup" --nocancel 3>&1 1>&2 2>&3)
+  HTTPPASS=$(whiptail --passwordbox "\nLogin  password (default='raspberry', cannot be blank):" 10 78 "raspberry" --title "Gateway HTTP_AUTH Setup" --nocancel 3>&1 1>&2 2>&3)
 done
 touch $APPSRVDIR/data/secure/.htpasswd
 htpasswd -b $APPSRVDIR/data/secure/.htpasswd $HTTPUSER $HTTPPASS
