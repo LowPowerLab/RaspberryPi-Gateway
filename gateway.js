@@ -64,7 +64,7 @@ console.info('************************* GATEWAY APP START **********************
 console.info('*********************************************************************');
 serialport.list(function(err, ports) { console.info(`Serial ports: ${JSON.stringify(ports)}`) });
 
-var openPort = (function f(reopen) { 
+var openPort = (function f(reopen) {
   if (reopen) port.close();
   port = new serialport(settings.serial.port.value, {baudRate : settings.serial.baud.value});
   parser = port.pipe(new serialport.parsers.Readline()); //new serialport.parsers.Readline(); //port.pipe(parser);
@@ -85,6 +85,7 @@ var openPort = (function f(reopen) {
 })();
 
 global.caseInsensitiveSorter = function (a, b) {return a.toLowerCase().localeCompare(b.toLowerCase())};
+String.prototype.replaceNewlines = function () { return this.replace('\n','\\n').replace('\r','\\r') };
 
 var merge = require('merge');
 global.loadMetricsFile = function(file, globalizeFunctions, fatal) {
@@ -196,7 +197,7 @@ global.sendMessageToNode = function(node) {
 }
 
 global.sendMessageToGateway = function(msg) {
-  console.log('sendMessageToGateway: ' + msg.replace('\n','\\n').replace('\r','\\r'));
+  console.log('sendMessageToGateway: ' + msg.replaceNewlines());
   port.write(msg + '\n', function (err) { 
     if (err) return console.error('port.write error: ', err.message)
     port.drain();
@@ -565,7 +566,7 @@ io.sockets.on('connection', function (socket) {
   
   socket.on('SIMULATEDMESSAGE', function (msg) {
     console.info(`SIMULATEDMESSAGE: ${msg}`);
-    processSerialData(msg);
+    processSerialData(msg, true);
   });
 
   socket.on('GATEWAYMESSAGE', function (msg) {
@@ -618,7 +619,7 @@ io.sockets.on('connection', function (socket) {
 
         requestString += nodeId + ':' + reqName + (reqValue?':'+reqValue.trim():'') + '\n';
         sendMessageToGateway(requestString);
-        console.log('REQUEST SENT: ' + requestString.replace('\n','\\n').replace('\r','\\r'));
+        console.log('REQUEST SENT: ' + requestString.replaceNewlines());
         db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) { console.log('SUBMITNODEREQUEST DB-Replaced:' + numReplaced); });
         console.log(`   [${nodeId}] ${(isNew?'Added':'Updated')} request:${reqName}`);
         socket.emit('LOG', 'NODE ['+nodeId+'] Request '+(isNew?'Added':'Updated')+': ' + reqName);
@@ -782,12 +783,14 @@ global.handleNodeRequest = function (existingNode, reqName, oldValue, newValue, 
 }
 
 global.msgHistory = new Array();
-global.processSerialData = function (data) {
+global.processSerialData = function (data, simulated) {
   var regexNodeData = /\[(\d+)\]([a-z0-9!"#\$%&'()*+,.\/:;<=>?@\[\] ^_`{|}~-]+)/ig; //modifiers: g:global i:caseinsensitive
   var regexTokenizedLine = /[a-z0-9!"#\$%&'()*+,.\/:;<=>?@\[\]^_`{|}~-]+/ig; //match (almost) any non whitespace human readable character
   var regexpGeneralRequests = /^([_a-z][_a-z0-9]*)(\:[-_a-z0-9]+)?(\:[-_a-z0-9]+)?(\:[-_a-z0-9]+)?$/i; //up to 5 capture groups: [0]whole_string [1]name ([2]:optional value) ([3]:optional status) ([4]:optional extra)
   var match = regexNodeData.exec(data);
-  console.log('>: ' + data)
+  let log = `${settings.serial.port.value}${simulated?'(simulated)':''}>:` + data;
+  console.log(log)
+  io.sockets.emit('LOG', log);
 
   //first try to match normal data from nodes: [nodeID] token:value ... token:value RSSI:-XX
   if (match != null)
@@ -900,7 +903,7 @@ global.processSerialData = function (data) {
           }
         }
         else if (!hasMatchedMetrics) { //else : we do not generate unknown requests (not defined in metrics) by default even if they are transmitted
-          console.log('NODEDATA PARTIAL NOMATCH>: ' + match[0].replace('\n','\\n').replace('\r','\\r'));
+          console.log('NODEDATA PARTIAL NOMATCH>: ' + match[0].replaceNewlines());
           if (unmatchedDataDB)
             unmatchedDataDB.insert({_id:Date.now(), data:match[0]});
         }
@@ -946,6 +949,10 @@ global.processSerialData = function (data) {
   {
     somethingMatched=false;
     validTokenMatched=false;
+    
+    if (data.startsWith('DEBUG:')) {
+      return; //it is already logged
+    }
 
     //atempt to process any commands/requests between gateway.js server and serial RF GATEWAY
     while (match = regexTokenizedLine.exec(data)) //extract each whitespace separated token/value pair from serial data and process it
@@ -990,7 +997,6 @@ global.processSerialData = function (data) {
 
         if (tokenMatch[1] == 'UPTIME' && metricsDef.isNumeric(tokenValue)) //millis() from RF GATEWAY
         {
-          io.sockets.emit('LOG',tokenMatch[0]);
           gatewayUptime = Date.now() - tokenValue;
           updateServerInfo=true;
           validTokenMatched=true;
@@ -999,7 +1005,6 @@ global.processSerialData = function (data) {
 
         if (tokenMatch[1] == 'SYSFREQ' && tokenValue)
         {
-          io.sockets.emit('LOG',tokenMatch[0]);
           gatewayFrequency = tokenValue;
           updateServerInfo=true;
           validTokenMatched=true;
@@ -1008,14 +1013,12 @@ global.processSerialData = function (data) {
 
         if (tokenMatch[1] == 'ENCRYPTKEY' && tokenValue)
         {
-          io.sockets.emit('LOG',tokenMatch[0]);
           validTokenMatched=true;
           partialMatch = true;
         }
 
         if (tokenMatch[1] == 'REQUESTQUEUE' || tokenMatch[1] == 'FREERAM' || tokenMatch[1] == 'GTWCMD' || tokenMatch[1] == 'ACK')
         {
-          io.sockets.emit('LOG',tokenMatch[0]);
           validTokenMatched=true;
           partialMatch = true;
         }
@@ -1024,14 +1027,14 @@ global.processSerialData = function (data) {
       }
 
       if (!partialMatch) {
-        console.log('GENERAL PARTIAL NOMATCH>: ' + match[0].replace('\n','\\n').replace('\r','\\r'));
+        console.log('GENERAL PARTIAL NOMATCH>: ' + match[0].replaceNewlines());
         if (unmatchedDataDB)
           unmatchedDataDB.insert({_id:Date.now(), data:match[0]});
       }
     }
 
     if (!somethingMatched) {
-      console.log('GENERAL NOMATCH>: ' + data.replace('\n','\\n').replace('\r','\\r'));
+      console.log('GENERAL NOMATCH>: ' + data.replaceNewlines());
       if (unmatchedDataDB)
         unmatchedDataDB.insert({_id:Date.now(), data:data});
     }
