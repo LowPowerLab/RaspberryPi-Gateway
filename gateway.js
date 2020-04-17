@@ -101,7 +101,7 @@ global.loadMetricsFile = function(file, globalizeFunctions, fatal) {
         Object.getOwnPropertyNames(tmp).forEach(function(variable){
           let type = typeof tmp[variable];
           if (['function','number','string'].indexOf(type)>-1) {
-            console.log(`|- GLOBALIZING ${variable}${type=='function'?'()':''}${global[variable]!=undefined?' (WARNING:OVERRIDING PREVIOUS VALUE!)':''}`);
+            console.info(`|- GLOBALIZING ${variable}${type=='function'?'()':''}${global[variable]!=undefined?' (WARNING:OVERRIDING PREVIOUS VALUE!)':''}`);
             global[variable] = tmp[variable];
           }
         });
@@ -183,7 +183,7 @@ global.sendMessageToNode = function(node) {
   if (isValidNodeId(node.nodeId) && node.action)
   {
     if (isNumeric(node.nodeId)) { //numeric ID - send to serial port (RF network)
-      console.log('sendMessageToNode(): ' + JSON.stringify(node));
+      //console.log('sendMessageToNode(): ' + JSON.stringify(node));
       sendMessageToGateway(node.nodeId + ':' + node.action);
     }
     else if (isValidIP()) //IP address, send via HTTP
@@ -191,13 +191,13 @@ global.sendMessageToNode = function(node) {
   }
   else if (node.action)
   {
-    console.log('sendMessageToNode()-else: ' + JSON.stringify(node));
+    //console.log('sendMessageToNode()-else: ' + JSON.stringify(node));
     sendMessageToGateway(node.action);
   }
 }
 
 global.sendMessageToGateway = function(msg) {
-  console.log('sendMessageToGateway: ' + msg.replaceNewlines());
+  //console.log('sendMessageToGateway: ' + msg.replaceNewlines());
   port.write(msg + '\n', function (err) { 
     if (err) return console.error('port.write error: ', err.message)
     port.drain();
@@ -490,7 +490,7 @@ io.sockets.on('connection', function (socket) {
       {
         var dbNode = entries[0];
         delete(dbNode.metrics[metricKey]);
-        db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) { console.log('DELETENODEMETRIC DB-Replaced:' + numReplaced); });
+        db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) { console.info('DELETENODEMETRIC DB-Replaced:' + numReplaced); });
         if (settings.general.keepMetricLogsOnDelete.value != 'true')
           dbLog.removeMetricLog(path.join(__dirname, dbDir, dbLog.getLogName(dbNode._id, metricKey)));
         io.sockets.emit('UPDATENODE', dbNode); //post it back to all clients to confirm UI changes
@@ -507,7 +507,7 @@ io.sockets.on('connection', function (socket) {
         reqValue = dbNode.requests[requestKey].value;
         sendMessageToGateway(dbNode._id+':VOID:'+reqName+(reqValue?':'+reqValue:'')); //remove pending request from gateway's REQUEST queue
         delete(dbNode.requests[requestKey]);
-        db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) { console.log('DELETENODEREQUEST DB-Replaced:' + numReplaced); });
+        db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) { console.info('DELETENODEREQUEST DB-Replaced:' + numReplaced); });
         io.sockets.emit('UPDATENODE', dbNode); //post it back to all clients to confirm UI changes
       }
     });
@@ -522,7 +522,7 @@ io.sockets.on('connection', function (socket) {
         var dbNode = entries[0];
         var logfile = path.join(__dirname, dbDir, dbLog.getLogName(dbNode._id, metricKey));
         var count = dbLog.deleteData(logfile, sts, ets);
-        console.log('DELETEMETRICDATA DB-Removed points:' + count);
+        console.info('DELETEMETRICDATA DB-Removed points:' + count);
         //if (settings.general.keepMetricLogsOnDelete.value != 'true')
         socket.emit('DELETEMETRICDATA_OK', count); //post it back to requesting client only
       }
@@ -538,7 +538,7 @@ io.sockets.on('connection', function (socket) {
         var dbNode = entries[0];
         var logfile = path.join(__dirname, dbDir, dbLog.getLogName(dbNode._id, metricKey));
         var count = dbLog.editData(logfile, sts, ets, newValue);
-        console.log(`EDITMETRICDATA DB-Updated points:${count} to:${newValue}`);
+        console.info(`EDITMETRICDATA DB-Updated points:${count} to:${newValue}`);
         socket.emit('EDITMETRICDATA_OK', count); //post it back to requesting client only
       }
     });
@@ -564,9 +564,8 @@ io.sockets.on('connection', function (socket) {
     sendMessageToNode(msg);
   });
   
-  socket.on('SIMULATEDMESSAGE', function (msg) {
-    console.info(`SIMULATEDMESSAGE: ${msg}`);
-    processSerialData(msg, true);
+  socket.on('SIMULATEDMESSAGE', function (str) {
+    if (msg) processSerialData(msg, true);
   });
 
   socket.on('GATEWAYMESSAGE', function (msg) {
@@ -583,7 +582,7 @@ io.sockets.on('connection', function (socket) {
         {
           var entry = { _id:node.nodeId, updated:Date.now(), label:node.label || 'NEW NODE', metrics:{} };
           db.insert(entry);
-          console.log(`   [${node.nodeId}] DB-Insert new _id:${node.nodeId}`);
+          console.info(`   [${node.nodeId}] DB-Insert new _id:${node.nodeId}`);
           socket.emit('LOG', 'NODE ADDED, ID: ' + node.nodeId);
           io.sockets.emit('UPDATENODE', entry);
         }
@@ -619,9 +618,9 @@ io.sockets.on('connection', function (socket) {
 
         requestString += nodeId + ':' + reqName + (reqValue?':'+reqValue.trim():'') + '\n';
         sendMessageToGateway(requestString);
-        console.log('REQUEST SENT: ' + requestString.replaceNewlines());
-        db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) { console.log('SUBMITNODEREQUEST DB-Replaced:' + numReplaced); });
-        console.log(`   [${nodeId}] ${(isNew?'Added':'Updated')} request:${reqName}`);
+        console.info('REQUEST SENT: ' + requestString.replaceNewlines());
+        db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) { console.info('SUBMITNODEREQUEST DB-Replaced:' + numReplaced); });
+        console.info(`   [${nodeId}] ${(isNew?'Added':'Updated')} request:${reqName}`);
         socket.emit('LOG', 'NODE ['+nodeId+'] Request '+(isNew?'Added':'Updated')+': ' + reqName);
         io.sockets.emit('UPDATENODE', dbNode);
       }
@@ -932,13 +931,13 @@ global.processSerialData = function (data, simulated) {
         if (settings.general.genNodeIfNoMatch.value == true || settings.general.genNodeIfNoMatch.value == 'true' || hasMatchedMetrics)
         {
           db.insert(entry);
-          console.log(`   [${id}] DB-Insert new _id:${id}`);
+          console.info(`   [${id}] DB-Insert new _id:${id}`);
           io.sockets.emit('UPDATENODE', entry);
           return;
         }
       }
       else {
-        db.update({ _id: id }, { $set : entry}, {}, function (err, numReplaced) { console.log(`[${id}] DB-Updates:` + numReplaced);});
+        db.update({ _id: id }, { $set : entry}, {}, function (err, numReplaced) { console.info(`[${id}] DB-Updates:` + numReplaced);});
         io.sockets.emit('UPDATENODE', entry);      
       }
       //handle any server side events (email, sms, custom actions)
@@ -1117,7 +1116,7 @@ function httpEndPointHandler(req, res) {
         icon: existingNode.icon||undefined
       };
 
-      //console.log('HTTP REQUEST MATCH from: ' + id + ' : ' + JSON.stringify(entry));
+      //console.info('HTTP REQUEST MATCH from: ' + id + ' : ' + JSON.stringify(entry));
 
       //save to DB
       db.findOne({_id:id}, function (err, doc) {
@@ -1126,12 +1125,12 @@ function httpEndPointHandler(req, res) {
           if (settings.general.genNodeIfNoMatch.value == true || settings.general.genNodeIfNoMatch.value == 'true' || hasMatchedMetrics)
           {
             db.insert(entry);
-            console.log(`   [${id}] DB-Insert new _id:${id}`);
+            console.info(`   [${id}] DB-Insert new _id:${id}`);
           }
           else return;
         }
         else
-          db.update({ _id: id }, { $set : entry}, {}, function (err, numReplaced) { console.log(`[${id}] DB-Updates:${numReplaced}`);});
+          db.update({ _id: id }, { $set : entry}, {}, function (err, numReplaced) { console.info(`[${id}] DB-Updates:${numReplaced}`);});
 
         //publish updated node to clients
         io.sockets.emit('UPDATENODE', entry);
@@ -1169,7 +1168,7 @@ global.schedule = function(node, eventKey) {
   var min = parseInt((nextRunTimeout - hrs*3600000) / 60000);
   var sec = parseInt((nextRunTimeout - hrs*3600000 - min*60000) / 1000);
   var timeoutStr = (hrs > 0 ? hrs+'h': '') + (min>0?min+'m':'') + (sec>0&&hrs==0?sec+'s':'');
-  console.log(`**** SCHEDULING EVENT - nodeId:${node._id} event:${eventKey} to run in ~${timeoutStr}`);
+  console.info(`**** SCHEDULING EVENT - nodeId:${node._id} event:${eventKey} to run in ~${timeoutStr}`);
 
   //clear any previous instances of the event
   for(var s in scheduledEvents)
@@ -1189,14 +1188,14 @@ global.schedule = function(node, eventKey) {
   //save to DB
   db.findOne({_id:node._id}, function (err, dbNode) {
     dbNode.events = node.events;
-    db.update({_id:dbNode._id}, { $set : dbNode }, {}, function (err, numReplaced) { console.log(`[${dbNode._id}] DB-Updates:${numReplaced}`);});
+    db.update({_id:dbNode._id}, { $set : dbNode }, {}, function (err, numReplaced) { console.info(`[${dbNode._id}] DB-Updates:${numReplaced}`);});
     io.sockets.emit('UPDATENODE', dbNode); //push updated node to client sockets
   });
 }
 
 //run a scheduled event and reschedule it
 global.runAndReschedule = function(functionToExecute, node, eventKey) {
-  console.log(`**** RUNNING SCHEDULED EVENT - nodeId:${node._id} event:${eventKey}...`);
+  console.info(`**** RUNNING SCHEDULED EVENT - nodeId:${node._id} event:${eventKey}...`);
   db.findOne({_id:node._id}, function (err, dbNode) {
     try
     {
