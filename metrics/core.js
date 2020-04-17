@@ -58,8 +58,8 @@ exports.metrics = {
 
   START : { name:'START', regexp:/\bSTART\b/i, value:'Started'}, //useful to track when a node comes online  
 
-  //node/mote type gets saved directly into node.type - valid values come from the exports.motes collection below
-  TYPE : { name:'TYPE', regexp:/\[(?:TYPE)\:(\w+)[^\s]*\]/i, value:''},
+  //ex: [TYPE:MotionMote] - the value is saved directly into node.type
+  TYPE : { name:'TYPE', regexp:/\[?(?:TYPE)\:(\w+)[^\s]*\]?/i, value:''},
 
   //request metrics                        Grp1     Group2 (the ?: designates non-capturing group)
   //key index must match name property!
