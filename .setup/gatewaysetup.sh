@@ -171,6 +171,7 @@ while [ -z ${HTTPPASS} ]; do
 done
 touch $APPSRVDIR/data/secure/.htpasswd
 htpasswd -b $APPSRVDIR/data/secure/.htpasswd $HTTPUSER $HTTPPASS
+echo -e "${YLW}Done. You can add/change http_auth credentials using ${RED}htpasswd $APPSRVDIR/data/secure/.htpasswd user newpassword${NC}"
 
 echo -e "${CYAN}************* STEP: Copy gateway site config to sites-available *************${NC}"
 cp -rf $APPSRVDIR/.setup/gateway /etc/nginx/sites-available/gateway
@@ -201,7 +202,7 @@ if (whiptail --title "ATXRaspi shutdown script" --yesno "Do you have a MightyHat
 fi
 
 echo -e "${CYAN}************* STEP: Enable GPIO serial0, disable serial0 shell & Bluetooth *************${NC}"
-sudo raspi-config nonint do_serial 1                 #disables console shell over GPIO serial
+sudo raspi-config nonint do_serial 1            #disables console shell over GPIO serial
 set_config_var enable_uart 1 $CONFIG            #enables GPIO serial
 set_config_var dtoverlay pi3-disable-bt $CONFIG #disables bluetooth
 
@@ -233,6 +234,7 @@ if (whiptail --title "Proftpd" --yesno "Do you want to install Proftpd?\nNote: P
 fi
 
 sudo apt-get clean
+cd ~/
 
 echo -e "${CYAN}************* STEP: Run raspi-config *************${NC}"
 if (whiptail --title "Run raspi-config ?" --yesno "Would you like to run raspi-config?\nNote: you should run this tool and configure the essential settings of your Pi if you haven't done it yet!" 12 78) then
@@ -240,10 +242,16 @@ if (whiptail --title "Run raspi-config ?" --yesno "Would you like to run raspi-c
 fi
 
 echo -e "${RED}Make sure: ${YLW}to edit your gateway settings from the UI or from settings.json5 (and restart to apply changes)${NC}"
-echo -e "${RED}By default ${YLW}the gateway app uses the GPIO serial port (/dev/ttyserial0)"
+echo -e "${RED}By default ${YLW}the gateway app uses the GPIO serial port (/dev/ttyAMA0)"
 echo -e "${YLW}If you use MoteinoUSB or another serial port you must edit the serial port setting or the app will not receive messages from your Moteino nodes.${NC}"
 echo -e "${RED}App restarts ${YLW}can be requested from the Gateway UI (power symbol button on settings page, or from the terminal via ${RED}sudo systemctl restart gateway.service${NC}"
 echo -e "${YLW}You can change httpauth password using ${RED}htpasswd $APPSRVDIR/data/secure/.htpasswd user newpassword${NC}"
-echo -e "${CYAN}************* ALL DONE! *************${NC}"
-cd ~/
+
+if (whiptail --title "REBOOT ?" --yesno "All done, a REBOOT is required for the GPIO serial port to be ready.\n\nWould you like to REBOOT now?" 12 78) then
+  echo -e "${CYAN}************* ALL DONE - REBOOTING... *****************${NC}"
+  sudo reboot
+else
+  echo -e "${CYAN}************* ALL DONE - REBOOT REQUIRED! *************${NC}"
+fi
+
 exit 0
