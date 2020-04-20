@@ -4,7 +4,7 @@ RaspberryPi Gateway Home Automation & IoT Applications
 [![GitHub release](https://img.shields.io/github/release/LowPowerLab/RaspberryPi-Gateway.svg)](https://github.com/LowPowerLab/RaspberryPi-Gateway)
 [![GitHub issues](https://img.shields.io/github/issues/LowPowerLab/RaspberryPi-Gateway.svg)](https://github.com/LowPowerLab/RaspberryPi-Gateway/issues)
 [![GitHub pull requests](https://img.shields.io/github/issues-pr/LowPowerLab/RaspberryPi-Gateway.svg)](https://github.com/LowPowerLab/RaspberryPi-Gateway/pulls)
-[![license](https://img.shields.io/github/license/LowPowerLab/RaspberryPi-Gateway.svg)](https://github.com/LowPowerLab/RaspberryPi-Gateway/blob/master/LICENSE)
+[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 
 Designed and coded by [Felix Rusu](lowpowerlab.com/contact), Low Power Lab LLC
 <br/>
