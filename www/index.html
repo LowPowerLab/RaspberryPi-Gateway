@@ -702,7 +702,7 @@
         <input type="text" id="nodeMsgID" data-mini="true" placeholder="nodeID" />
       </span>
       <span>
-         <input type="text" id="nodeMsgPayload" data-mini="true" placeholder="message (ex: BEEP)" />
+         <input type="text" id="nodeMsgPayload" data-mini="true" placeholder="message (ex: BEEP)"  spellcheck="false" />
       </span>
       <span>
         <a data-role="button">Send</a>
@@ -710,15 +710,14 @@
     </div>
     <div class="terminal simulatedMsg">
       <span>
-        <input type="text" id="simulatedMsgPayload" data-mini="true" placeholder="simulate a node's data (ex: [123] MOTION)" />
+        <input type="text" id="simulatedMsgPayload" data-mini="true" placeholder="simulate a node's data (ex: [123] MOTION)"  spellcheck="false"/>
       </span>
       <span>
         <a data-role="button">Simulate</a>
       </span>
     </div>
-
     <div class="wrap">
-      <textarea name="log" id="log" rows="10" style="font-size:10px;"></textarea>
+      <textarea name="log" id="log" rows="10" style="font-size:10px;" spellcheck="false"></textarea>
     </div>
   </div>
 
@@ -920,14 +919,14 @@
               +'</div>'
               +':</label>'
               + (setting.type=='checkbox' ? '<label for="'+sectionName+'-'+settingName+'">'+setting.value+'</label>' : '')
-              +'<input '+type+' name="'+sectionName+'-'+settingName+'" id="'+sectionName+'-'+settingName+'" value="'+setting.value+'"'+(setting.editable===false?' data-clear-btn="false" readonly="readonly"':' data-clear-btn="true"')+'></li>');
+              +'<input '+type+' name="'+sectionName+'-'+settingName+'" id="'+sectionName+'-'+settingName+'" value="'+setting.value+'"'+(setting.editable===false?' data-clear-btn="false" readonly="readonly"':' data-clear-btn="true"')+' spellcheck="false"></li>');
           }
           else
           {
             settingLI = $('<li class="ui-field-contain">'
               +'<label>'+settingName+':</label>'
               + (setting.type=='checkbox' ? '<label for="'+sectionName+'-'+settingName+'">'+setting.value+'</label>' : '')
-              +'<input '+type+' name="'+sectionName+'-'+settingName+'" id="'+sectionName+'-'+settingName+'" value="'+setting.value+'"'+(setting.editable===false?' data-clear-btn="false" readonly="readonly"':' data-clear-btn="false"')+'></li>');
+              +'<input '+type+' name="'+sectionName+'-'+settingName+'" id="'+sectionName+'-'+settingName+'" value="'+setting.value+'"'+(setting.editable===false?' data-clear-btn="false" readonly="readonly"':' data-clear-btn="false"')+' spellcheck="false"></li>');
           }
 
           settingsDefBindMap[sectionName+'.'+settingName+'.value'] = '#'+sectionName+'-'+settingName;
@@ -1986,14 +1985,14 @@
                     +'</div>'
                     +':</label>'
                     + (setting.type=='checkbox' ? '<label for="'+node._id+'-'+sectionName+'-'+settingName+'">'+nodeSettingValue+'</label>' : '')
-                    +'<input '+type+' name="'+node._id+'-'+sectionName+'-'+settingName+'" id="'+node._id+'-'+sectionName+'-'+settingName+'" value="'+nodeSettingValue+'"'+(setting.editable===false?' data-clear-btn="false" readonly="readonly"':' data-clear-btn="true" placeholder="'+setting.value+'"')+'></li>');
+                    +'<input '+type+' name="'+node._id+'-'+sectionName+'-'+settingName+'" id="'+node._id+'-'+sectionName+'-'+settingName+'" value="'+nodeSettingValue+'"'+(setting.editable===false?' data-clear-btn="false" readonly="readonly"':' data-clear-btn="true" placeholder="'+setting.value+'"')+' spellcheck="false"></li>');
                 }
                 else
                 {
                   settingLI = $('<li class="ui-field-contain">'
                     +'<label>'+settingName+':</label>'
                     + (setting.type=='checkbox' ? '<label for="'+node._id+'-'+sectionName+'-'+settingName+'">'+nodeSettingValue+'</label>' : '')
-                    +'<input '+type+' name="'+node._id+'-'+sectionName+'-'+settingName+'" id="'+node._id+'-'+sectionName+'-'+settingName+'" value="'+nodeSettingValue+'"'+(setting.editable===false?' data-clear-btn="false" readonly="readonly"':' data-clear-btn="false" placeholder="'+setting.value+'"')+'></li>');
+                    +'<input '+type+' name="'+node._id+'-'+sectionName+'-'+settingName+'" id="'+node._id+'-'+sectionName+'-'+settingName+'" value="'+nodeSettingValue+'"'+(setting.editable===false?' data-clear-btn="false" readonly="readonly"':' data-clear-btn="false" placeholder="'+setting.value+'"')+' spellcheck="false"></li>');
                 }
                 
                 if (setting.type == 'checkbox')
