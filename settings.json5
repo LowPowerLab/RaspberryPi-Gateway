@@ -62,7 +62,7 @@
       editable: true,
       exposed: true,
       consoleLogDateFormat: {
-        value: 'mm-dd-yy_HH:MM:ss.l',
+        value: 'mm-dd-yy HH:MM:ss.l',
         exposed: false,
       },
       socketPort: {
@@ -72,7 +72,7 @@
         description: 'the port at which the gateway.js socket app is listening',
       },
       genNodeIfNoMatch: {
-        value: 'true',
+        value: 'false',
         description: 'generate a new node even if the data received does not match any metric definition, default = false',
         type: 'checkbox',
       },
@@ -113,6 +113,14 @@
         type: 'range',
         min: -180,
         max: 180,
+      },
+    },
+    radiothermostat: {
+      editable: true,
+      exposed: true,
+      ip: {
+        value: '192.168.1.100',
+        description: 'If you have a wifi RadioThermostat CT50/CT80 this is the IP address',
       },
     },
     interface: {
