@@ -1186,20 +1186,31 @@ global.schedule = function(node, eventKey) {
   node.events[eventKey].executeDateTime = new Date(Date.now() + nextRunTimeout); //actual datetime when this is scheduled to execute
 
   //save to DB
-  db.findOne({_id:node._id}, function (err, dbNode) {
-    dbNode.events = node.events;
-    db.update({_id:dbNode._id}, { $set : dbNode }, {}, function (err, numReplaced) { console.info(`[${dbNode._id}] DB-Updates:${numReplaced}`);});
-    io.sockets.emit('UPDATENODE', dbNode); //push updated node to client sockets
-  });
+  if (node.modifiedByEvent)
+  {
+    node.modifiedByEvent = false;
+    db.update({ _id:node._id }, { $set : node}, {}, function (err, numReplaced) { console.info(`[${node._id}] DB-Updates:${numReplaced}`);});
+  }
+  else
+  {
+    db.findOne({_id:node._id}, function (err, dbNode) {
+      dbNode.events = node.events;
+      db.update({_id:dbNode._id}, { $set : dbNode }, {}, function (err, numReplaced) { console.info(`[${dbNode._id}] DB-Updates:${numReplaced}`);});
+      io.sockets.emit('UPDATENODE', dbNode); //push updated node to client sockets
+    });
+  }
 }
 
 //run a scheduled event and reschedule it
 global.runAndReschedule = function(functionToExecute, node, eventKey) {
   console.info(`**** RUNNING SCHEDULED EVENT - nodeId:${node._id} event:${eventKey}...`);
   db.findOne({_id:node._id}, function (err, dbNode) {
+
+    var eventNode = null;
+
     try
     {
-      functionToExecute(dbNode, eventKey);
+      eventNode = functionToExecute(dbNode, eventKey);
     }
     catch (ex)
     {
@@ -1207,6 +1218,14 @@ global.runAndReschedule = function(functionToExecute, node, eventKey) {
       console.error(msg);
       io.sockets.emit('LOG', msg);
     }
+
+    if (null != eventNode)
+    {
+      // The node was modified by the event.
+      // Pass the modified event to schedule.
+      dbNode = eventNode;
+    }
+
     schedule(dbNode, eventKey);
   });
 }
