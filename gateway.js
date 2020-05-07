@@ -62,23 +62,24 @@ http.createServer(httpEndPointHandler).listen(8081);
 console.info('*********************************************************************');
 console.info('************************* GATEWAY APP START *************************');
 console.info('*********************************************************************');
-serialport.list(function(err, ports) { console.info(`Serial ports: ${JSON.stringify(ports)}`) });
+serialport.list().then(ports => { ports.forEach(function(port) { console.info(`Available serial port: ${JSON.stringify(port)}`) }); });
 
 var openPort = (function f(reopen) {
-  if (reopen) port.close();
+  if (reopen && port.isOpen) port.close();
   port = new serialport(settings.serial.port.value, {baudRate : settings.serial.baud.value});
   parser = port.pipe(new serialport.parsers.Readline()); //new serialport.parsers.Readline(); //port.pipe(parser);
   parser.on('data', function(data) { processSerialData(data.replace(/\0/g, '')); }); //replace nulls in received string
   port.on('error', function serialErrorHandler(error) {
-    //Send serial error messages to console. Better error handling needs to be here in the future.
-    console.error('node-serialport error:' + error.message);
+    msg = 'node-serialport error:' + error.message;
+    console.error(msg);
+    io.sockets.emit('LOG', msg);
   });
 
   port.on('close', function serialCloseHandler(error) {
     if (error) {
       //Give user a sane error message and exit. Future: send message to UI & retry reopening
       console.error(error.message);
-      process.exit(1);
+      //process.exit(1);
     }
   });
   return f;
@@ -194,6 +195,7 @@ global.sendMessageToNode = function(node) {
     //console.log('sendMessageToNode()-else: ' + JSON.stringify(node));
     sendMessageToGateway(node.action);
   }
+  else console.error(`sendMessageToNode() FAIL: invalid nodeId or action: node=${JSON.stringify(node)}`);
 }
 
 global.sendMessageToGateway = function(msg) {
@@ -683,6 +685,7 @@ io.sockets.on('connection', function (socket) {
     var settings = nconf.get('settings');
     var changed=false;
     var baudChangedTo = 0;
+    var portChangedTo = undefined;
 
     for(var sectionName in settings)
     {
@@ -695,9 +698,9 @@ io.sockets.on('connection', function (socket) {
         if (setting.value == undefined || newSettings[sectionName][settingName].value == undefined) continue;
         if (setting.value != newSettings[sectionName][settingName].value) {
           changed=true;
-          if (settingName=='baud') baudChanged = true;
           setting.value = newSettings[sectionName][settingName].value;
           if (settingName=='baud') baudChangedTo = setting.value;
+          if (settingName=='port') portChangedTo = setting.value;
         }
       }
     }
@@ -711,10 +714,16 @@ io.sockets.on('connection', function (socket) {
           io.sockets.emit('SETTINGSDEF', settings);
       });
       
-      if (baudChangedTo) {
-        log = `BAUD changed to ${baudChangedTo} - reopening serial port...`;
+      if (portChangedTo) {
+        log = `PORT changed to ${portChangedTo} - reopening serial port @ ${settings.serial.baud.value} baud...`;
+        openPort(true);
+        console.log(log);
+        socket.emit('LOG', log);
+      }
+      else if (baudChangedTo) {
+        log = `BAUD changed to ${baudChangedTo} - updating port baud speed...`;
         port.drain();
-        port.update({baudRate: baudChangedTo},function(err,res) { if (err)console.error(msg) });
+        port.update({baudRate: baudChangedTo},function(err,res) { if (err) console.error(err) });
         console.log(log);
         socket.emit('LOG', log);
       }
@@ -937,7 +946,7 @@ global.processSerialData = function (data, simulated) {
         }
       }
       else {
-        db.update({ _id: id }, { $set : entry}, {}, function (err, numReplaced) { console.info(`[${id}] DB-Updates:` + numReplaced);});
+        db.update({ _id: id }, { $set : entry}, {}, function (err, numReplaced) { console.info(`[${id}] DB-Updated: processSerialData('${data.replaceNewlines()}',${simulated}):entry=${JSON.stringify(entry)}`);});
         io.sockets.emit('UPDATENODE', entry);      
       }
       //handle any server side events (email, sms, custom actions)
@@ -1130,7 +1139,7 @@ function httpEndPointHandler(req, res) {
           else return;
         }
         else
-          db.update({ _id: id }, { $set : entry}, {}, function (err, numReplaced) { console.info(`[${id}] DB-Updates:${numReplaced}`);});
+          db.update({ _id: id }, { $set : entry}, {}, function (err, numReplaced) { console.info(`[${id}] DB-Updated: httpEndPointHandler(${queryString}):entry=${JSON.stringify(entry)}`) });
 
         //publish updated node to clients
         io.sockets.emit('UPDATENODE', entry);
@@ -1188,15 +1197,15 @@ global.schedule = function(node, eventKey) {
   //save to DB
   db.findOne({_id:node._id}, function (err, dbNode) {
     dbNode.events = node.events;
-    db.update({_id:dbNode._id}, { $set : dbNode }, {}, function (err, numReplaced) { console.info(`[${dbNode._id}] DB-Updates:${numReplaced}`);});
+    db.update({_id:dbNode._id}, { $set : dbNode }, {}, function (err, numReplaced) { console.info(`[${dbNode._id}] DB-Updated: schedule(${eventKey}):dbNode=${JSON.stringify(dbNode)}`);});
     io.sockets.emit('UPDATENODE', dbNode); //push updated node to client sockets
   });
 }
 
 //run a scheduled event and reschedule it
-global.runAndReschedule = function(functionToExecute, node, eventKey) {
-  console.info(`**** RUNNING SCHEDULED EVENT - nodeId:${node._id} event:${eventKey}...`);
-  db.findOne({_id:node._id}, function (err, dbNode) {
+global.runAndReschedule = function(functionToExecute, nodeAtScheduleTime, eventKey) {
+  console.info(`**** RUNNING SCHEDULED EVENT - nodeId:${nodeAtScheduleTime._id} event:${eventKey}...`);
+  db.findOne({_id:nodeAtScheduleTime._id}, function (err, dbNode) {
     try
     {
       functionToExecute(dbNode, eventKey);
