@@ -618,7 +618,7 @@ io.sockets.on('connection', function (socket) {
         if (!isNew) //VOID previous request value before queuing adding latest value
           requestString += nodeId + ':VOID:' + reqName + (reqValue?':'+reqValue.trim():'') + '\n';
 
-        requestString += nodeId + ':' + reqName + (reqValue?':'+reqValue.trim():'') + '\n';
+        requestString += 'REQUESTQUEUE:' + nodeId + ':' + reqName + (reqValue?':'+reqValue.trim():'') + '\n';
         sendMessageToGateway(requestString);
         console.info('REQUEST SENT: ' + requestString.replaceNewlines());
         db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) { console.info('SUBMITNODEREQUEST DB-Replaced:' + numReplaced); });
