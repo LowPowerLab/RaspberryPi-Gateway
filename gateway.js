@@ -1139,7 +1139,7 @@ function httpEndPointHandler(req, res) {
           else return;
         }
         else
-          db.update({ _id: id }, { $set : entry}, {}, function (err, numReplaced) { console.info(`[${id}] DB-Updated: httpEndPointHandler(${queryString}):entry=${JSON.stringify(entry)}`) });
+          db.update({ _id: id }, { $set : entry}, {}, function (err, numReplaced) { console.info(`[${JSON.stringify(id)}] DB-Updated: httpEndPointHandler(${JSON.stringify(queryString)}):entry=${JSON.stringify(entry)}`) });
 
         //publish updated node to clients
         io.sockets.emit('UPDATENODE', entry);
