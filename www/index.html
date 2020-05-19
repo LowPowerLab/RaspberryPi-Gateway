@@ -1487,6 +1487,7 @@
     function metricsValues(metrics, ignorePin) {
       if(ignorePin === undefined) ignorePin = false; //default param
       var label = '';
+      if (!metrics) return label;
       var metrics = Object.values(metrics).filter(function(m){ return (m.pin !=0 && m.pin !=undefined) || ignorePin }).sort((a, b) => (a.pin > b.pin) ? -1 : 1); //filter only pinned metrics, and sort them descending
       for(var key in metrics)
       {
