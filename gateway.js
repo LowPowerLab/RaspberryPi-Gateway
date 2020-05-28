@@ -86,7 +86,7 @@ var openPort = (function f(reopen) {
 })();
 
 global.caseInsensitiveSorter = function (a, b) {return a.toLowerCase().localeCompare(b.toLowerCase())};
-String.prototype.replaceNewlines = function () { return this.replace('\n','\\n').replace('\r','\\r') };
+String.prototype.replaceNewlines = function () { return this.replace(/(?:\r\n|\r|\n)/g, '\\n') };
 
 var merge = require('merge');
 global.loadMetricsFile = function(file, globalizeFunctions, fatal) {
