@@ -1006,7 +1006,8 @@
     var editDataEnd=0;
 
     function renderGraphTooltip(event, pos, item) {
-      if (item && graphOptions.yaxes[item.seriesIndex]) {
+      if(!item) return;
+      if (graphOptions.yaxes[item.seriesIndex]) {
         var date = new Date(item.datapoint[0]);
 
         for (var mkey in metricsDef)
@@ -1035,7 +1036,7 @@
         var val = date.format("mmm-d, ") + '<b>' + date.format('h:MM')+'</b>'+date.format('tt')+'<br/><b>' + (item.graphValPrefix||'') + (item.valOverride || item.datapoint[1]/*.toFixed(2)*/) + '</b>' + (item.unit || '') + (item.graphValSuffix||'');
         $("#tooltip").html(val)
           .css({top: item.pageY-40, left: item.pageX+7})
-          .fadeIn(100);
+          .show();
       }
       else if (toolTipOnItem) { hideTooltip(); toolTipOnItem=false; }
     }
@@ -1427,7 +1428,7 @@
     //$('#graphReset').click(function () {graphView.resetDomain(); refreshGraph();});
     $('#graphExport').click(function (e) { e.preventDefault(); exportGraph(); });
     $('.graphControl').click(function () {graphView.setDomain($(this).attr("hours")); refreshGraph();});
-    
+
     metricGraph.on("plothover", renderGraphTooltip); //graph value tooltips
     metricGraph.on("plotclick", plotClick);
     metricGraph.on("plotselected", plotSelect);
@@ -1578,10 +1579,12 @@
           existingNode.replaceWith(newLI);
         else $('#nodeList').append(newLI);
 
-        if (selectedNodeId == node._id && (['nodedetails','metricdetails','requestdetails'].indexOf($.mobile.activePage.attr('id')) > -1))
-          refreshNodeDetails(node);
-
-        if ($.mobile.activePage.attr('id')=='metricdetails') refreshGraph(true, false);
+        if (selectedNodeId == node._id) {
+          if (['nodedetails','metricdetails','requestdetails'].indexOf($.mobile.activePage.attr('id')) > -1)
+            refreshNodeDetails(node);
+          if ($.mobile.activePage.attr('id')=='metricdetails')
+            refreshGraph(true, false);
+        }
         
         //update this node's events on the events page
         for(var key in node.events)
@@ -1734,7 +1737,7 @@
     var timeoutID=false;
     function hideTooltip() {
       if ($("#tooltip").is(':visible'))
-        $("#tooltip").fadeOut(100);
+        $("#tooltip").hide();
     }
     
     $("#graphDeleteDataToggle").click("tap", function(event) {
