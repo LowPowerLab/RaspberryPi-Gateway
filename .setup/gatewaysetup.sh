@@ -110,7 +110,7 @@ sudo apt-get -y install php-common php-cli php-fpm
 
 echo -e "${CYAN}************* STEP: Install nodeJS & npm *************${NC}"
 #install latest NodeJS --- https://www.raspberrypi.org/forums/viewtopic.php?t=141770
-sudo wget -O - https://raw.githubusercontent.com/LowPowerLab/RaspberryPi-Gateway/master/.setup/Install-Node.sh | sudo bash
+sudo wget -O - https://raw.githubusercontent.com/audstanley/NodeJs-Raspberry-Pi/master/Install-Node.sh | sudo bash
 sudo npm install -g npm
 
 echo -e "${CYAN}************* STEP: Setup Gateway app & dependencies *************${NC}"

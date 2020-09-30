@@ -23,7 +23,7 @@
     "nconf": "~0.10.0",
     "nedb": "~1.8",
     "nodemailer": "^6.4.6",
-    "serialport": "~7.0.2",
+    "serialport": "~9.0.1",
     "socket.io": "~2.3.0",
     "speedtest-net": "^1.6.2",
     "suncalc": "~1.8"
