@@ -11,57 +11,57 @@ exports.events = {
     descr:'Auto Close Garage after 11PM',
     nextSchedule: function(nodeAtScheduleTime) { return 300000; }, //runs every 5min
     scheduledExecute: function(nodeAtScheduleTime) {
-      db.findOne({ _id : nodeAtScheduleTime._id }, function (err, nodeRightNow) {
-        var nowDate = new Date(Date.now());
-        var nodeUpdated = false;
-        if (nodeRightNow)
-        {
-          //console.log('GARAGE POLL STATUS Node Id: ' + nodeRightNow._id + " Status: " + nodeRightNow.metrics['Status'].value);
+      var nowDate = new Date(Date.now());
+      var nodeUpdated = false;
 
-          if (nodeRightNow.metrics['Status'] &&
-              nodeRightNow.metrics['Status'].value == 'OPEN') {
+      if (nodeAtScheduleTime)
+      {
+        //console.log('GARAGE POLL STATUS Node Id: ' + nodeAtScheduleTime._id + " Status: " + nodeAtScheduleTime.metrics['Status'].value);
 
-            /* Only automatically close between 11pm and 6am */
-            if ((nowDate.getHours() >= 23 || nowDate.getHours() <= 6) && nodeRightNow.metrics['Status'].closeCount < 3) {
+        if (nodeAtScheduleTime.metrics['Status'] &&
+            nodeAtScheduleTime.metrics['Status'].value == 'OPEN') {
 
-              if (nodeRightNow.metrics['Status'].openDate == null) {
-                nodeRightNow.metrics['Status'].openDate = nowDate;
-                nodeUpdated = true;
-              };
+          /* Only automatically close between 11pm and 6am */
+          if ((nowDate.getHours() >= 23 || nowDate.getHours() <= 6) && nodeAtScheduleTime.metrics['Status'].closeCount < 3) {
 
-              /* Elapsed time in minutes */
-              var elapsedTimeMinutes = Math.round(((nowDate - nodeRightNow.metrics['Status'].openDate)) / (60*1000));
-              console.log('GARAGE SHOULD BE CLOSED ' + elapsedTimeMinutes);
-              console.log('GARAGE OPEN timestamp: ' + nodeRightNow.metrics['Status'].openDate);
-
-              /* Close the door if open more than 10 minutes */
-              if (elapsedTimeMinutes >= 10) {
-                sendMessageToNode({nodeId:nodeRightNow._id, action:'CLS'});
-                nodeRightNow.metrics['Status'].closeCount++;
-                nodeRightNow.metrics['Status'].openDate = null;
-                nodeUpdated = true;
-              };
-
-              console.log('Close Count: ' + nodeRightNow.metrics['Status'].closeCount);
+            if (nodeAtScheduleTime.metrics['Status'].openDate == null) {
+              nodeAtScheduleTime.metrics['Status'].openDate = nowDate;
+              nodeUpdated = true;
             };
-          };
 
-          if (nowDate.getHours() < 23 && nowDate.getHours() > 6 && nodeRightNow.metrics['Status'].openDate) {
-            nodeRightNow.metrics['Status'].openDate = null;
-            nodeUpdated = true;
-          };
+            /* Elapsed time in minutes */
+            var elapsedTimeMinutes = Math.round(((nowDate - nodeAtScheduleTime.metrics['Status'].openDate)) / (60*1000));
+            console.log('GARAGE SHOULD BE CLOSED ' + elapsedTimeMinutes);
+            console.log('GARAGE OPEN timestamp: ' + nodeAtScheduleTime.metrics['Status'].openDate);
 
-          /* Reset the close count */
-          if ((nowDate.getHours() < 23 && nowDate.getHours() > 6 && nodeRightNow.metrics['Status'].closeCount > 0) || nodeRightNow.metrics['Status'].closeCount == null) {
-            nodeRightNow.metrics['Status'].closeCount = 0;
-            nodeUpdated = true;
-          };
+            /* Close the door if open more than 10 minutes */
+            if (elapsedTimeMinutes >= 10) {
+              sendMessageToNode({nodeId:nodeAtScheduleTime._id, action:'CLS'});
+              nodeAtScheduleTime.metrics['Status'].closeCount++;
+              nodeAtScheduleTime.metrics['Status'].openDate = null;
+              nodeUpdated = true;
+            };
 
-          if (nodeUpdated) {
-            db.update({ _id: nodeRightNow._id }, { $set : nodeRightNow}, {}, function (err, numReplaced) { console.log('   ['+nodeRightNow._id+'] DB-Updates:' + numReplaced);});
+            console.log('Close Count: ' + nodeAtScheduleTime.metrics['Status'].closeCount);
           };
         };
-      });
+
+        if (nowDate.getHours() < 23 && nowDate.getHours() > 6 && nodeAtScheduleTime.metrics['Status'].openDate) {
+          nodeAtScheduleTime.metrics['Status'].openDate = null;
+          nodeUpdated = true;
+        };
+
+        /* Reset the close count */
+        if ((nowDate.getHours() < 23 && nowDate.getHours() > 6 && nodeAtScheduleTime.metrics['Status'].closeCount > 0) || nodeAtScheduleTime.metrics['Status'].closeCount == null) {
+          nodeAtScheduleTime.metrics['Status'].closeCount = 0;
+          nodeUpdated = true;
+        };
+
+        if (nodeUpdated) {
+          nodeAtScheduleTime.modifiedByEvent = true;
+          return nodeAtScheduleTime;
+        };
+      };
     },
   }
 }
