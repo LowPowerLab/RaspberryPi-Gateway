@@ -9,11 +9,17 @@ server{
   listen 443 ssl;
   server_name gateway;
  
+  #turn OFF the nginx version in error pages
+  server_tokens off;
+
   # enable basic authentication and point to the credentials file
+  satisfy any;          #allow either valid IP address or valid login
+  #deny 192.168.1.123;   #deny specific IP
+  allow 192.168.1.1/24; #allow whole LAN
+  allow 127.0.0.1;      #allow localhost
+  deny  all;            #deny everyone else
   auth_basic "Restricted";
   auth_basic_user_file /home/pi/gateway/data/secure/.htpasswd;
-
-  server_tokens off;  #turns OFF the nginx version in error pages
 
   # point to the SSL certificate required for SSL
   ssl_certificate /home/pi/gateway/data/secure/server.crt;
