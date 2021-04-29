@@ -12,7 +12,9 @@ server{
   # enable basic authentication and point to the credentials file
   auth_basic "Restricted";
   auth_basic_user_file /home/pi/gateway/data/secure/.htpasswd;
- 
+
+  server_tokens off;  #turns OFF the nginx version in error pages
+
   # point to the SSL certificate required for SSL
   ssl_certificate /home/pi/gateway/data/secure/server.crt;
   ssl_certificate_key /home/pi/gateway/data/secure/server.key;
