@@ -16,3 +16,5 @@ before_install:
   - npm -g install npm@latest
 install:
   - npm install --unsafe-perm --build-from-source
+script:
+  - node gateway.js
