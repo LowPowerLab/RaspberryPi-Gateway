@@ -17,4 +17,4 @@ before_install:
 install:
   - npm install --unsafe-perm --build-from-source
 script:
-  - node gateway.js
+  - npm outdated
