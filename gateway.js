@@ -38,7 +38,7 @@ var coreMetricsFilePath = './metrics/core.js';
 nconf.argv().file({ file: './settings.json5', format: JSON5 });
 global.settings = nconf.get('settings');
 var dbLog = require('./logUtil.js');
-io = require('socket.io').listen(settings.general.socketPort.value);
+io = require('socket.io')().listen(settings.general.socketPort.value)    //usage in 2.3.0:  io = require('socket.io').listen(settings.general.socketPort.value);
 var serialport = require("serialport");                         //https://github.com/node-serialport/node-serialport
 var Datastore = require('nedb');                                //https://github.com/louischatriot/nedb
 var nodemailer = require('nodemailer');                         //https://github.com/andris9/Nodemailer
