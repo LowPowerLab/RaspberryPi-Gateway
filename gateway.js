@@ -95,9 +95,9 @@ global.loadMetricsFile = function(file, globalizeFunctions, fatal) {
     try {
       var tmp = require(file);
       if (!global.metricsDef) global.metricsDef = {};
-      metricsDef.metrics = merge(true, metricsDef.metrics, tmp.metrics);
-      metricsDef.motes = merge(true, metricsDef.motes, tmp.motes);
-      metricsDef.events = merge(true, metricsDef.events, tmp.events);
+      metricsDef.metrics = merge(false, metricsDef.metrics, tmp.metrics);
+      metricsDef.motes = merge(false, metricsDef.motes, tmp.motes);
+      metricsDef.events = merge(false, metricsDef.events, tmp.events);
       if (globalizeFunctions) {
         Object.getOwnPropertyNames(tmp).forEach(function(variable){
           let type = typeof tmp[variable];
@@ -111,7 +111,7 @@ global.loadMetricsFile = function(file, globalizeFunctions, fatal) {
       delete tmp.metrics;
       delete tmp.motes;
       delete tmp.events;
-      metricsDef = merge(true, metricsDef, tmp); //merge anything else (properties, variables, objects, functions)
+      metricsDef = merge(false, metricsDef, tmp); //merge anything else (properties, variables, objects, functions)
     } catch (ex) {
       console.error(`FAIL LOADING METRICS MODULE [${file}]: ${ex.message}\n${ex.stack}`);
       if (fatal) throw ex;

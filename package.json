@@ -9,17 +9,17 @@
   },
   "author": "Felix Rusu (https://github.com/LowPowerLab)",
   "homepage": "http://lowpowerlab.com/gateway",
-  "license" : "CC-BY-NC-SA-4.0",
+  "license": "CC-BY-NC-SA-4.0",
   "bugs": {
     "url": "https://github.com/LowPowerLab/RaspberryPi-Gateway/issues",
-    "email": "bugs@lowpowerlab.com"
+    "email": "support@lowpowerlab.com"
   },
   "contributors": "Felix Rusu (https://github.com/LowPowerLab)",
   "dependencies": {
     "colors": "~1.4",
     "console-stamp": "^0.2.7",
     "json5": "~2.1.0",
-    "merge": "^1.2.1",
+    "merge": "^2.1.1",
     "nconf": "~0.10.0",
     "nedb": "~1.8",
     "nodemailer": "^6.4.6",
