@@ -1,6 +1,6 @@
 RaspberryPi Gateway Home Automation & IoT Applications
 ----------------
-[![Build Status](https://travis-ci.org/LowPowerLab/RaspberryPi-Gateway.svg)](https://travis-ci.org/LowPowerLab/RaspberryPi-Gateway)
+[![Build Status](https://app.travis-ci.com/LowPowerLab/RaspberryPi-Gateway.svg)](https://app.travis-ci.com/LowPowerLab/RaspberryPi-Gateway)
 [![GitHub release](https://img.shields.io/github/release/LowPowerLab/RaspberryPi-Gateway.svg)](https://github.com/LowPowerLab/RaspberryPi-Gateway)
 [![GitHub issues](https://img.shields.io/github/issues/LowPowerLab/RaspberryPi-Gateway.svg)](https://github.com/LowPowerLab/RaspberryPi-Gateway/issues)
 [![GitHub pull requests](https://img.shields.io/github/issues-pr/LowPowerLab/RaspberryPi-Gateway.svg)](https://github.com/LowPowerLab/RaspberryPi-Gateway/pulls)
