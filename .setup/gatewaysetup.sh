@@ -99,6 +99,9 @@ sudo apt-get update -m
 # echo -e "${CYAN}************* STEP: Running dist-upgrade *************${NC}"
 # sudo apt-get dist-upgrade
 
+echo -e "${CYAN}************* STEP: Install latest SMBCLIENT *************${NC}"
+sudo apt-get -y install smbclient
+
 echo -e "${CYAN}************* STEP: Installing git & apache2-utils *************${NC}"
 sudo apt-get -y install git apache2-utils
 
