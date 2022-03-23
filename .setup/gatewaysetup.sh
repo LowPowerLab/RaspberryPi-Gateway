@@ -117,6 +117,7 @@ sudo wget -O - https://raw.githubusercontent.com/audstanley/NodeJs-Raspberry-Pi/
 sudo npm install -g npm
 
 echo -e "${CYAN}************* STEP: Setup Gateway app & dependencies *************${NC}"
+sudo apt-get -y install curl grep wget sed build-essential openssl whiptail
 sudo mkdir -p $APPSRVDIR    #main dir where gateway app lives
 cd $APPSRVDIR || exit
 
