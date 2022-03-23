@@ -618,7 +618,7 @@ io.sockets.on('connection', function (socket) {
         if (!isNew) //VOID previous request value before queuing adding latest value
           requestString += nodeId + ':VOID:' + reqName + (reqValue?':'+reqValue.trim():'') + '\n';
 
-        requestString += 'REQUESTQUEUE:' + nodeId + ':' + reqName + (reqValue?':'+reqValue.trim():'') + '\n';
+        requestString += 'RQ:' + nodeId + ':' + reqName + (reqValue?':'+reqValue.trim():'') + '\n';
         sendMessageToGateway(requestString);
         console.info('REQUEST SENT: ' + requestString.replaceNewlines());
         db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) { console.info('SUBMITNODEREQUEST DB-Replaced:' + numReplaced); });
@@ -1025,7 +1025,7 @@ global.processSerialData = function (data, simulated) {
           partialMatch = true;
         }
 
-        if (tokenMatch[1] == 'REQUESTQUEUE' || tokenMatch[1] == 'FREERAM' || tokenMatch[1] == 'GTWCMD' || tokenMatch[1] == 'ACK')
+        if (tokenMatch[1] == 'RQ' || tokenMatch[1] == 'FREERAM' || tokenMatch[1] == 'GTWCMD' || tokenMatch[1] == 'ACK')
         {
           validTokenMatched=true;
           partialMatch = true;
