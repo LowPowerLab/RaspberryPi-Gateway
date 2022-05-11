@@ -1,6 +1,6 @@
 {
   "name": "RaspberryPi-Gateway",
-  "version": "9.2.0",
+  "version": "9.2.1",
   "description": "Moteino IoT Gateway",
   "main": "gateway.js",
   "repository": {
