@@ -32,11 +32,18 @@
 var nconf = require('nconf');                                   //https://github.com/indexzero/nconf
 var JSON5 = require('json5');                                   //https://github.com/aseemk/json5
 var path = require('path');
-var dbDir = 'data/db';
+
+nconf.argv()
+  .env()
+  .file({
+    file: './settings.json5',
+    format: JSON5,
+  });
+
+global.settings = nconf.get('settings');
+
 var packageJson = require('./package.json')
 var coreMetricsFilePath = './metrics/core.js';
-nconf.argv().file({ file: './settings.json5', format: JSON5 });
-global.settings = nconf.get('settings');
 var dbLog = require('./logUtil.js');
 io = require('socket.io')().listen(settings.general.socketPort.value)    //usage in 2.3.0:  io = require('socket.io').listen(settings.general.socketPort.value);
 var serialport = require("serialport");                         //https://github.com/node-serialport/node-serialport
@@ -44,7 +51,8 @@ var Datastore = require('nedb');                                //https://github
 var nodemailer = require('nodemailer');                         //https://github.com/andris9/Nodemailer
 var http = require('http');
 var url = require('url');
-db = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.name.value), autoload: true });       //used to keep all node/metric data
+var dbDir = path.resolve([settings.database.directory.value]);
+db = new Datastore({ filename: path.join(dbDir, settings.database.name.value), autoload: true });       //used to keep all node/metric data
 var dbCompacted = Date.now();
 var fs = require('fs');
 var gatewayUptime='';
@@ -53,7 +61,7 @@ global.port=undefined;
 global.parser=undefined;
 var unmatchedDataDB = null;
 if (settings.database.nonMatchesName.value)
-  unmatchedDataDB = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.nonMatchesName.value), autoload: true });
+  unmatchedDataDB = new Datastore({ filename: path.join(dbDir, settings.database.nonMatchesName.value), autoload: true });
 require("console-stamp")(console, settings.general.consoleLogDateFormat.value); //timestamp logs - https://github.com/starak/node-console-stamp
 
 //HTTP ENDPOINT - accept HTTP: data from the internet/LAN
@@ -229,7 +237,7 @@ global.handleNodeEvents = function(node) {
 global.getGraphData = function(nodeId, metricKey, start, end, exportMode) {
   var sts = Math.floor(start / 1000); //get timestamp in whole seconds
   var ets = Math.floor(end / 1000); //get timestamp in whole seconds
-  var logfile = path.join(__dirname, dbDir, dbLog.getLogName(nodeId,metricKey));
+  var logfile = path.join(dbDir, dbLog.getLogName(nodeId,metricKey));
   var graphData = dbLog.getData(logfile, sts, ets, exportMode ? 100000 : settings.general.graphMaxPoints.value); //100k points when exporting, more points is really pointless
   var graphOptions={};
   for(var k in metricsDef.metrics)
@@ -460,7 +468,7 @@ io.sockets.on('connection', function (socket) {
           if (dbNode.metrics) {
             Object.keys(dbNode.metrics).forEach(function(mKey,index) { //syncronous/blocking call
               if (dbNode.metrics[mKey].graph == 1)
-                dbLog.removeMetricLog(path.join(__dirname, dbDir, dbLog.getLogName(dbNode._id, mKey)));
+                dbLog.removeMetricLog(path.join(dbDir, dbLog.getLogName(dbNode._id, mKey)));
             });
           }
         }
@@ -494,7 +502,7 @@ io.sockets.on('connection', function (socket) {
         delete(dbNode.metrics[metricKey]);
         db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) { console.info('DELETENODEMETRIC DB-Replaced:' + numReplaced); });
         if (settings.general.keepMetricLogsOnDelete.value != 'true')
-          dbLog.removeMetricLog(path.join(__dirname, dbDir, dbLog.getLogName(dbNode._id, metricKey)));
+          dbLog.removeMetricLog(path.join(dbDir, dbLog.getLogName(dbNode._id, metricKey)));
         io.sockets.emit('UPDATENODE', dbNode); //post it back to all clients to confirm UI changes
       }
     });
@@ -522,7 +530,7 @@ io.sockets.on('connection', function (socket) {
       if (entries.length == 1)
       {
         var dbNode = entries[0];
-        var logfile = path.join(__dirname, dbDir, dbLog.getLogName(dbNode._id, metricKey));
+        var logfile = path.join(dbDir, dbLog.getLogName(dbNode._id, metricKey));
         var count = dbLog.deleteData(logfile, sts, ets);
         console.info('DELETEMETRICDATA DB-Removed points:' + count);
         //if (settings.general.keepMetricLogsOnDelete.value != 'true')
@@ -538,7 +546,7 @@ io.sockets.on('connection', function (socket) {
       if (entries.length == 1)
       {
         var dbNode = entries[0];
-        var logfile = path.join(__dirname, dbDir, dbLog.getLogName(dbNode._id, metricKey));
+        var logfile = path.join(dbDir, dbLog.getLogName(dbNode._id, metricKey));
         var count = dbLog.editData(logfile, sts, ets, newValue);
         console.info(`EDITMETRICDATA DB-Updated points:${count} to:${newValue}`);
         socket.emit('EDITMETRICDATA_OK', count); //post it back to requesting client only
@@ -669,7 +677,7 @@ io.sockets.on('connection', function (socket) {
         var dbNode = entries[0];
         Object.keys(dbNode.metrics).forEach(function(mKey,index) { //syncronous/blocking call
           if (dbNode.metrics[mKey].graph == 1) {
-            var logfile = path.join(__dirname, dbDir, dbLog.getLogName(dbNode._id, mKey));
+            var logfile = path.join(dbDir, dbLog.getLogName(dbNode._id, mKey));
             var theData = dbLog.getData(logfile, sts, ets, howManyPoints /*settings.general.graphMaxPoints.value*/);
             theData.label = dbNode.metrics[mKey].label || mKey;
             sets.push(theData); //100k points when exporting, more points is really pointless
@@ -883,7 +891,7 @@ global.processSerialData = function (data, simulated) {
               if (isNumeric(graphValue))
               {
                 var ts = Math.floor(Date.now() / 1000); //get timestamp in whole seconds
-                var logfile = path.join(__dirname, dbDir, dbLog.getLogName(id, matchingMetric.name));
+                var logfile = path.join(dbDir, dbLog.getLogName(id, matchingMetric.name));
                 try {
                   console.log('post: ' + logfile + '[' + ts + ','+graphValue + ']');
                   dbLog.postData(logfile, ts, graphValue, matchingMetric.duplicateInterval || null);
@@ -1093,7 +1101,7 @@ function httpEndPointHandler(req, res) {
               if (isNumeric(graphValue))
               {
                 var ts = Math.floor(Date.now() / 1000); //get timestamp in whole seconds
-                var logfile = path.join(__dirname, dbDir, dbLog.getLogName(id, matchingMetric.name));
+                var logfile = path.join(dbDir, dbLog.getLogName(id, matchingMetric.name));
                 try {
                   console.log(`post: ${logfile} [${ts},${graphValue}]`);
                   dbLog.postData(logfile, ts, graphValue, matchingMetric.duplicateInterval || null);

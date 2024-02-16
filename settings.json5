@@ -44,6 +44,10 @@
     database: {
       editable: false,
       exposed: false,
+      directory: {
+        value: 'data/db',
+        description: 'path to the database directory, expanded relative to the application working directory',
+      },
       name: {
         value: 'gateway.db',
         description: 'where your node information is stored, should not really be changed',
