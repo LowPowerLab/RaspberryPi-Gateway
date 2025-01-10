@@ -180,7 +180,7 @@ echo -e "${YLW}Done. You can add/change http_auth credentials using ${RED}htpass
 echo -e "${CYAN}************* STEP: Copy gateway site config to sites-available *************${NC}"
 cp -rf $APPSRVDIR/.setup/gateway /etc/nginx/sites-available/gateway
 #determine php-fpm version and replace in gateway site config
-phpfpmsock=$(grep -ri "listen = " /etc/php)  #search for file containing "listen =" in php path
+phpfpmsock=$(grep -ri "listen = /" /etc/php) #search for file containing "listen =" in php path
 phpfpmsock=${phpfpmsock##*/}                 #extract everything after last /
 sudo sed -i "s/PHPFPMSOCK/${phpfpmsock}/g" /etc/nginx/sites-available/gateway  #replace PHPFPMSOCK with it in site config file
 cd /etc/nginx/sites-enabled
@@ -238,7 +238,9 @@ if (whiptail --title "Proftpd" --yesno "Do you want to install Proftpd?\nNote: P
 fi
 
 sudo apt-get clean
-cd ~/
+
+cd $APPSRVDIR
+chmod og+x /home/pi #grant o(thers) and g(roup) to x(ecute) files in the gateway dir
 
 echo -e "${CYAN}************* STEP: Run raspi-config *************${NC}"
 if (whiptail --title "Run raspi-config ?" --yesno "Would you like to run raspi-config?\nNote: you should run this tool and configure the essential settings of your Pi if you haven't done it yet!" 12 78) then
