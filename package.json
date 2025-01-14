@@ -21,12 +21,12 @@
     "json5": "~2.2.0",
     "merge": "^2.1.1",
     "nconf": "~0.11.2",
-    "nedb": "~1.8",
+    "LowPowerLab/nedb": "~1.8",
     "nodemailer": "^6.6.0",
     "serialport": "~9.0.7",
     "socket.io": "~4.1.0",
     "speedtest-net": "^1.6.2",
-    "suncalc": "~1.8"
+    "suncalc": "~1.9"
   },
   "scripts": {
     "preinstall": "",
