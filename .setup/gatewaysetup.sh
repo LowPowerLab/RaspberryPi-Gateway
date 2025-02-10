@@ -108,7 +108,7 @@ sudo apt-get -y install git apache2-utils
 echo -e "${CYAN}************* STEP: Install latest NGINX *************${NC}"
 sudo apt-get -y install nginx
 
-echo -e "${CYAN}************* STEP: Install PHP7 *********************${NC}"
+echo -e "${CYAN}************* STEP: Install latest PHP *********************${NC}"
 sudo apt-get -y install php-common php-cli php-fpm
 
 echo -e "${CYAN}************* STEP: Install nodeJS & npm *************${NC}"

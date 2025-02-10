@@ -21,7 +21,7 @@
     "json5": "~2.2.0",
     "merge": "^2.1.1",
     "nconf": "~0.11.2",
-    "LowPowerLab/nedb": "~1.8",
+    "nedb": "https://github.com/LowPowerLab/nedb.git",
     "nodemailer": "^6.6.0",
     "serialport": "~9.0.7",
     "socket.io": "~4.1.0",

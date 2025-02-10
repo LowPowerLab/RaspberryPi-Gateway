@@ -8,6 +8,9 @@ server{
   listen 80;
   listen 443 ssl;
   server_name gateway;
+  
+  #allow uploads up to 8MB in size
+  client_max_body_size 8M;
  
   #turn OFF the nginx version in error pages
   server_tokens off;
