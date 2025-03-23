@@ -67,7 +67,7 @@ if (settings.database.nonMatchesName.value)
 require("console-stamp")(console, settings.general.consoleLogDateFormat.value); //timestamp logs - https://github.com/starak/node-console-stamp
 
 //HTTP ENDPOINT - accept HTTP: data from the internet/LAN
-http.createServer(httpEndPointHandler).listen(8081);
+http.createServer(httpEndPointHandler).listen(settings.general.port.value);
 
 console.info('*********************************************************************');
 console.info('************************* GATEWAY APP START *************************');
