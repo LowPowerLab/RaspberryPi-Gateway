@@ -2285,35 +2285,33 @@
     $("#changeNodeIcon_OK").click("tap", function(event) {
       if ($("#nodeIconUpload").val()) {
         event.preventDefault();
-        var file_data = $('#nodeIconUpload').prop('files')[0];   
-        var form_data = new FormData();                  
-        form_data.append('file', file_data);
-        $.ajax({
-          type: "POST",
-          url: "upload.php",
-          enctype: 'multipart/form-data',
-          dataType: 'json',
-          cache: false,
-          contentType: false,
-          processData: false,
-          data: form_data,
-          success: function (data, textStatus, jqXHR) {
-            data['status'];
-            if (data['status']=='success')
+
+        var file = $('#nodeIconUpload').prop('files')[0];
+
+        var types = ['image/jpeg', 'image/png', 'image/gif'];
+        if (!types.includes(file.type)) {
+          alert('Invalid file type; only JPG/JPEG/PNG/GIF are allowed');
+          return;
+        }
+
+        if ((file.size || 0) > 500000) {
+          alert('File too large (>500K)');
+          return;
+        }
+
+        socket.emit('UPLOADIMAGE', file.name, file, function(filePath, err) {
+          if (err) {
+            alert('Upload failed: ' + err.message);
+          }
+          else {
+            if (filePath)
             {
-              if (data['filePath'])
-              {
-                $('#nodeDetailImage').attr('src', 'images/'+data['filePath']);
-                nodes[selectedNodeId].icon = data['filePath'];
-                socket.emit('REFRESHICONS');
-                $.mobile.navigate('#nodedetails');
-              }
-              else alert('Expected filePath back, got nothing');
+              $('#nodeDetailImage').attr('src', 'images/'+filePath);
+              nodes[selectedNodeId].icon = filePath;
+              socket.emit('REFRESHICONS');
+              $.mobile.navigate('#nodedetails');
             }
-            else alert(data['message']||'Upload failed');
-          },
-          error: function (data, textStatus, msg) {
-            alert(msg||'Upload failed');
+            else alert('Expected filePath back, got nothing');
           }
         });
       }
