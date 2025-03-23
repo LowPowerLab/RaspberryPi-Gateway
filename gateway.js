@@ -29,16 +29,20 @@
 // ********************************************************************************************
 // Note: In NodeJS modules are loaded synchronously and processed in the order they occur
 // ********************************************************************************************
-var nconf = require('nconf');                                   //https://github.com/indexzero/nconf
-var JSON5 = require('json5');                                   //https://github.com/aseemk/json5
+var fs = require('fs');
 var path = require('path');
 
-nconf.argv()
-  .env()
-  .file({
-    file: './settings.json5',
-    format: JSON5,
-  });
+const config = require('./config');
+
+const nconf = config.nconf;
+const coreImagesDir = config.coreImagesDir;
+const userImagesDir = config.userImagesDir;
+const coreMetricsDir = config.coreMetricsDir;
+const userMetricsDir = config.userMetricsDir;
+const dbDir = config.dbDir;
+
+fs.mkdirSync(dbDir, {'recursive': true});
+fs.mkdirSync(userImagesDir, {'recursive': true});
 
 global.settings = nconf.get('settings');
 
@@ -51,10 +55,8 @@ var Datastore = require('nedb');                                //https://github
 var nodemailer = require('nodemailer');                         //https://github.com/andris9/Nodemailer
 var http = require('http');
 var url = require('url');
-var dbDir = path.resolve([settings.database.directory.value]);
 db = new Datastore({ filename: path.join(dbDir, settings.database.name.value), autoload: true });       //used to keep all node/metric data
 var dbCompacted = Date.now();
-var fs = require('fs');
 var gatewayUptime='';
 var gatewayFrequency='';
 global.port=undefined;
@@ -253,19 +255,42 @@ global.getGraphData = function(nodeId, metricKey, start, end, exportMode) {
   return { graphData:graphData, options : graphOptions };
 }
 
-global.getNodeIcons = function(dir, files_, steps){
-  files_ = files_ || [];
-  dir = dir || __dirname + '/www/images';
-  steps = steps || 0;
-  var files = fs.readdirSync(dir);
-  for (var i in files){
-    var name = dir + '/' + files[i];
-    if (fs.statSync(name).isDirectory() && steps==0) //recurse 1 level only
-      getNodeIcons(name, files_, steps+1);
-    else if (files[i].match(/^icon_.+\.(bmp|png|jpg|jpeg|ico)$/ig)) //images only
-      files_.push(name.replace(__dirname+'/www/images/',''));
+global.getNodeIcons = function({
+  dir = coreImagesDir,
+  root = null,
+  files = [],
+  steps = 0,
+  prefix = 'icon_',
+  extensions = ['.bmp', '.png', '.jpg', '.jpeg', '.ico'],
+} = {}) {
+  dir = path.resolve(dir);
+  root = path.resolve(root || dir);
+
+  console.log({'dir': dir, 'root': root, 'files': files, 'steps': steps, 'prefix': prefix, 'extensions': extensions});
+
+  var basenames = fs.readdirSync(dir);
+  for (var i in basenames) {
+    var basename = basenames[i];
+    var file = path.join(dir, basename);
+
+    if (fs.statSync(file).isDirectory() && steps==0) //recurse 1 level only
+      getNodeIcons({'dir': file, 'root': root, 'files': files, 'steps': steps+1, 'prefix': prefix, 'extensions': extensions});
+    else if (basename.startsWith(prefix) && extensions.includes(path.extname(file)))
+      files.push(path.relative(root, file));
   }
-  return files_;
+
+  return files;
+}
+
+global.allNodeIcons = function () {
+  var files;
+
+  if (coreImagesDir == userImagesDir)
+    files = [];
+  else
+    files = getNodeIcons({'dir': userImagesDir, 'prefix': ''});
+
+  return getNodeIcons({'dir': coreImagesDir, 'files': files});
 }
 
 //authorize handshake - make sure the request is proxied from localhost, not from the outside world
@@ -310,7 +335,7 @@ io.sockets.on('connection', function (socket) {
   socket.emit('SETTINGSDEF', settings);
   broadcastServerInfo(socket);
   socket.emit('DBCOMPACTED', dbCompacted);
-  socket.emit('NODEICONS', getNodeIcons());
+  socket.emit('NODEICONS', allNodeIcons());
 
   //pull all nodes from the database and send them to client
   db.find({ _id : { $exists: true } }, function (err, entries) {
@@ -328,7 +353,7 @@ io.sockets.on('connection', function (socket) {
   });
 
   socket.on('REFRESHICONS', function () {
-    io.sockets.emit('NODEICONS', getNodeIcons());
+    io.sockets.emit('NODEICONS', allNodeIcons());
   });
 
   socket.on('UPDATENODELISTORDER', function (newOrder) {

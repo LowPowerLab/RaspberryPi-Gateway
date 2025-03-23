@@ -11,11 +11,11 @@
 // ********************************************************************************************
 // (C) Felix Rusu, Low Power Lab LLC (2020), http://lowpowerlab.com/contact
 // ********************************************************************************************
-var config = require('nconf');
-var JSON5 = require('json5');
 var suncalc = require('suncalc'); //https://github.com/mourner/suncalc
-config.argv().file({ file: require('path').resolve(__dirname, '../settings.json5'), format: JSON5 });
-var settings = config.get('settings'); //these are local to avoid runtime errors but in events they will reference the global settings declared in gateway.js
+
+//these are local to avoid runtime errors but in events they will reference the
+//global settings declared in gateway.js
+var settings = require('../config').nconf.get('settings');
 
 // ******************************************************************************************************************************************
 //                                            SAMPLE METRICS DEFINITIONS
