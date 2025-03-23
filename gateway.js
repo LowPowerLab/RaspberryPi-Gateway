@@ -812,6 +812,25 @@ io.sockets.on('connection', function (socket) {
     console.info('PI SHUTDOWN REQUESTED from ' + address);
     child_process.exec('sudo /sbin/shutdown now "GATEWAY SHUTDOWN REQUEST"', function (msg) { console.info(msg) });
   });
+
+  // https://socket.io/how-to/upload-a-file
+  socket.on('UPLOADIMAGE', function (name, buffer, callback) {
+    if (!name) {
+      callback(null, "missing file name");
+      return;
+    }
+
+    if (!buffer) {
+      callback(null, "missing file data");
+      return;
+    }
+
+    target = path.join(userImagesDir, name);
+
+    fs.writeFile(target, buffer, function(err) {
+      callback(name, err);
+    });
+  });
 });
 
 //entries should contain the node list and also a node that contains the order (if this was ever added)

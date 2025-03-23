@@ -63,33 +63,12 @@ server{
     proxy_set_header X-Forwarded-User $remote_user;
   }
 
-  # enable and configure PHP
-  location ~* \.php$ {
-    fastcgi_split_path_info ^(.+\.php)(.*)$;
- 
-    # typically the fpm.sock is used, but check to make sure by using:
-    # sudo grep -ri "listen = " /etc/php
-    # should get something like: 
-    #  /etc/php/7.3/fpm/pool.d/www.conf:listen = /run/php/php7.3-fpm.sock
-    # then you know it's fpm.sock
-    fastcgi_pass unix:/run/php/PHPFPMSOCK;   #uncomment if PHP runs on fpm.sock
-    #fastcgi_pass 127.0.0.1:9000;            #uncomment if PHP is running on port 9000
- 
-    fastcgi_index index.php;
-    fastcgi_param SCRIPT_FILENAME /home/pi/gateway/www$fastcgi_script_name;
-    fastcgi_param QUERY_STRING $query_string;
-    fastcgi_param REQUEST_METHOD $request_method;
-    fastcgi_param CONTENT_TYPE $content_type;
-    fastcgi_param CONTENT_LENGTH $content_length;
-    include fastcgi_params;
-  }
- 
   # redirect server error pages to the static page /50x.html
   error_page 500 502 503 504 /50x.html;
   location = /50x.html {
       root html;
   }
- 
+
   ## Disable viewing .htaccess & .htpassword
   location ~ /\.ht {
       deny all;
