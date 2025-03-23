@@ -29,16 +29,22 @@
 // ********************************************************************************************
 // Note: In NodeJS modules are loaded synchronously and processed in the order they occur
 // ********************************************************************************************
-var nconf = require('nconf');                                   //https://github.com/indexzero/nconf
-var JSON5 = require('json5');                                   //https://github.com/aseemk/json5
-var path = require('path');
 
-nconf.argv()
-  .env()
-  .file({
-    file: './settings.json5',
-    format: JSON5,
-  });
+const JSON5 = require('json5'); // https://github.com/aseemk/json5
+const fs = require('fs');
+const path = require('path');
+
+const config = require('./config');
+
+const nconf = config.nconf;
+const coreImagesDir = config.coreImagesDir;
+const userImagesDir = config.userImagesDir;
+const coreMetricsDir = config.coreMetricsDir;
+const userMetricsDir = config.userMetricsDir;
+const dbDir = config.dbDir;
+
+fs.mkdirSync(dbDir, {'recursive': true});
+fs.mkdirSync(userImagesDir, {'recursive': true});
 
 global.settings = nconf.get('settings');
 
@@ -52,10 +58,8 @@ var Datastore = require('nedb');                                //https://github
 var nodemailer = require('nodemailer');                         //https://github.com/andris9/Nodemailer
 var http = require('http');
 var url = require('url');
-var dbDir = path.resolve([settings.database.directory.value]);
 db = new Datastore({ filename: path.join(dbDir, settings.database.name.value), autoload: true });       //used to keep all node/metric data
 var dbCompacted = Date.now();
-var fs = require('fs');
 var child_process = require('child_process');
 var gatewayUptime='';
 var gatewayFrequency='';
@@ -239,7 +243,7 @@ global.sendMessageToGateway = function(msg) {
   //console.log('sendMessageToGateway: ' + msg.replaceNewlines());
   let serialEnabled = settings.serial.enabled && (settings.serial.enabled.value.toString().toLowerCase()==='true')
   if (!serialEnabled) { console.info('settings.serial.enabled FALSE or NOT FOUND!'); return; }
-  port.write(msg + '\n', function (err) { 
+  port.write(msg + '\n', function (err) {
     if (err) return console.error('port.write error: ', err.message)
     port.drain();
   });
@@ -284,19 +288,42 @@ global.getGraphData = function(nodeId, metricKey, start, end, exportMode) {
   return { graphData:graphData, options : graphOptions };
 }
 
-global.getNodeIcons = function(dir, files_, steps){
-  files_ = files_ || [];
-  dir = dir || __dirname + '/www/images';
-  steps = steps || 0;
-  var files = fs.readdirSync(dir);
-  for (var i in files){
-    var name = dir + '/' + files[i];
-    if (fs.statSync(name).isDirectory() && steps==0) //recurse 1 level only
-      getNodeIcons(name, files_, steps+1);
-    else if (files[i].match(/^icon_.+\.(bmp|png|jpg|jpeg|ico)$/ig)) //images only
-      files_.push(name.replace(__dirname+'/www/images/',''));
+global.getNodeIcons = function({
+  dir = coreImagesDir,
+  root = null,
+  files = [],
+  steps = 0,
+  prefix = 'icon_',
+  extensions = ['.bmp', '.png', '.jpg', '.jpeg', '.ico'],
+} = {}) {
+  dir = path.resolve(dir);
+  root = path.resolve(root || dir);
+
+  console.log({'dir': dir, 'root': root, 'files': files, 'steps': steps, 'prefix': prefix, 'extensions': extensions});
+
+  var basenames = fs.readdirSync(dir);
+  for (var i in basenames) {
+    var basename = basenames[i];
+    var file = path.join(dir, basename);
+
+    if (fs.statSync(file).isDirectory() && steps==0) //recurse 1 level only
+      getNodeIcons({'dir': file, 'root': root, 'files': files, 'steps': steps+1, 'prefix': prefix, 'extensions': extensions});
+    else if (basename.startsWith(prefix) && extensions.includes(path.extname(file)))
+      files.push(path.relative(root, file));
   }
-  return files_;
+
+  return files;
+}
+
+global.allNodeIcons = function () {
+  var files;
+
+  if (coreImagesDir == userImagesDir)
+    files = [];
+  else
+    files = getNodeIcons({'dir': userImagesDir, 'prefix': ''});
+
+  return getNodeIcons({'dir': coreImagesDir, 'files': files});
 }
 
 //authorize handshake - make sure the request is proxied from localhost, not from the outside world
@@ -341,7 +368,7 @@ io.sockets.on('connection', function (socket) {
   socket.emit('SETTINGSDEF', settings);
   broadcastServerInfo(socket);
   socket.emit('DBCOMPACTED', dbCompacted);
-  socket.emit('NODEICONS', getNodeIcons());
+  socket.emit('NODEICONS', allNodeIcons());
 
   let serialEnabled = settings.serial.enabled && (settings.serial.enabled.value.toString().toLowerCase()==='true');
   socket.emit('SVREVENT',`SERIAL-${serialEnabled?(port?(port.isOpen?'CONNECTED':'DISCONNECTED'):'UNAVAILABLE'):'DISABLED'}`);
@@ -361,7 +388,7 @@ io.sockets.on('connection', function (socket) {
   });
 
   socket.on('REFRESHICONS', function () {
-    io.sockets.emit('NODEICONS', getNodeIcons());
+    io.sockets.emit('NODEICONS', allNodeIcons());
   });
 
   socket.on('UPDATENODELISTORDER', function (newOrder) {
@@ -455,7 +482,7 @@ io.sockets.on('connection', function (socket) {
       }
     });
   });
-  
+
   socket.on('ADDNODEGRAPH', function (nodeId, selectedMetrics) {
     db.find({ _id : nodeId }, function (err, entries) {
       if (entries.length == 1)
@@ -478,7 +505,7 @@ io.sockets.on('connection', function (socket) {
       }
     });
   });
-  
+
   socket.on('DELETENODEGRAPH', function (nodeId) {
     db.find({ _id : nodeId }, function (err, entries) {
       if (entries.length == 1)
@@ -555,7 +582,7 @@ io.sockets.on('connection', function (socket) {
       }
     });
   });
-  
+
   socket.on('DELETEMETRICDATA', function (nodeId, metricKey, start, end) {
     var sts = Math.floor(start / 1000); //get timestamp in whole seconds
     var ets = Math.floor(end / 1000); //get timestamp in whole seconds
@@ -606,7 +633,7 @@ io.sockets.on('connection', function (socket) {
   socket.on('NODEMESSAGE', function (msg) {
     sendMessageToNode(msg);
   });
-  
+
   socket.on('SIMULATEDMESSAGE', function (str) {
     if (str) processSerialData(str, true);
   });
@@ -720,7 +747,7 @@ io.sockets.on('connection', function (socket) {
       }
     });
   });
-  
+
   socket.on('UPDATESETTINGSDEF', function (newSettings) {
     //console.info(`UPDATESETTINGSDEF requested, new settings: ${JSON.stringify(newSettings)}`);
     var settings = nconf.get('settings');
@@ -998,7 +1025,7 @@ global.processSerialData = function (data, simulated) {
   {
     somethingMatched=false;
     validTokenMatched=false;
-    
+
     if (data.startsWith('DEBUG:')) {
       return; //it is already logged
     }
@@ -1009,7 +1036,7 @@ global.processSerialData = function (data, simulated) {
       somethingMatched=true;
       var tokenMatch = regexpGeneralRequests.exec(match[0]);  //format is  REQUEST:VALUE:STATUS  with VALUE and STATUS optional
       var partialMatch = false;
-      
+
       //check "known" REQUESTs
       if (tokenMatch != null) {
         updateServerInfo=false;
@@ -1027,7 +1054,7 @@ global.processSerialData = function (data, simulated) {
           db.find({ _id : { $exists: true }, requests : { $exists: true } }, function (err, entries) {
             var updates = [];
             var ts = Date.now();
-            
+
             for (var i = 0; i < entries.length; i++) {
               var nodeUpdated=false;
               var dbNode = entries[i];
@@ -1288,7 +1315,7 @@ setInterval(function(){
   db.find({ _id : { $exists: true }, requests : { $exists: true } }, function (err, entries) {
     var updates = [];
     var ts = Date.now();
-    
+
     for (var i = 0; i < entries.length; i++) {
       var nodeUpdated=false;
       var dbNode = entries[i];
