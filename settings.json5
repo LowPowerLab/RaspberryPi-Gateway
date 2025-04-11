@@ -71,6 +71,12 @@
         editable: false,
         description: 'the port at which the gateway.js socket app is listening',
       },
+      port: {
+        value: 8081,
+        type: 'number',
+        editable: false,
+        description: 'the port at which the web app is listening',
+      },
       genNodeIfNoMatch: {
         value: 'false',
         description: 'generate a new node even if the data received does not match any metric definition, default = false',
