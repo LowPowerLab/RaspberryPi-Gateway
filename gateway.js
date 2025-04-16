@@ -21,7 +21,7 @@
 //
 // This script is configured to compact the database every 24 hours since time of start.
 // ********************************************************************************************
-// Copyright Felix Rusu, Low Power Lab LLC (2018), http://lowpowerlab.com/contact
+// Copyright Felix Rusu, Low Power Lab LLC (2014-2025), http://lowpowerlab.com/contact
 // ********************************************************************************************
 // IMPORTANT details about NeDB:
 // _id field is special - if not used it is automatically added and used as unique index
@@ -39,7 +39,8 @@ nconf.argv().file({ file: './settings.json5', format: JSON5 });
 global.settings = nconf.get('settings');
 var dbLog = require('./logUtil.js');
 io = require('socket.io')().listen(settings.general.socketPort.value)    //usage in 2.3.0:  io = require('socket.io').listen(settings.general.socketPort.value);
-var serialport = require("serialport");                         //https://github.com/node-serialport/node-serialport
+const { SerialPort } = require('serialport')                             //https://github.com/node-serialport/node-serialport   --> v13.0.0 syntax!
+const { ReadlineParser } = require('@serialport/parser-readline')
 var Datastore = require('nedb');                                //https://github.com/louischatriot/nedb
 var nodemailer = require('nodemailer');                         //https://github.com/andris9/Nodemailer
 var http = require('http');
@@ -47,6 +48,7 @@ var url = require('url');
 db = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.name.value), autoload: true });       //used to keep all node/metric data
 var dbCompacted = Date.now();
 var fs = require('fs');
+var child_process = require('child_process');
 var gatewayUptime='';
 var gatewayFrequency='';
 global.port=undefined;
@@ -62,28 +64,55 @@ http.createServer(httpEndPointHandler).listen(8081);
 console.info('*********************************************************************');
 console.info('************************* GATEWAY APP START *************************');
 console.info('*********************************************************************');
-serialport.list().then(ports => { ports.forEach(function(port) { console.info(`Available serial port: ${JSON.stringify(port)}`) }); });
+SerialPort.list().then(ports => { ports.forEach(function(port) { console.info(`Available serial port: ${JSON5.stringify(port).replace(/[\0\r\n]/g, '')}`) }); });
 
-var openPort = (function f(reopen) {
-  if (reopen && port.isOpen) port.close();
-  port = new serialport(settings.serial.port.value, {baudRate : settings.serial.baud.value});
-  parser = port.pipe(new serialport.parsers.Readline()); //new serialport.parsers.Readline(); //port.pipe(parser);
-  parser.on('data', function(data) { processSerialData(data.replace(/\0/g, '')); }); //replace nulls in received string
+var openPort = function f(reopen) {
+  let serialEnabled = settings.serial.enabled && (settings.serial.enabled.value.toString().toLowerCase()==='true')
+  if (!serialEnabled) { console.info('settings.serial.enabled FALSE or NOT FOUND!'); return; }
+
+  if (reopen && port && port.isOpen) port.close();
+  if (!settings.serial.port.value) return f; // no port defined
+  port = new SerialPort({ path: settings.serial.port.value, baudRate: settings.serial.baud.value });
+  parser = port.pipe(new ReadlineParser())
+  parser.on('data', function(data) { processSerialData(data.replace(/[\0\r]/g, '')); }); //replace nulls and \r in received string
+
+  port.on('open', function serialErrorHandler() {
+    console.info('SERIAL PORT CONNECTION TO: ' + settings.serial.port.value + ' @ ' + settings.serial.baud.value + 'baud');
+    io.sockets.emit('SVREVENT','SERIAL-CONNECTED');
+    //run at start/restart - attempt to get uptime & any other info from RFGATEWAY
+    if (!gatewayUptime) sendMessageToGateway('\nUPTIME\nFREERAM\nSYSFREQ\nGATEWAYFWVERSION\nGATEWAYFWNAME\nFLXIMG\nNETID');
+  });
+
   port.on('error', function serialErrorHandler(error) {
-    msg = 'node-serialport error:' + error.message;
-    console.error(msg);
-    io.sockets.emit('LOG', msg);
+    console.error('SERIAL PORT ERROR: '+error.message);
+    io.sockets.emit('LOG', error.message);
+    io.sockets.emit('SVREVENT','SERIAL-ERROR', error.message);
   });
 
   port.on('close', function serialCloseHandler(error) {
     if (error) {
-      //Give user a sane error message and exit. Future: send message to UI & retry reopening
-      console.error(error.message);
-      //process.exit(1);
+      console.error('SERIAL PORT CLOSED: ' + error.message);
+      io.sockets.emit('SVREVENT','SERIAL-DISCONNECTED', `DISCONNECTED:${error.message}`);
     }
   });
+
   return f;
-})();
+}
+
+openPort();
+
+//if serial port disconnects try to re-connect automatically after a timeout
+setInterval(function() { if (!port || (port && !port.isOpen)) openPort(); }, 1000);
+
+//load any sub-modules/plugins
+for (var file of fs.readdirSync(__dirname)) {
+  if (file.match(/^gateway-([a-zA-Z0-9_\-\.]+)\.js$/gi))
+    try {
+      require(`./${file}`);
+    } catch(ex) {
+      console.error(`FAILED TO LOAD MODULE [${file}]: ${ex.stack}`);
+    }
+}
 
 global.caseInsensitiveSorter = function (a, b) {return a.toLowerCase().localeCompare(b.toLowerCase())};
 String.prototype.replaceNewlines = function () { return this.replace(/(?:\r\n|\r|\n)/g, '\\n') };
@@ -200,6 +229,8 @@ global.sendMessageToNode = function(node) {
 
 global.sendMessageToGateway = function(msg) {
   //console.log('sendMessageToGateway: ' + msg.replaceNewlines());
+  let serialEnabled = settings.serial.enabled && (settings.serial.enabled.value.toString().toLowerCase()==='true')
+  if (!serialEnabled) { console.info('settings.serial.enabled FALSE or NOT FOUND!'); return; }
   port.write(msg + '\n', function (err) { 
     if (err) return console.error('port.write error: ', err.message)
     port.drain();
@@ -304,6 +335,8 @@ io.sockets.on('connection', function (socket) {
   socket.emit('DBCOMPACTED', dbCompacted);
   socket.emit('NODEICONS', getNodeIcons());
 
+  let serialEnabled = settings.serial.enabled && (settings.serial.enabled.value.toString().toLowerCase()==='true')
+  socket.emit('SVREVENT',`SERIAL-${serialEnabled?(port?(port.isOpen?'CONNECTED':'DISCONNECTED'):'UNAVAILABLE'):'DISABLED'}`);;
   //pull all nodes from the database and send them to client
   db.find({ _id : { $exists: true } }, function (err, entries) {
     socket.emit('UPDATENODES', sortNodes(entries));
@@ -731,19 +764,18 @@ io.sockets.on('connection', function (socket) {
   });
 
   socket.on('PROCESSEXIT', function () {
-    console.log('PROCESS EXIT REQUESTED from ' + address);
+    console.info('PROCESS EXIT REQUESTED from ' + address);
     process.exit();
   });
 
   socket.on('RESTARTPI', function () {
-    console.log('PI RESTART REQUESTED from ' + address);
-    require('child_process').exec('sudo /sbin/shutdown -r now "GATEWAY RESTART REQUEST"', function (msg) { console.log(msg) });
+    console.info('PI RESTART REQUESTED from ' + address);
+    child_process.exec('sudo /sbin/shutdown -r now "GATEWAY RESTART REQUEST"', function (msg) { console.info(msg) });
   });
 
   socket.on('SHUTDOWNPI', function () {
-    console.log('PI SHUTDOWN REQUESTED from ' + address);
-    require('child_process').exec('sudo /sbin/shutdown now "GATEWAY SHUTDOWN REQUEST"', function (msg) { console.log(msg) });
-  });
+    console.info('PI SHUTDOWN REQUESTED from ' + address);
+    child_process.exec('sudo /sbin/shutdown now "GATEWAY SHUTDOWN REQUEST"', function (msg) { console.info(msg) });
 });
 
 //entries should contain the node list and also a node that contains the order (if this was ever added)
@@ -935,20 +967,21 @@ global.processSerialData = function (data, simulated) {
       };
 
       //save to DB
-      if (dbEntry==null) //it is an INSERT
-      {
-        if (settings.general.genNodeIfNoMatch.value == true || settings.general.genNodeIfNoMatch.value == 'true' || hasMatchedMetrics)
-        {
-          db.insert(entry);
-          console.info(`   [${id}] DB-Insert new _id:${id}`);
+      if (dbEntry==null) { //INSERT
+        if (settings.general.genNodeIfNoMatch.value == true || settings.general.genNodeIfNoMatch.value == 'true' || hasMatchedMetrics) {
+          db.insert(entry, function(err, newDoc) { if (err) {console.error('db.insert fail: ' + err.toString() + ' --- ' + JSON.stringify(newDoc))}});
+          console.dbinsert(`[${id}] attempted`, );
           io.sockets.emit('UPDATENODE', entry);
           return;
         }
+      } else { //UPDATE
+        db.update({ _id: id }, { $set : entry }, {}, function (err, numReplaced) {
+          //console.dbupdate(`processSerialData('${data.replaceNewlines()}',${simulated?1:0}) ${JSON5.stringify(entry)}`);
+          console.dbupdate(`[${id}] updated`);
+        });
+        io.sockets.emit('UPDATENODE', entry);
       }
-      else {
-        db.update({ _id: id }, { $set : entry}, {}, function (err, numReplaced) { console.info(`[${id}] DB-Updated: processSerialData('${data.replaceNewlines()}',${simulated}):entry=${JSON.stringify(entry)}`);});
-        io.sockets.emit('UPDATENODE', entry);      
-      }
+
       //handle any server side events (email, sms, custom actions)
       handleNodeEvents(entry);
     });
