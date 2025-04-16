@@ -23,8 +23,8 @@
     "nconf": "~0.11.2",
     "nedb": "https://github.com/LowPowerLab/nedb.git",
     "nodemailer": "^6.6.0",
-    "serialport": "~9.0.7",
-    "socket.io": "~4.1.0",
+    "serialport": "~13.0.0",
+    "socket.io": "~4.8.0",
     "speedtest-net": "^1.6.2",
     "suncalc": "~1.9"
   },
