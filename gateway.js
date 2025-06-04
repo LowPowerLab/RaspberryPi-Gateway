@@ -739,14 +739,17 @@ io.sockets.on('connection', function (socket) {
     }
 
     if (changed) {
-      global.settings = settings;
+      nconf.set('settings', settings)
+
       nconf.save(function (err) {
         if (err !=null)
           socket.emit('LOG', 'UPDATESETTINGSDEF ERROR: '+err);
         else
           io.sockets.emit('SETTINGSDEF', settings);
       });
-      
+
+      global.settings = nconf.get('settings')
+
       if (portChangedTo) {
         log = `PORT changed to ${portChangedTo} - reopening serial port @ ${settings.serial.baud.value} baud...`;
         openPort(true);
