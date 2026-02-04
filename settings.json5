@@ -53,7 +53,7 @@
         description: 'where non match node information is dumped, should not really be changed',
       },
       compactDBInterval: {
-        value: 86400000,
+        value: 7200000,
         type: 'number',
         description: 'the gateway.db database is compacted every this many milliseconds, default = once every day',
       },
@@ -62,7 +62,7 @@
       editable: true,
       exposed: true,
       consoleLogDateFormat: {
-        value: 'mm-dd-yy HH:MM:ss.l',
+        value: 'yy/mm/dd HH:MM:ss.l',
         exposed: false,
       },
       socketPort: {
@@ -127,7 +127,7 @@
       editable: true,
       exposed: true,
       uiTitle: {
-        value: 'PiGateway v9.1.0',
+        value: 'PiGateway v9.2.2',
         type: 'text',
       },
       responsive: {

@@ -1,6 +1,6 @@
 {
   "name": "RaspberryPi-Gateway",
-  "version": "9.2.1",
+  "version": "9.2.2",
   "description": "Moteino IoT Gateway",
   "main": "gateway.js",
   "repository": {
@@ -26,7 +26,8 @@
     "serialport": "~13.0.0",
     "socket.io": "~4.8.0",
     "speedtest-net": "^1.6.2",
-    "suncalc": "~1.9"
+    "suncalc": "~1.9",
+    "samba-client": "^4.0.0"
   },
   "scripts": {
     "preinstall": "",
