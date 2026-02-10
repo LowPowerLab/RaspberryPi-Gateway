@@ -40,6 +40,11 @@
         type: 'number',
         description: 'needs to match the Serial baud speed in the sketch running on the Moteino or MightyHat that is attached to this Pi',
       },
+      enabled: {
+        value: 'true',
+        description: 'Enables/Disables serial port, default = true',
+        type: 'checkbox',
+      },
     },
     database: {
       editable: false,
