@@ -335,8 +335,8 @@ io.sockets.on('connection', function (socket) {
   socket.emit('DBCOMPACTED', dbCompacted);
   socket.emit('NODEICONS', getNodeIcons());
 
-  let serialEnabled = settings.serial.enabled && (settings.serial.enabled.value.toString().toLowerCase()==='true')
-  socket.emit('SVREVENT',`SERIAL-${serialEnabled?(port?(port.isOpen?'CONNECTED':'DISCONNECTED'):'UNAVAILABLE'):'DISABLED'}`);;
+  let serialEnabled = settings.serial.enabled && (settings.serial.enabled.value.toString().toLowerCase()==='true');
+  socket.emit('SVREVENT',`SERIAL-${serialEnabled?(port?(port.isOpen?'CONNECTED':'DISCONNECTED'):'UNAVAILABLE'):'DISABLED'}`);
   //pull all nodes from the database and send them to client
   db.find({ _id : { $exists: true } }, function (err, entries) {
     socket.emit('UPDATENODES', sortNodes(entries));
@@ -776,6 +776,7 @@ io.sockets.on('connection', function (socket) {
   socket.on('SHUTDOWNPI', function () {
     console.info('PI SHUTDOWN REQUESTED from ' + address);
     child_process.exec('sudo /sbin/shutdown now "GATEWAY SHUTDOWN REQUEST"', function (msg) { console.info(msg) });
+  });
 });
 
 //entries should contain the node list and also a node that contains the order (if this was ever added)
