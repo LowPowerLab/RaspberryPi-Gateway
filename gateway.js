@@ -971,7 +971,6 @@ global.processSerialData = function (data, simulated) {
       if (dbEntry==null) { //INSERT
         if (settings.general.genNodeIfNoMatch.value == true || settings.general.genNodeIfNoMatch.value == 'true' || hasMatchedMetrics) {
           db.insert(entry, function(err, newDoc) { if (err) {console.error('db.insert fail: ' + err.toString() + ' --- ' + JSON.stringify(newDoc))}});
-          console.dbinsert(`[${id}] attempted`, );
           io.sockets.emit('UPDATENODE', entry);
           return;
         }
