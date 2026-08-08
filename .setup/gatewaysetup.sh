@@ -108,9 +108,6 @@ sudo apt-get -y install git apache2-utils
 echo -e "${CYAN}************* STEP: Install latest NGINX *************${NC}"
 sudo apt-get -y install nginx
 
-echo -e "${CYAN}************* STEP: Install latest PHP *********************${NC}"
-sudo apt-get -y install php-common php-cli php-fpm
-
 echo -e "${CYAN}************* STEP: Install nodeJS & npm *************${NC}"
 #install latest NodeJS --- https://www.raspberrypi.org/forums/viewtopic.php?t=141770
 sudo wget -O - https://raw.githubusercontent.com/audstanley/NodeJs-Raspberry-Pi/master/Install-Node.sh | sudo bash
@@ -179,10 +176,6 @@ echo -e "${YLW}Done. You can add/change http_auth credentials using ${RED}htpass
 
 echo -e "${CYAN}************* STEP: Copy gateway site config to sites-available *************${NC}"
 cp -rf $APPSRVDIR/.setup/gateway /etc/nginx/sites-available/gateway
-#determine php-fpm version and replace in gateway site config
-phpfpmsock=$(grep -ri "listen = /" /etc/php) #search for file containing "listen =" in php path
-phpfpmsock=${phpfpmsock##*/}                 #extract everything after last /
-sudo sed -i "s/PHPFPMSOCK/${phpfpmsock}/g" /etc/nginx/sites-available/gateway  #replace PHPFPMSOCK with it in site config file
 cd /etc/nginx/sites-enabled
 sudo rm /etc/nginx/sites-enabled/default
 sudo ln -s /etc/nginx/sites-available/gateway

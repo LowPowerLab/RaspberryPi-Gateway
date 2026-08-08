@@ -1,3 +1,14 @@
 node_modules
 db/*
 *.log
+
+# VM disk images
+*.qcow2
+
+# Nix build results
+result
+result-*
+repl-result-*
+
+# NixOS test driver REPL history
+.nixos-test-history

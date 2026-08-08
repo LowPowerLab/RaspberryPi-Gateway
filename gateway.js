@@ -29,14 +29,27 @@
 // ********************************************************************************************
 // Note: In NodeJS modules are loaded synchronously and processed in the order they occur
 // ********************************************************************************************
-var nconf = require('nconf');                                   //https://github.com/indexzero/nconf
-var JSON5 = require('json5');                                   //https://github.com/aseemk/json5
-var path = require('path');
-var dbDir = 'data/db';
+
+const JSON5 = require('json5'); // https://github.com/aseemk/json5
+const fs = require('fs');
+const path = require('path');
+
+const config = require('./config');
+
+const nconf = config.nconf;
+const coreImagesDir = config.coreImagesDir;
+const userImagesDir = config.userImagesDir;
+const coreMetricsDir = config.coreMetricsDir;
+const userMetricsDir = config.userMetricsDir;
+const dbDir = config.dbDir;
+
+fs.mkdirSync(dbDir, {'recursive': true});
+fs.mkdirSync(userImagesDir, {'recursive': true});
+
+global.settings = nconf.get('settings');
+
 var packageJson = require('./package.json')
 var coreMetricsFilePath = './metrics/core.js';
-nconf.argv().file({ file: './settings.json5', format: JSON5 });
-global.settings = nconf.get('settings');
 var dbLog = require('./logUtil.js');
 io = require('socket.io')().listen(settings.general.socketPort.value)    //usage in 2.3.0:  io = require('socket.io').listen(settings.general.socketPort.value);
 const { SerialPort } = require('serialport')                             //https://github.com/node-serialport/node-serialport   --> v13.0.0 syntax!
@@ -45,9 +58,8 @@ var Datastore = require('nedb');                                //https://github
 var nodemailer = require('nodemailer');                         //https://github.com/andris9/Nodemailer
 var http = require('http');
 var url = require('url');
-db = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.name.value), autoload: true });       //used to keep all node/metric data
+db = new Datastore({ filename: path.join(dbDir, settings.database.name.value), autoload: true });       //used to keep all node/metric data
 var dbCompacted = Date.now();
-var fs = require('fs');
 var child_process = require('child_process');
 var gatewayUptime='';
 var gatewayFrequency='';
@@ -55,11 +67,11 @@ global.port=undefined;
 global.parser=undefined;
 var unmatchedDataDB = null;
 if (settings.database.nonMatchesName.value)
-  unmatchedDataDB = new Datastore({ filename: path.join(__dirname, dbDir, settings.database.nonMatchesName.value), autoload: true });
+  unmatchedDataDB = new Datastore({ filename: path.join(dbDir, settings.database.nonMatchesName.value), autoload: true });
 require("console-stamp")(console, settings.general.consoleLogDateFormat.value); //timestamp logs - https://github.com/starak/node-console-stamp
 
 //HTTP ENDPOINT - accept HTTP: data from the internet/LAN
-http.createServer(httpEndPointHandler).listen(8081);
+http.createServer(httpEndPointHandler).listen(settings.general.port.value);
 
 console.info('*********************************************************************');
 console.info('************************* GATEWAY APP START *************************');
@@ -231,7 +243,7 @@ global.sendMessageToGateway = function(msg) {
   //console.log('sendMessageToGateway: ' + msg.replaceNewlines());
   let serialEnabled = settings.serial.enabled && (settings.serial.enabled.value.toString().toLowerCase()==='true')
   if (!serialEnabled) { console.info('settings.serial.enabled FALSE or NOT FOUND!'); return; }
-  port.write(msg + '\n', function (err) { 
+  port.write(msg + '\n', function (err) {
     if (err) return console.error('port.write error: ', err.message)
     port.drain();
   });
@@ -260,7 +272,7 @@ global.handleNodeEvents = function(node) {
 global.getGraphData = function(nodeId, metricKey, start, end, exportMode) {
   var sts = Math.floor(start / 1000); //get timestamp in whole seconds
   var ets = Math.floor(end / 1000); //get timestamp in whole seconds
-  var logfile = path.join(__dirname, dbDir, dbLog.getLogName(nodeId,metricKey));
+  var logfile = path.join(dbDir, dbLog.getLogName(nodeId,metricKey));
   var graphData = dbLog.getData(logfile, sts, ets, exportMode ? 100000 : settings.general.graphMaxPoints.value); //100k points when exporting, more points is really pointless
   var graphOptions={};
   for(var k in metricsDef.metrics)
@@ -276,19 +288,42 @@ global.getGraphData = function(nodeId, metricKey, start, end, exportMode) {
   return { graphData:graphData, options : graphOptions };
 }
 
-global.getNodeIcons = function(dir, files_, steps){
-  files_ = files_ || [];
-  dir = dir || __dirname + '/www/images';
-  steps = steps || 0;
-  var files = fs.readdirSync(dir);
-  for (var i in files){
-    var name = dir + '/' + files[i];
-    if (fs.statSync(name).isDirectory() && steps==0) //recurse 1 level only
-      getNodeIcons(name, files_, steps+1);
-    else if (files[i].match(/^icon_.+\.(bmp|png|jpg|jpeg|ico)$/ig)) //images only
-      files_.push(name.replace(__dirname+'/www/images/',''));
+global.getNodeIcons = function({
+  dir = coreImagesDir,
+  root = null,
+  files = [],
+  steps = 0,
+  prefix = 'icon_',
+  extensions = ['.bmp', '.png', '.jpg', '.jpeg', '.ico'],
+} = {}) {
+  dir = path.resolve(dir);
+  root = path.resolve(root || dir);
+
+  console.log({'dir': dir, 'root': root, 'files': files, 'steps': steps, 'prefix': prefix, 'extensions': extensions});
+
+  var basenames = fs.readdirSync(dir);
+  for (var i in basenames) {
+    var basename = basenames[i];
+    var file = path.join(dir, basename);
+
+    if (fs.statSync(file).isDirectory() && steps==0) //recurse 1 level only
+      getNodeIcons({'dir': file, 'root': root, 'files': files, 'steps': steps+1, 'prefix': prefix, 'extensions': extensions});
+    else if (basename.startsWith(prefix) && extensions.includes(path.extname(file)))
+      files.push(path.relative(root, file));
   }
-  return files_;
+
+  return files;
+}
+
+global.allNodeIcons = function () {
+  var files;
+
+  if (coreImagesDir == userImagesDir)
+    files = [];
+  else
+    files = getNodeIcons({'dir': userImagesDir, 'prefix': ''});
+
+  return getNodeIcons({'dir': coreImagesDir, 'files': files});
 }
 
 //authorize handshake - make sure the request is proxied from localhost, not from the outside world
@@ -333,7 +368,7 @@ io.sockets.on('connection', function (socket) {
   socket.emit('SETTINGSDEF', settings);
   broadcastServerInfo(socket);
   socket.emit('DBCOMPACTED', dbCompacted);
-  socket.emit('NODEICONS', getNodeIcons());
+  socket.emit('NODEICONS', allNodeIcons());
 
   let serialEnabled = settings.serial.enabled && (settings.serial.enabled.value.toString().toLowerCase()==='true');
   socket.emit('SVREVENT',`SERIAL-${serialEnabled?(port?(port.isOpen?'CONNECTED':'DISCONNECTED'):'UNAVAILABLE'):'DISABLED'}`);
@@ -353,7 +388,7 @@ io.sockets.on('connection', function (socket) {
   });
 
   socket.on('REFRESHICONS', function () {
-    io.sockets.emit('NODEICONS', getNodeIcons());
+    io.sockets.emit('NODEICONS', allNodeIcons());
   });
 
   socket.on('UPDATENODELISTORDER', function (newOrder) {
@@ -447,7 +482,7 @@ io.sockets.on('connection', function (socket) {
       }
     });
   });
-  
+
   socket.on('ADDNODEGRAPH', function (nodeId, selectedMetrics) {
     db.find({ _id : nodeId }, function (err, entries) {
       if (entries.length == 1)
@@ -470,7 +505,7 @@ io.sockets.on('connection', function (socket) {
       }
     });
   });
-  
+
   socket.on('DELETENODEGRAPH', function (nodeId) {
     db.find({ _id : nodeId }, function (err, entries) {
       if (entries.length == 1)
@@ -493,7 +528,7 @@ io.sockets.on('connection', function (socket) {
           if (dbNode.metrics) {
             Object.keys(dbNode.metrics).forEach(function(mKey,index) { //syncronous/blocking call
               if (dbNode.metrics[mKey].graph == 1)
-                dbLog.removeMetricLog(path.join(__dirname, dbDir, dbLog.getLogName(dbNode._id, mKey)));
+                dbLog.removeMetricLog(path.join(dbDir, dbLog.getLogName(dbNode._id, mKey)));
             });
           }
         }
@@ -527,7 +562,7 @@ io.sockets.on('connection', function (socket) {
         delete(dbNode.metrics[metricKey]);
         db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) { console.info('DELETENODEMETRIC DB-Replaced:' + numReplaced); });
         if (settings.general.keepMetricLogsOnDelete.value != 'true')
-          dbLog.removeMetricLog(path.join(__dirname, dbDir, dbLog.getLogName(dbNode._id, metricKey)));
+          dbLog.removeMetricLog(path.join(dbDir, dbLog.getLogName(dbNode._id, metricKey)));
         io.sockets.emit('UPDATENODE', dbNode); //post it back to all clients to confirm UI changes
       }
     });
@@ -547,7 +582,7 @@ io.sockets.on('connection', function (socket) {
       }
     });
   });
-  
+
   socket.on('DELETEMETRICDATA', function (nodeId, metricKey, start, end) {
     var sts = Math.floor(start / 1000); //get timestamp in whole seconds
     var ets = Math.floor(end / 1000); //get timestamp in whole seconds
@@ -555,7 +590,7 @@ io.sockets.on('connection', function (socket) {
       if (entries.length == 1)
       {
         var dbNode = entries[0];
-        var logfile = path.join(__dirname, dbDir, dbLog.getLogName(dbNode._id, metricKey));
+        var logfile = path.join(dbDir, dbLog.getLogName(dbNode._id, metricKey));
         var count = dbLog.deleteData(logfile, sts, ets);
         console.info('DELETEMETRICDATA DB-Removed points:' + count);
         //if (settings.general.keepMetricLogsOnDelete.value != 'true')
@@ -571,7 +606,7 @@ io.sockets.on('connection', function (socket) {
       if (entries.length == 1)
       {
         var dbNode = entries[0];
-        var logfile = path.join(__dirname, dbDir, dbLog.getLogName(dbNode._id, metricKey));
+        var logfile = path.join(dbDir, dbLog.getLogName(dbNode._id, metricKey));
         var count = dbLog.editData(logfile, sts, ets, newValue);
         console.info(`EDITMETRICDATA DB-Updated points:${count} to:${newValue}`);
         socket.emit('EDITMETRICDATA_OK', count); //post it back to requesting client only
@@ -598,7 +633,7 @@ io.sockets.on('connection', function (socket) {
   socket.on('NODEMESSAGE', function (msg) {
     sendMessageToNode(msg);
   });
-  
+
   socket.on('SIMULATEDMESSAGE', function (str) {
     if (str) processSerialData(str, true);
   });
@@ -702,7 +737,7 @@ io.sockets.on('connection', function (socket) {
         var dbNode = entries[0];
         Object.keys(dbNode.metrics).forEach(function(mKey,index) { //syncronous/blocking call
           if (dbNode.metrics[mKey].graph == 1) {
-            var logfile = path.join(__dirname, dbDir, dbLog.getLogName(dbNode._id, mKey));
+            var logfile = path.join(dbDir, dbLog.getLogName(dbNode._id, mKey));
             var theData = dbLog.getData(logfile, sts, ets, howManyPoints /*settings.general.graphMaxPoints.value*/);
             theData.label = dbNode.metrics[mKey].label || mKey;
             sets.push(theData); //100k points when exporting, more points is really pointless
@@ -712,7 +747,7 @@ io.sockets.on('connection', function (socket) {
       }
     });
   });
-  
+
   socket.on('UPDATESETTINGSDEF', function (newSettings) {
     //console.info(`UPDATESETTINGSDEF requested, new settings: ${JSON.stringify(newSettings)}`);
     var settings = nconf.get('settings');
@@ -739,14 +774,17 @@ io.sockets.on('connection', function (socket) {
     }
 
     if (changed) {
-      global.settings = settings;
+      nconf.set('settings', settings)
+
       nconf.save(function (err) {
         if (err !=null)
           socket.emit('LOG', 'UPDATESETTINGSDEF ERROR: '+err);
         else
           io.sockets.emit('SETTINGSDEF', settings);
       });
-      
+
+      global.settings = nconf.get('settings')
+
       if (portChangedTo) {
         log = `PORT changed to ${portChangedTo} - reopening serial port @ ${settings.serial.baud.value} baud...`;
         openPort(true);
@@ -776,6 +814,25 @@ io.sockets.on('connection', function (socket) {
   socket.on('SHUTDOWNPI', function () {
     console.info('PI SHUTDOWN REQUESTED from ' + address);
     child_process.exec('sudo /sbin/shutdown now "GATEWAY SHUTDOWN REQUEST"', function (msg) { console.info(msg) });
+  });
+
+  // https://socket.io/how-to/upload-a-file
+  socket.on('UPLOADIMAGE', function (name, buffer, callback) {
+    if (!name) {
+      callback(null, "missing file name");
+      return;
+    }
+
+    if (!buffer) {
+      callback(null, "missing file data");
+      return;
+    }
+
+    target = path.join(userImagesDir, name);
+
+    fs.writeFile(target, buffer, function(err) {
+      callback(name, err);
+    });
   });
 });
 
@@ -916,7 +973,7 @@ global.processSerialData = function (data, simulated) {
               if (isNumeric(graphValue))
               {
                 var ts = Math.floor(Date.now() / 1000); //get timestamp in whole seconds
-                var logfile = path.join(__dirname, dbDir, dbLog.getLogName(id, matchingMetric.name));
+                var logfile = path.join(dbDir, dbLog.getLogName(id, matchingMetric.name));
                 try {
                   console.log('post: ' + logfile + '[' + ts + ','+graphValue + ']');
                   dbLog.postData(logfile, ts, graphValue, matchingMetric.duplicateInterval || null);
@@ -990,7 +1047,7 @@ global.processSerialData = function (data, simulated) {
   {
     somethingMatched=false;
     validTokenMatched=false;
-    
+
     if (data.startsWith('DEBUG:')) {
       return; //it is already logged
     }
@@ -1001,7 +1058,7 @@ global.processSerialData = function (data, simulated) {
       somethingMatched=true;
       var tokenMatch = regexpGeneralRequests.exec(match[0]);  //format is  REQUEST:VALUE:STATUS  with VALUE and STATUS optional
       var partialMatch = false;
-      
+
       //check "known" REQUESTs
       if (tokenMatch != null) {
         updateServerInfo=false;
@@ -1019,7 +1076,7 @@ global.processSerialData = function (data, simulated) {
           db.find({ _id : { $exists: true }, requests : { $exists: true } }, function (err, entries) {
             var updates = [];
             var ts = Date.now();
-            
+
             for (var i = 0; i < entries.length; i++) {
               var nodeUpdated=false;
               var dbNode = entries[i];
@@ -1126,7 +1183,7 @@ function httpEndPointHandler(req, res) {
               if (isNumeric(graphValue))
               {
                 var ts = Math.floor(Date.now() / 1000); //get timestamp in whole seconds
-                var logfile = path.join(__dirname, dbDir, dbLog.getLogName(id, matchingMetric.name));
+                var logfile = path.join(dbDir, dbLog.getLogName(id, matchingMetric.name));
                 try {
                   console.log(`post: ${logfile} [${ts},${graphValue}]`);
                   dbLog.postData(logfile, ts, graphValue, matchingMetric.duplicateInterval || null);
@@ -1280,7 +1337,7 @@ setInterval(function(){
   db.find({ _id : { $exists: true }, requests : { $exists: true } }, function (err, entries) {
     var updates = [];
     var ts = Date.now();
-    
+
     for (var i = 0; i < entries.length; i++) {
       var nodeUpdated=false;
       var dbNode = entries[i];
